@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'pyqtgraph/console/template.ui'
+# Form implementation generated from reading ui file 'console/template.ui'
 #
-# Created: Tue Sep 19 09:45:18 2017
+# Created: Mon Oct 16 12:37:21 2017
 #      by: pyside-uic 0.2.15 running on PySide 1.2.2
 #
 # WARNING! All changes made in this file will be lost!

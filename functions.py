@@ -15,7 +15,7 @@ from .python2_3 import asUnicode, basestring
 from .Qt import QtGui, QtCore, USE_PYSIDE
 from .metaarray import MetaArray
 from . import getConfigOption, setConfigOptions
-from . import debug, reload
+from . import debug
 from .reload import getPreviousVersion 
 from .metaarray import MetaArray
 
@@ -2445,8 +2445,8 @@ def disconnect(signal, slot):
         try:
             signal.disconnect(slot)
             return True
-        except (TypeError, RuntimeError):
-            slot = reload.getPreviousVersion(slot)
+        except TypeError, RuntimeError:
+            slot = getPreviousVersion(slot)
             if slot is None:
                 return False
 

@@ -14,9 +14,7 @@ class BusyCursor(object):
     active = []
 
     def __enter__(self):
-        app = QtCore.QCoreApplication.instance()
-        isGuiThread = (app is not None) and (QtCore.QThread.currentThread() == app.thread())
-        if isGuiThread and QtGui.QApplication.instance() is not None:
+        if QtGui.QApplication.instance() is not None:
             QtGui.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.WaitCursor))
             BusyCursor.active.append(self)
             self._active = True
@@ -26,5 +24,6 @@ class BusyCursor(object):
     def __exit__(self, *args):
         if self._active:
             BusyCursor.active.pop(-1)
-            QtGui.QApplication.restoreOverrideCursor()
+            if len(BusyCursor.active) == 0:
+                QtGui.QApplication.restoreOverrideCursor()
         
