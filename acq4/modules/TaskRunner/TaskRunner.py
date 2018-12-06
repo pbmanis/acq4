@@ -162,7 +162,10 @@ class TaskRunner(Module):
         return self.protoStateGroup.state()[param]
         
     def updateDeviceList(self, task=None):
-        """Update the device list to reflect only the devices that exist in the system or are referenced by the current task. Update the color and checkstate of each item as well."""
+        """
+        Update the device list to reflect only the devices that exist
+        in the system or are referenced by the current task. 
+        Update the color and checkstate of each item as well."""
         devList = self.manager.listDevices()
         
         if task is not None:

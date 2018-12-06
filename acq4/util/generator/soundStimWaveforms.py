@@ -12,6 +12,7 @@ in waveforms.py.
 import numpy as np
 from scipy import signal
 from acq4.util.generator import waveforms
+from acq4.util.generator import sound # Campagnola/Manis sound generator class for special waveforms
 
 def allFunctions():
     """Return all registered waveform generation functions.
@@ -87,7 +88,7 @@ def tonePip(freq= 1000.0, risfall=10e-3, start=0.0, stop=500.0e-3, base=0.0, **k
 #np.cos(1.570796+sawWave(2.5e-3,1.570796,0,.250,.250+2.5e-3,0)+pulse(.250+2.5e-3,497.5e-3,1.570796)-sawWave(2.5e-3,1.570796,0,497.5e-3,500e-3))**2*sineWave(1/4000.0,1,0,.250,.500,0)
 
 # def soundstim(startfreq= 1000.0, npip= 11, tdur= 50, tipi= 200, direction= 'up', **kwds):  #tfr 09/28/2015
-def soundstim(startfreq= 1000.0, npip= 11, tdur= 50, tipi= 400, octspace = 0.5, reps=1, direction= 'up', delay = 0, **kwds):
+def soundstim(startfreq= 1000.0, risfall= 1e-3, npip= 11, tdur= 50, tipi= 400, octspace = 0.5, reps=1, direction= 'up', delay = 0, **kwds):
     rate = kwds['rate']
     nPts = kwds['nPts']
     warnings = kwds['warnings']
@@ -481,5 +482,26 @@ def FMSweepReversal(method='linear',sweeprate=12., upfirst=True, f0=5000., f1= 1
     d = cos2gat(risfall, delay, duration, **kwds) * SWP
 
     return d
+
+def CMMR(f0=4000., s2n=0., duration=0.6, rf=0.025, fmod=10, dmod=100, pipdu=0.05, 
+        pipst=[0.2, 0.3, 0.4], maskst=[0.05], maskdu=0.5,
+        flgap=1, flspc=0.33, flN=3, dbspl=50., fltype='Tone',
+         flph='Comod', **kwds):
+    rate = kwds['rate']
+    nPts = kwds['nPts']
+
+    d = sound.ComodulationMasking(rate=rate, duration=(nPts-1)/rate, f0=f0, dbspl=dbspl, s2n=s2n,
+            rf=rf, fmod=fmod, dmod=dmod,
+            pipdu=pipdu, pipst=pipst, maskst=maskst, maskdu=maskdu,
+            flgap=flgap, 
+            flspc=flspc, flN=flN, fltype=fltype, flph=flph)
+  #  print('OK', nPts, nPts/rate, rate)
+  #  print('max d: ', np.max(d.sound))
+    t = d.time
+    ds = d.sound
+  #  print('len ds: ', ds, len(d.time), np.max(d.time))
+
+    return ds
+
 
 _allFuncs = dict([(k, v) for k, v in globals().items() if callable(v)])
