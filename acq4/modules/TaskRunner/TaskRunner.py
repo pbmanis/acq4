@@ -747,14 +747,24 @@ class TaskRunner(Module):
         self.taskThread.pause(pause)
         
     def taskStarted(self, params):
-        cur = 'Current iteration:\n'
+        cur = 'It: '
+        cur2 = ''
         plist = self.ui.sequenceParamList.listParams()
+
         try:
-            nums = [str(params[p[:2]]+1) for p in plist]
+            num = [params[p[:2]] for p in plist]
+            nums = [str(m+1) for m in num]
+            n = '%.1f' % plist[0][2][num[0]]
         except:
             nums = []
-        cur += ',  '.join(nums)
-        self.ui.seqCurrentLabel.setText(cur)
+            n = '0'
+        cur += ', '.join(nums)
+        for i in range(len(plist)):
+            pkey = plist[i][:2]
+            index = params[pkey]
+            n = plist[i][2][index]
+            cur2 += '\n%s: %8.1f' % (pkey[0][:3], n)
+        self.ui.seqCurrentLabel.setText(cur+cur2)
 
         # check for co-sequenced parameters and re-insert here.
         # (the task runner thread does not know about these)
