@@ -761,9 +761,12 @@ class TaskRunner(Module):
         cur += ', '.join(nums)
         for i in range(len(plist)):
             pkey = plist[i][:2]
-            index = params[pkey]
-            n = plist[i][2][index]
-            cur2 += '\n%s: %8.1f' % (pkey[0][:3], n)
+            if pkey in params:
+                index = params[pkey]
+                n = plist[i][2][index]
+                cur2 += '\n%s: %8.1f' % (pkey[0][:3], n)
+            else:
+                 cur2 += '\n%s' % (pkey[0][:3])
         self.ui.seqCurrentLabel.setText(cur+cur2)
 
         # check for co-sequenced parameters and re-insert here.

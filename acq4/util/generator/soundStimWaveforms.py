@@ -483,9 +483,9 @@ def FMSweepReversal(method='linear',sweeprate=12., upfirst=True, f0=5000., f1= 1
 
     return d
 
-def CMMR(f0=4000., s2n=0., duration=0.6, rf=0.025, fmod=10, dmod=100, pipdu=0.05, 
-        pipst=[0.2, 0.3, 0.4], maskst=[0.05], maskdu=0.5,
-        flgap=1, flspc=0.33, flN=3, dbspl=50., fltype='Tone',
+def CMMR(f0=4000., s2n=0., duration=0.6, rf=0.025, fmod=10., dmod=100., pipdu=0.05, 
+        pipst=[0.275, 0.375, 0.475], maskst=[0.05], maskdu=0.5,
+        flgap=1, flspc=0.33, flN=3, dbspl=65., fltype='Tone',
          flph='Comod', **kwds):
     rate = kwds['rate']
     nPts = kwds['nPts']

@@ -578,6 +578,7 @@ class ComodulationMasking(Sound):
             target = np.zeros_like(target)
         onfreqmasker = sinusoidal_modulation(self.time, onfreqmasker, o['maskst'],
             o['fmod'], o['dmod'], 0.)
+        print(np.max(target))
         # print("o['dbspl']+o['s2n']: ", o['dbspl']+o['s2n'])
         # print('np.max(target): ', np.max(target))
 
@@ -1020,9 +1021,14 @@ def piptone(t, rt, Fs, F0, dBSPL, pip_dur, pip_start):
         ps = [ps]
     for start in pip_start:
         ts = int(np.floor(start * Fs))
-      #  print(len(pin), len(pip), ts, pip.size, Fs)
-        pin[ts:ts+pip.size] += pip
-
+       # print('1: ', len(pin), len(pip), ts, pip.size, Fs)
+        tend = ts + pip.size
+        if tend >= len(pin):
+            dpip = len(pin) - tend
+            tend = len(pin)
+            pin[ts:tend] += pip[:dpip]
+        else:
+            pin[ts:ts+pip.size] += pip
     return pin
 
 def shape_signal(signal, t, rt, Fs, F0, dBSPL, pip_dur, pip_start):
