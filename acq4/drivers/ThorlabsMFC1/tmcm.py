@@ -1,10 +1,13 @@
+from __future__ import print_function
 """
 Low-level serial communication for Trinamic TMCM-140-42-SE controller
 (used internally for the Thorlabs MFC1)
 """
 
+debugFlag = False  # turn off or on printing of various variables.....
 
 import serial, struct, time, collections
+import ctypes
 
 try:
     # this is nicer because it provides deadlock debugging information
@@ -41,7 +44,7 @@ COMMANDS = {
     'sco': 30,
     'cco': 32,
     'gco': 31,
-    
+
     'sap': 5,
     'gap': 6,
     'stap': 7,
@@ -50,10 +53,10 @@ COMMANDS = {
     'ggp': 10,
     'stgp': 11,
     'rsgp': 12,
-    
+
     'sio': 14,
     'gio': 15,
-    
+
     'calc': 19,
     'comp': 20,
     'jc': 21,
@@ -69,9 +72,9 @@ COMMANDS = {
     'aap': 34,
     'agp': 35,
     'aco': 39,
-    
+
     'sac': 29,
-    
+
     'stop_application': 128,
     'run_application': 129,
     'step_application': 130,
@@ -80,7 +83,7 @@ COMMANDS = {
     'stop_download': 133,
     'get_application_status': 135,
     'get_firmware_version': 136,
-    'restore_factory_settings': 137,    
+    'restore_factory_settings': 137,
 }
 
 
@@ -107,23 +110,30 @@ PARAMETERS = {    # negative values indicate read-only parameters
     'soft_stop_flag': 149,
     'ramp_divisor': 153,
     'pulse_divisor': 154,
+    'step_interpolation_enable': 160, # new controller only
+    'stallGuard2_threshold': 174, # 1140: signed 0 is default, -64 to +63 is range.
     'referencing_mode': 193,
     'referencing_search_speed': 194,
     'referencing_switch_speed': 195,
     'distance_end_switches': 196,
-    'mixed_decay_threshold': 203,
+    'mixed_decay_threshold': 203,  # 110-42 (firmware 140) only
     'freewheeling': 204,
-    'stall_detection_threshold': 205,
+    'stall_detection_threshold': 205,  # 110-42 (firmware 140) only
     'actual_load_value': 206,
     'driver_error_flags': -208,
     'encoder_position': 209,
     'encoder_prescaler': 210,
-    'fullstep_threshold': 211,
+    'fullstep_threshold': 211,  # 1140: does not exist in new controller
     'maximum_encoder_deviation': 212,
     'power_down_delay': 214,
     'absolute_encoder_value': -215,
 }
 
+def from_parnum(num):
+    for k in PARAMETERS.keys():
+        if num == PARAMETERS[k]:
+            return(k)
+    return(None)
 
 GLOBAL_PARAMETERS = {
     'eeprom_magic': 64,
@@ -159,7 +169,7 @@ OPERATORS = {
 
 CONDITIONS = {
     'ze': 0,
-    'nz': 1, 
+    'nz': 1,
     'eq': 2,
     'ne': 3,
     'gt': 4,
@@ -186,9 +196,9 @@ class TMCMError(Exception):
     def __init__(self, status):
         self.status = status
         msg = STATUS[status]
-        
-        Exception.__init__(msg)
-        
+
+        Exception.__init__(self, msg)
+
 
 class TMCM140(SerialDevice):
 
@@ -208,21 +218,22 @@ class TMCM140(SerialDevice):
         SerialDevice.__init__(self, port=self.port, baudrate=baudrate)
 
     @threadsafe
-    def command(self, cmd, type, motor, value):
+    def command(self, cmd, cmdtype, motor, value):
         """Send a command to the controller and return the reply.
-        
+
         If an error is returned from the controller then raise an exception.
         """
-        self._send_cmd(cmd, type, motor, value)
+        # print('MFC1 command: ', cmd, cmdtype, motor, value)
+        self._send_cmd(cmd, cmdtype, motor, value)
         return self._get_reply()
-   
+
     def rotate(self, velocity):
         """Begin rotating motor.
-        
+
         velocity: -2047 to +2047
                   negative values turn left; positive values turn right.
         """
-        assert isinstance(velocity, int)        
+        assert isinstance(velocity, int)
         assert -2047 <= velocity <= 2047
         if velocity < 0:
             direction = 'l'
@@ -233,39 +244,58 @@ class TMCM140(SerialDevice):
 
     def stop(self):
         """Stop the motor.
-        
+
         Note: does not stop currently running programs.
         """
         self.command('mst', 0, 0, 0)
-        
+
+    def reset(self):
+        """
+        Reset to factory defaults
+        """
+        self.command('restore_factory_settings', 0, 0, 0)
+        # print('tmcm.py: RESET')
+
+    def get_firmware(self):
+        """
+        Get the firmware get_firmware_version
+        Some commands work differently with different firmware, so we have
+        to pay attention (newer Thorlabs motors use the TMCM1140 controller;
+        older ones use the TMCM-110-42 controller).
+        New firmware will be "1140V135"
+        Old firmware will be "140V4.45"
+        """
+        self.command('get_firmware_version', 0, 0, 0)
+        self.stop()
+
     def move(self, pos, relative=False, velocity=None):
         """Rotate until reaching *pos*.
-        
+
         pos: The target position
-        relative: If True, then *pos* is interpreted as relative to the current 
+        relative: If True, then *pos* is interpreted as relative to the current
                   position
-        velocity: Optionally set the target velocity before moving 
+        velocity: Optionally set the target velocity before moving
         """
         assert isinstance(pos, int)
         assert -2**32 <= pos < 2**32
         if velocity is not None:
-            assert isinstance(velocity, int) 
+            assert isinstance(velocity, int)
             assert 0 <= velocity < 2048
             raise NotImplementedError()
-        
+
         type = 1 if relative else 0
         self.command('mvp', type, 0, pos)
-        
+
     def get_param(self, param):
         pnum = abs(PARAMETERS[param])
         return self.command('gap', pnum, 0, 0)[4]
-        
+
     def __getitem__(self, param):
         return self.get_param(param)
-        
+
     def set_param(self, param, value, **kwds):
         """Set a parameter value.
-        
+
         If valus is 'accum' then the parameter is set from the accumulator
         register.
         """
@@ -279,23 +309,34 @@ class TMCM140(SerialDevice):
         if value == 'accum':
             self.command('aap', pnum, 0, 0)
         else:
+            if debugFlag:
+                print('\nset_param [%s] value: %d' % (param, value))
             self.command('sap', pnum, 0, value)
 
     @threadsafe
     def set_params(self, **kwds):
         """Set multiple parameters.
-        
+
         The driver is thread-locked until all parameters are set.
         """
         for param, value in kwds.items():
+            # if self.firmware_version.startswith('1140V'):  # skip values that are not in new version
+            #     if param in ['stall_detection_threshold', 'fullstep_threshold', 'mixed_decay_threshold']:
+            #         continue
+            #     if param == 'step_interpolation_enable' and value == 1:
+            #         value = 1
+            #         self.set_param('microstep_resolution', 4)  # first, then enable interpolation
+            # elif self.firmware_version.startswith('140V4'): # skip values that are not in the old version
+            #     if param in ['stallGuard2_threshold',  'step_interpolation_enable']:
+            #         continue
             self.set_param(param, value)
-        
+
     def __setitem__(self, param, value):
         return self.set_param(param, value)
 
     def get_global(self, param):
         """Return a global parameter or copy global to accumulator.
-        
+
         Use param='gpX' to refer to general-purpose variables.
         """
         if param.startswith('gp'):
@@ -305,7 +346,7 @@ class TMCM140(SerialDevice):
             pnum = abs(GLOBAL_PARAMETERS[param])
             bank = 0
         return self.command('ggp', pnum, bank, 0)[4]
-        
+
     def set_global(self, param, value):
         if param.startswith('gp'):
             pnum = int(param[2:])
@@ -315,46 +356,46 @@ class TMCM140(SerialDevice):
             bank = 0
         if pnum < 0:
             raise TypeError("Parameter %s is read-only." % param)
-        
+
         if value == 'accum':
             self.command('agp', pnum, bank, 0)
         else:
             self.command('sgp', pnum, bank, value)
-            
+
     def stop_program(self):
         """Stop the currently running TMCL program.
         """
         self.command('stop_application', 0, 0, 0)
 
     def start_program(self, address=None):
-        """Start running TMCL program code from the given address (in bytes?), 
+        """Start running TMCL program code from the given address (in bytes?),
         or from the current address if None.
         """
         if address is None:
             self.command('run_application', 0, 0, 0)
         else:
             self.command('run_application', 1, 0, address)
-        
+
     def start_download(self, address=0):
         """Begin loading TMCL commands into EEPROM .
         """
         self.command('start_download', 0, 0, address)
-        
+
     def stop_download(self):
         """Finish loading TMCL commands into EEPROM.
         """
         self.command('stop_download', 0, 0, 0)
-        
+
     def write_program(self, address=0):
         return ProgramManager(self, address)
-        
+
     def program_status(self):
         """Return current program status:
-        
+
         0=stop, 1=run, 2=step, 3=reset
         """
         return self.command('get_application_status', 0, 0, 0)[4]
-        
+
     def calc(self, op, value):
         opnum = OPERATORS[op]
         if opnum > 9:
@@ -367,15 +408,15 @@ class TMCM140(SerialDevice):
 
     def comp(self, val):
         self.command('comp', 0, 0, val)
-        
+
     def jump(self, *args):
         """Program jump to *addr* (instruction index).
-        
-        Usage: 
-        
+
+        Usage:
+
             jump(address)
             jump(cond, address)
-            
+
         Where *cond* may be ze, nz, eq, ne, gt, ge, lt, le, eto, eal, or esd.
         """
         if len(args) == 1:
@@ -384,77 +425,115 @@ class TMCM140(SerialDevice):
         else:
             cnum = CONDITIONS[args[0]]
             self.command('jc', cnum, 0, args[1])
-        
-    def _send_cmd(self, cmd, type, motor, value):
+
+    def _send_cmd(self, cmd, cmdtype, motor, value):
         """Send a command to the controller.
         """
         if self._waiting_for_reply:
             raise Exception("Cannot send command; previous reply has not been "
                             "received yet.")
         cmd_num = COMMANDS[cmd]
-        assert isinstance(type, int)
+        assert isinstance(cmdtype, int)
         assert isinstance(motor, int)
-        
+
         # Try packing the value first as unsigned, then signed. (the overlapping
-        # integer ranges have identical bit representation, so there is no 
-        # ambiguity)
+        # integer ranges have identical bit representation, so there is no
         try:
-            cmd = struct.pack('>BBBBI', self.module_addr, cmd_num, type, motor, value)
+            cmd = struct.pack('>BBBBi', self.module_addr, cmd_num, cmdtype, motor, value)
+            if debugFlag:
+                print('    cmds (i) %d, type=%d, value=%d' % (cmd_num, cmdtype, value), end='')
         except struct.error:
-            cmd = struct.pack('>BBBBi', self.module_addr, cmd_num, type, motor, value)
-            
+            cmd = struct.pack('>BBBBI', self.module_addr, cmd_num, cmdtype, motor, value)
+            if debugFlag:
+                print('    cmds (I) %d, type=%d, value=%d' % (cmd_num, cmdtype, value), end='')
+
+        if cmd_num in [205]:
+            cmd = struct.pack('>BBBBi', self.module_addr, cmd_num, cmdtype, motor, value)
+
         chksum = sum(bytearray(cmd)) % 256
         out = cmd + struct.pack('B', chksum)
+        if debugFlag:
+            print('   len out: ', len(out))
+            self.print_cmd(out)
         self.write(out)
+        self.lastcmd = out
         self._waiting_for_reply = True
-        
+
+    def print_cmd(self, out):
+        SAP = ['Address', 'Inst No.', 'Type', 'Motor',
+           'Byte3', 'Byte2', 'Byte1', 'Byte0', 'Checksum']
+        print('Command: ', )
+        s1 = ' '
+        s2 = ' '
+        for i, name in enumerate(SAP):
+                s1 += '{:^10s}'.format(name)
+                s2 += '{:^10s}'.format(str(ord(out[i])))
+        print(s1)
+        print(s2)
+
     def _get_reply(self):
         """Read and parse a reply from the controller.
-        
         Raise an exception if an error was reported.
         """
         if not self._waiting_for_reply:
             raise Exception("No reply expected.")
-        
+        nread = 9
         try:
-            d = self.read(9)
+            d = self.read(nread)
         finally:
             self._waiting_for_reply = False
         d2 = self.readAll()
         if len(d2) > 0:
             raise Exception("Error: extra data while reading reply.")
-        
-        parts = struct.unpack('>BBBBiB', d)
+
+        parts = struct.unpack('>BBBBiB', d) # big-endian, unsigned char (B), int(i)
         reply_addr, module_addr, status, cmd_num, value, chksum = parts
-        
+
+        if ord(self.lastcmd[1]) == 136:
+            ver = d[1:]
+            print('MFC1 Firmware Version: ', ver)
+            self.firmware_version = ver
+            return None
+
         if chksum != sum(bytearray(d[:-1])) % 256:
             raise Exception("Invalid checksum reading from controller.")
-        
+
         if status < 100:
-            raise TMCMError(status)        
-        
+            print(' Status < 100 (likely error): ', status)
+            titles = ['reply_addr', 'module_addr', 'status', 'cmd_num', 'value', 'chksum']
+            data = [reply_addr, module_addr, status, cmd_num, value, chksum]
+            s1 = '    '
+            s2 = '    '
+            for i, t in enumerate(titles):
+                s1 += '{:^12s}'.format(t)
+                s2 += '{:^12d}'.format(data[i])
+            print(s1)
+            print(s2)
+            # x = self.get_param(cmd)
+            # print('parameters from controller for this command: ', x)
+            raise TMCMError(status)
+
         return parts
-   
+
 
 class ProgramManager(object):
     def __init__(self, mcm, start=0):
         self.mcm = mcm
         self.start = start
         self.count = 0
-        
+
     def __enter__(self):
         self.mcm.lock.acquire()
         self.mcm.start_download(self.start)
         return self
-        
+
     def __exit__(self, *args):
         # insert an extra stop to ensure the program can't leak
         # into previously written code.
         self.mcm.command('stop', 0, 0, 0)
         self.mcm.stop_download()
         self.mcm.lock.release()
-        
+
     def __getattr__(self, name):
         self.count += 1
         return getattr(self.mcm, name)
-

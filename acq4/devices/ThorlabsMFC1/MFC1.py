@@ -5,6 +5,8 @@ from acq4.drivers.ThorlabsMFC1 import MFC1 as MFC1_Driver
 from acq4.util.Mutex import Mutex
 from acq4.util.Thread import Thread
 from acq4.pyqtgraph import debug
+import numpy as np
+
 import time
 
 class ChangeNotifier(QtCore.QObject):
@@ -19,8 +21,10 @@ class ThorlabsMFC1(Stage):
         self.port = config.pop('port')
         self.scale = config.pop('scale', (1, 1, 1))
         params = config.pop('motorParams', {})
+        # print('params: ', params)
         self.dev = MFC1_Driver(self.port, **params)
         man.sigAbortAll.connect(self.dev.stop)
+        self.lastmove = 0.
 
         # Optionally use ROE-200 z axis to control focus
         roe = config.pop('roe', None)
@@ -29,11 +33,11 @@ class ThorlabsMFC1(Stage):
         if roe is not None:
             dev = man.getDevice(roe)
             self._roeDev = dev
-            # need to connect to internal change signal because 
+            # need to connect to internal change signal because
             # the public signal should already have z-axis information removed.
             dev._notifier.sigPosChanged.connect(self._roeChanged)
 
-        self._lastPos = None
+        self._lastPos = 0.
 
         Stage.__init__(self, man, config, name)
 
@@ -45,7 +49,7 @@ class ThorlabsMFC1(Stage):
 
         self._monitor = MonitorThread(self)
         self._monitor.start()
-        
+
     def capabilities(self):
         # device only reads/writes z-axis
         return {
@@ -56,13 +60,23 @@ class ThorlabsMFC1(Stage):
 
     def mfcPosChanged(self, pos, oldpos):
         self.posChanged(pos)
+        print('pos changed: ', pos)
 
     def _getPosition(self):
+        # print(self.dev.position()* self.scale[2])
+        # print('getpos in MFc1', self.lastmove)
         pos = self.dev.position() * self.scale[2]
-        if pos != self._lastPos:
+        # print('                    ', pos, self._lastPos)
+        # print(pos, self._lastPos)
+        if np.fabs(pos - self._lastPos) > 2e-7:  # 200 nm minimum?
+            self.lastmove = time.time()
             oldpos = self._lastPos
             self._lastPos = pos
             self.posChanged([0, 0, pos])
+        if (time.time() - self.lastmove) > 1 :
+            self.stop()
+
+
         return [0, 0, pos]
 
     def _move(self, abs, rel, speed, linear):
@@ -90,9 +104,12 @@ class ThorlabsMFC1(Stage):
                 self._roeEnabled = True
             return
         dz = pos[2] - oldpos[2]
-        if dz == 0:
+        # print('dz: ', dz)
+        if abs(dz) < 1e-9:
             return
         target = self.dev.target_position() * self.scale[2] + dz
+        # print('target: ', target)
+        self.dev.set_holding(False)
         self.moveTo([0, 0, target], 'fast')
 
     def deviceInterface(self, win):
@@ -119,7 +136,7 @@ class MonitorThread(Thread):
         self.dev = dev
         self.lock = Mutex(recursive=True)
         self.stopped = False
-        self.interval = 0.3
+        self.interval = 0.1
         Thread.__init__(self)
 
     def start(self):
@@ -135,7 +152,7 @@ class MonitorThread(Thread):
             self.interval = i
 
     def run(self):
-        minInterval = 100e-3
+        minInterval = 0.1
         interval = minInterval
         lastPos = None
         while True:
@@ -151,7 +168,6 @@ class MonitorThread(Thread):
                 else:
                     interval = min(maxInterval, interval*2)
                 lastPos = pos
-
                 time.sleep(interval)
             except:
                 debug.printExc('Error in MFC1 monitor thread:')
@@ -195,7 +211,7 @@ class MFC1MoveFuture(MoveFuture):
         return self._getStatus()['status'] in ('interrupted', 'failed')
 
     def percentDone(self):
-        """Return an estimate of the percent of move completed based on the 
+        """Return an estimate of the percent of move completed based on the
         device's speed table.
         """
         if self.isDone():
@@ -226,6 +242,3 @@ class MFC1MoveFuture(MoveFuture):
         if self._moveStatus['status'] in (None, 'moving'):
             self._moveStatus = self.dev.dev.move_status(self.id)
         return self._moveStatus
-        
-
-
