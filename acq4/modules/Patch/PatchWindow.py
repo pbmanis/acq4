@@ -643,6 +643,7 @@ class PatchThread(Thread):
         if params['mode'] == 'vc':
             #global iBase, iPulse, iPulseEnd
             iBase = base['Channel': 'primary'].asarray()
+            iSecondary = base['Channel': 'secondary'].asarray()
             iPulse = pulse['Channel': 'primary']
             iPulseEnd = pulseEnd['Channel': 'primary'] 
             vBase = base['Channel': 'command'].asarray()
@@ -685,6 +686,7 @@ class PatchThread(Thread):
             
         if params['mode'] == 'ic':
             iBase = base['Channel': 'command'].asarray()
+            iSecondary = base['Channel': 'secondary'].asarray()
             iPulse = pulse['Channel': 'command'] 
             vBase = base['Channel': 'primary'].asarray()
             vPulse = pulse['Channel': 'primary'] 
@@ -713,6 +715,9 @@ class PatchThread(Thread):
         rmps = vBase.std()
         rmc = iBase.mean()
         rmcs = iBase.std()
+        isec = iSecondary.mean()
+        isecs = iSecondary.std()
+
         #print rmp, rmc
         
         ## Compute values for fit trace to be plotted over raw data
@@ -736,8 +741,12 @@ class PatchThread(Thread):
             'inputResistance': iRes, 
             'accessResistance': aRes,
             'capacitance': cap,
-            'restingPotential': rmp, 'restingPotentialStd': rmps,
-            'restingCurrent': rmc, 'restingCurrentStd': rmcs,
+            'restingPotential': rmp,
+            'restingPotentialStd': rmps,
+            'restingCurrent': rmc,
+            'restingCurrentStd': rmcs,
+            'secondary': isec,
+            'secondaryStd': isecs,
             'fitError': err,
             'fitTrace': fitTrace
         }

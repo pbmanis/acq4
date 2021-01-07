@@ -284,7 +284,18 @@ class MultiClamp(Device):
 
 class MultiClampTask(DeviceTask):
     
-    recordParams = ['Holding', 'HoldingEnable', 'PipetteOffset', 'FastCompCap', 'SlowCompCap', 'FastCompTau', 'SlowCompTau', 'NeutralizationEnable', 'NeutralizationCap', 'WholeCellCompEnable', 'WholeCellCompCap', 'WholeCellCompResist', 'RsCompEnable', 'RsCompBandwidth', 'RsCompCorrection', 'PrimarySignalLPF', 'PrimarySignalHPF', 'OutputZeroEnable', 'OutputZeroAmplitude', 'LeakSubEnable', 'LeakSubResist', 'BridgeBalEnable', 'BridgeBalResist']
+    recordParams = ['Holding', 'HoldingEnable', 
+                    'PipetteOffset', 'FastCompCap', 
+                    'SlowCompCap', 'FastCompTau', 'SlowCompTau',
+                    'NeutralizationEnable', 'NeutralizationCap', 
+                    'WholeCellCompEnable', 'WholeCellCompCap',
+                    'WholeCellCompResist', 'RsCompEnable', 
+                    'RsCompBandwidth', 'RsCompCorrection', 
+                    'PrimarySignalLPF', 'PrimarySignalHPF', 
+                    'OutputZeroEnable', 'OutputZeroAmplitude', 
+                    'LeakSubEnable', 'LeakSubResist', 
+                    'BridgeBalEnable', 'BridgeBalResist',
+                    'SlowCurrentInjEnable', 'SlowCurrentInjLevel', 'SlowCurrentInjSettlingTime']
     
     def __init__(self, dev, cmd, parentTask):
         DeviceTask.__init__(self, dev, cmd, parentTask)

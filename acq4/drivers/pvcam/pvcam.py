@@ -335,9 +335,9 @@ class _CameraClass:
             self.isOpen = False
             
     def call(self, fn, *args, **kargs):
-        # ret = LIB('functions', fn)(*args, **kargs)
-        # return ret
-        return self.pvcam.call(fn, *args, **kargs)
+        ret = LIB('functions', fn)(*args, **kargs)
+        return ret
+        # return self.pvcam.call(fn, *args, **kargs)
 
     def initCam(self, params=None):
         buf = create_string_buffer('\0' * LIB.CCD_NAME_LEN)

@@ -14,7 +14,7 @@ def __reload__(old):
 
 
 class ChangeNotifier(QtCore.QObject):
-    """Used to send raw (unscaled) stage position updates to other devices. 
+    """Used to send raw (unscaled) stage position updates to other devices.
     In particular, focus motors may use this to hijack unused ROE axes.
     """
     sigPosChanged = QtCore.Signal(object, object, object)
@@ -23,7 +23,7 @@ class ChangeNotifier(QtCore.QObject):
 class SutterMPC200(Stage):
     """
     This Device class represents a single drive of a Sutter MPC-200 stage/manipulator driver.
-    Config options are: 
+    Config options are:
 
         port: <serial port>  # eg. 'COM1' or '/dev/ttyACM0'
         drive: <drive>       # int 1-4
@@ -54,7 +54,7 @@ class SutterMPC200(Stage):
         self._pos_cache[self.drive-1] = None
         self.getPosition(refresh=True)
 
-        ## May have multiple SutterMPC200 instances (one per drive), but 
+        ## May have multiple SutterMPC200 instances (one per drive), but
         ## we only need one monitor.
         if SutterMPC200._monitor is None:
             SutterMPC200._monitor = MonitorThread(self)
@@ -78,8 +78,8 @@ class SutterMPC200(Stage):
 
     @classmethod
     def _checkPositionChange(cls, drive=None, pos=None):
-        ## Anyone may call this function. 
-        ## If any drive has changed position, SutterMPC200_notifier will emit 
+        ## Anyone may call this function.
+        ## If any drive has changed position, SutterMPC200_notifier will emit
         ## a signal, and the correct devices will be notified.
         if drive is None:
             for dev in cls._drives:
@@ -133,7 +133,7 @@ class SutterMPC200(Stage):
                 speed = 'fast'
         else:
             speed = self._getClosestSpeed(speed)
-        
+
         self._lastMove = MPC200MoveFuture(self, pos, speed)
         return self._lastMove
 
@@ -159,11 +159,11 @@ class MonitorThread(Thread):
         self.lock = Mutex(recursive=True)
         self.stopped = False
         self.interval = 0.3
-        
+
         self.nextMoveId = 0
         self.moveRequest = None
         self._moveStatus = {}
-        
+
         Thread.__init__(self)
 
     def start(self):
@@ -177,9 +177,9 @@ class MonitorThread(Thread):
     def setInterval(self, i):
         with self.lock:
             self.interval = i
-            
+
     def move(self, drive, pos, speed):
-        """Instruct a drive to move. 
+        """Instruct a drive to move.
 
         Return an ID that can be used to check on the status of the move until it is complete.
         """
@@ -190,7 +190,7 @@ class MonitorThread(Thread):
             self.nextMoveId += 1
             self.moveRequest = (id, drive, pos, speed)
             self._moveStatus[id] = (None, None)
-            
+
         return id
 
     def moveStatus(self, id):
@@ -213,7 +213,7 @@ class MonitorThread(Thread):
     def run(self):
         minInterval = 100e-3
         interval = minInterval
-        
+
         while True:
             try:
                 with self.lock:
@@ -256,14 +256,14 @@ class MonitorThread(Thread):
             except:
                 debug.printExc('Error in MPC200 monitor thread:')
                 time.sleep(maxInterval)
-                
+
 
 class MPC200MoveFuture(MoveFuture):
     """Provides access to a move-in-progress on an MPC200 drive.
     """
     def __init__(self, dev, pos, speed):
         MoveFuture.__init__(self, dev, pos, speed)
-        
+
         # because of MPC200 idiosyncracies, we must coordinate with the monitor
         # thread to do a move.
         self._expectedDuration = dev.dev.expectedMoveDuration(dev.drive, pos, speed)
@@ -283,14 +283,14 @@ class MPC200MoveFuture(MoveFuture):
             time.sleep(5e-3)
         if isinstance(status, Exception):
             raise status
-        
+
     def wasInterrupted(self):
         """Return True if the move was interrupted before completing.
         """
         return isinstance(self._getStatus()[1], Exception)
 
     def percentDone(self):
-        """Return an estimate of the percent of move completed based on the 
+        """Return an estimate of the percent of move completed based on the
         device's speed table.
         """
         if self.isDone():
@@ -299,7 +299,7 @@ class MPC200MoveFuture(MoveFuture):
         if self._expectedDuration == 0:
             return 99
         return max(min(100 * dt / self._expectedDuration, 99), 0)
-    
+
     def isDone(self):
         """Return True if the move is complete.
         """
@@ -310,4 +310,3 @@ class MPC200MoveFuture(MoveFuture):
         if self._moveStatus[1] in (None, False):
             self._moveStatus = SutterMPC200._monitor.moveStatus(self._id)
         return self._moveStatus
-        

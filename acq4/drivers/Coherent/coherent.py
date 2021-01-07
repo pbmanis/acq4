@@ -12,7 +12,10 @@ class Coherent(object):
         """
         self.port = port
         self.baud = baud
-        self.sp = serial.Serial(int(self.port), baudrate=self.baud, bytesize=serial.EIGHTBITS)
+        print(self.port, isinstance(self.port, str))
+        print(self.baud)
+        p = "COM%d" % int(self.port)
+        self.sp = serial.Serial(p, baudrate=self.baud, bytesize=serial.EIGHTBITS)
         time.sleep(0.3)  ## Give devices a moment to chill after opening the serial line.
         self.write("PROMPT=0\r\n")
         self.readPacket()
