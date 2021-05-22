@@ -103,6 +103,7 @@ class Scientifica(SerialDevice):
         if name is not None:
             if isinstance(name, str):
                 name = name.encode()
+            print('name, port: ', name, port)
             assert port is None, "May not specify both name and port."
             if self.availableDevices is None:
                 self.enumerateDevices()

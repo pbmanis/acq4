@@ -29,7 +29,6 @@ class Scientifica(Stage):
         # can specify 
         port = config.pop('port', None)
         name = config.pop('name', None)
-
         # if user has not provided scale values, we can make a guess
         config.setdefault('scale', (1e-6, 1e-6, 1e-6))
 
@@ -49,8 +48,9 @@ class Scientifica(Stage):
 
         self._lastMove = None
         man.sigAbortAll.connect(self.abort)
-
-        Stage.__init__(self, man, config, name)
+        fname = config.pop('configfile', None)
+        print('secientifici with name: ', fname)
+        Stage.__init__(self, man, config, fname)
 
         # clear cached position for this device and re-read to generate an initial position update
         self._lastPos = None
