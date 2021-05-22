@@ -378,7 +378,7 @@ class TMCM140(SerialDevice):
             cnum = CONDITIONS[args[0]]
             self.command('jc', cnum, 0, args[1])
         
-    def _send_cmd(self, cmd, type, motor, value):
+    def _send_cmd(self, cmd, cmd_type, motor, value):
         """Send a command to the controller.
         """
         if self._waiting_for_reply:
@@ -386,16 +386,16 @@ class TMCM140(SerialDevice):
                             "received yet.")
 
         cmd_num = COMMANDS[cmd]
-        assert isinstance(type, int)
+        assert isinstance(cmd_type, int)
         assert isinstance(motor, int)
-        
+        value = int(value) # force into an integer - may get passed as a float
         # Try packing the value first as unsigned, then signed. (the overlapping
         # integer ranges have identical bit representation, so there is no 
         # ambiguity)
         try:
-            cmd = struct.pack('>BBBBI', self.module_addr, cmd_num, type, motor, value)
+            cmd = struct.pack('>BBBBI', self.module_addr, cmd_num, cmd_type, motor, value)
         except struct.error:
-            cmd = struct.pack('>BBBBi', self.module_addr, cmd_num, type, motor, value)
+            cmd = struct.pack('>BBBBi', self.module_addr, cmd_num, cmd_type, motor, value)
             
         chksum = sum(bytearray(cmd)) % 256
         out = cmd + struct.pack('B', chksum)

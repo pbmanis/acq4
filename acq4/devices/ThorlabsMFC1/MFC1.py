@@ -169,11 +169,11 @@ class MFC1StageInterface(StageInterface):
             self.connectRoeBtn = Qt.QPushButton('Enable ROE')
             self.connectRoeBtn.setCheckable(True)
             self.connectRoeBtn.setChecked(True)
-            self.layout.addWidget(self.connectRoeBtn, self.nextRow, 0, 1, 2)
+            self.layout.addWidget(self.connectRoeBtn, self.layout.rowCount(), 0, 1, 2)
             self.connectRoeBtn.toggled.connect(self.connectRoeToggled)
 
             self.setZeroBtn = Qt.QPushButton('Set Zero')
-            self.layout.addWidget(self.setZeroBtn, self.nextRow, 2, 1, 1)
+            self.layout.addWidget(self.setZeroBtn, self.layout.rowCount(), 2, 1, 1)
             self.setZeroBtn.clicked.connect(self.setZeroClicked)
 
     def setZeroClicked(self):
