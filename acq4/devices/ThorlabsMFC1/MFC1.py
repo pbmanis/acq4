@@ -46,6 +46,9 @@ class ThorlabsMFC1(Stage):
 
         self._monitor = MonitorThread(self)
         self._monitor.start()
+
+    def axes(self):
+        return('x', 'y', 'z')  # must define all 3, even though only one is used
         
     def capabilities(self):
         # device only reads/writes z-axis
