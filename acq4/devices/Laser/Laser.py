@@ -461,7 +461,7 @@ class Laser(DAQGeneric, OptomechDevice):
             waveform = np.zeros(nPts, dtype=np.byte)
             #for i in range(reps):
                 #waveform[(i+1)/10.*rate:((i+1)/10.+sTime+mTime)*rate] = 1 ## divide i+1 by 10 to increment by hundreds of milliseconds
-            waveform[0.1*rate:-2] = 1
+            waveform[int(0.1*rate):-2] = 1
             
             measureMode = self.measurementMode()
             cmd = {
@@ -484,8 +484,8 @@ class Laser(DAQGeneric, OptomechDevice):
             powerIndTrace = result[powerInd[0]]
             if powerIndTrace is None:
                 raise Exception("No data returned from power indicator")
-            laserOn = powerIndTrace[0][0.1*rate:-2].asarray()
-            laserOff = powerIndTrace[0][:0.1*rate].asarray()
+            laserOn = powerIndTrace[0][int(0.1*rate):-2].asarray()
+            laserOff = powerIndTrace[0][:int(0.1*rate)].asarray()
 
             t, prob = stats.ttest_ind(laserOn, laserOff)
             if prob < 0.01: ### if powerOn is statistically different from powerOff
@@ -610,11 +610,11 @@ class Laser(DAQGeneric, OptomechDevice):
             delayPts = int(delay*rate) 
             a = np.argwhere(shutterCmd[1:]-shutterCmd[:-1] == 1)+1
             for i in a:
-                start = i-delayPts
+                start = int(i-delayPts)
                 if start < 0:
                     print(start, delayPts, i)
                     raise HelpfulException("Shutter takes %g seconds to open. Power pulse cannot be started before then." %delay)
-                shutterCmd[start:i+1] = 1
+                shutterCmd[start:int(i)+1] = 1
             daqCmd['shutter'] = shutterCmd
             
         return daqCmd
