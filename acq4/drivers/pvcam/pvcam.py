@@ -62,8 +62,8 @@ cameraDefaults = {
         ('SPDTAB_INDEX', 0),  ## Fastest option for QM512
         ('CLEAR_MODE', LIB.CLEAR_PRE_SEQUENCE),  ## Overlapping mode for QuantEM cameras
         ('GAIN_INDEX', 2),
-        ('binningX', 1, range(1,9)),
-        ('binningY', 1, range(1,9)),
+        ('binningX', 1, list(range(1,9))),
+        ('binningY', 1, list(range(1,9))),
     ],
     
     b'Quantix57': [
