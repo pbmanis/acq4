@@ -125,8 +125,11 @@ class LaserTaskGui(DAQGenericTaskGui):
         
     def restoreState(self, state):
         """Restore the state of the widget from a dictionary previously generated using saveState"""
-        return DAQGenericTaskGui.restoreState(self, state['daqState'])
-    
+        if 'daqState' in list(state.keys()):
+            return DAQGenericTaskGui.restoreState(self, state['daqState'])
+        else:
+            return None
+
     def describe(self, params=None):
         state = self.saveState()
         ps = state['daqState']['channels']['power']
