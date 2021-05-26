@@ -32,6 +32,7 @@ class PatchWindow(Qt.QMainWindow):
     
     def __init__(self, dm, config):
         clampName = config['clampDev']
+        print("Clamp Name: ", clampName)
         Qt.QMainWindow.__init__(self)
         self.setWindowTitle(clampName)
         self.startTime = None
@@ -424,7 +425,11 @@ class PatchThread(Thread):
             with self.lock:
                 self.stopThread = False
                 clamp = self.manager.getDevice(self.clampName)
-                daqName = clamp.getDAQName()
+                try:
+                    daqName = clamp.getDAQName()
+                except:
+                    channel = list(clamp.listChannels().keys())[0]
+                    daqName = clamp.getDAQName(channel)
                 clampName = self.clampName
                 self.paramsUpdated = True
             
