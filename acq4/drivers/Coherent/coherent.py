@@ -13,14 +13,25 @@ class Coherent(object):
         """
         self.port = port
         self.baud = baud
-        self.sp = serial.Serial(int(self.port), baudrate=self.baud, bytesize=serial.EIGHTBITS)
+        self.open_chameleon()
+        # self.sp = serial.Serial(self.port, baudrate=self.baud, bytesize=serial.EIGHTBITS)
         time.sleep(0.3)  ## Give devices a moment to chill after opening the serial line.
+
+
+    def open_chameleon(self):
+        self.sp = serial.Serial(self.port, self.baud, timeout=2)
+        self.sp.write(b'E=0\r\n')  # turn off echo
+        self.sp.readline()  # get the incoming line
         self.write("PROMPT=0\r\n")
         self.readPacket()
         self.write("ECHO=0\r\n")
         self.readPacket()
         self.write("HEARTBEAT=0\r\n")
         self.readPacket()
+
+    def close_chameleon(self):
+        self.sp.close()
+        self.sp = None
 
     def getPower(self):
         v = self['UF']
@@ -118,22 +129,31 @@ class Coherent(object):
         time.sleep(0.1)
         d += self.read()
         if len(d) > 0:
-            print("Sutter MP285: Warning: tossed data ", repr(d))
+            print("Chameleon Laser: Warning: tossed data ", repr(d))
         return d
     
     def read(self):
         ## read all bytes waiting in buffer; non-blocking.
-        n = self.sp.inWaiting()
-        if n > 0:
-            return self.sp.read(n)
-        return ''
-    
+        # n = self.sp.inWaiting()
+        # if n > 0:
+        data = str(self.sp.readline())
+        return data
+
+    # def read(self):
+    #     ## read all bytes waiting in buffer; non-blocking.
+    #     # n = self.chameleon_serial.inWaiting()
+    #     # if n > 0:
+    #     data = str(self.sp.readline())
+    #     # print("r: ", data)
+    #     return data
+
+
     def write(self, data):
         self.read()  ## always empty buffer before sending command
-        self.sp.write(data)
+        self.sp.write(bytes(data, 'utf-8'))
         
     def close(self):
-        self.sp.close()
+        self.sp.close_chameleon()
 
     #def raiseError(self, errVals):
         ### errVals should be list of error codes
@@ -153,18 +173,18 @@ class Coherent(object):
         ## If expect is >0, then try to get a packet of that length, ignoring CRLF within that data
         ## if block is False, then return immediately if no data is available.
         start = time.time()
-        s = ''
+        s = b''
         errors = []
         packets = []
         while True:
-            s += self.read()
+            s += self.sp.read()
             #print "read:", repr(s)
             if not block and len(s) == 0:
                 return
             
             while len(s) > 0:  ## pull packets out of s one at a time
-                if '\r\n' in s[expect:]:
-                    i = expect + s[expect:].index('\r\n')
+                if b'\r\n' in s[expect:]:
+                    i = expect + s[expect:].index(b'\r\n')
                     packets.append(s[:i])
                     expect = 0
                     s = s[i+2:]
@@ -173,7 +193,7 @@ class Coherent(object):
                 
             if len(s) == 0:
                 if len(packets) == 1:
-                    if 'Error' in packets[0]:
+                    if b'Error' in packets[0]:
                         raise Exception(packets[0])
                     return packets[0]   ## success
                 if len(packets) > 1:

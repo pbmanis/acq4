@@ -13,7 +13,9 @@ import time
 class CoherentLaser(Laser):
 
     def __init__(self, dm, config, name):
-        self.port = config['port']-1  ## windows com ports start at COM1, pyserial ports start at 0
+        if not isinstance(config['port'], str):
+            raise ValueError("Coherent port must be defined in devices.cfg as 'COMn', not integer")
+        self.port = config['port']  ## windows com ports start at COM1, pyserial ports start at 0
         self.baud = config.get('baud', 19200)
         self.driver = Coherent(self.port, self.baud)
         self.driverLock = Mutex(Qt.QMutex.Recursive)  ## access to low level driver calls
