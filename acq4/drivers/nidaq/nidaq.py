@@ -3,6 +3,7 @@ from __future__ import print_function, division
 
 import ctypes
 from inspect import signature
+import traceback
 
 import PyDAQmx
 import numpy as np
@@ -55,8 +56,11 @@ class _NIDAQ:
 
     def call(self, func, *args):
         fn = getattr(PyDAQmx, func)
-
         sig = signature(fn)
+        # if func.startswith("Read"):
+        #     print("\nfuntion on call: ", func)
+        #     print("signature: ", sig)
+        #     print("ARGS: ", args)
 
         if "bufferSize" in sig.parameters:
             buffSize = fn(data=None, bufferSize=0, *args)
@@ -73,14 +77,25 @@ class _NIDAQ:
             ret = dataType._type_()
             if "data" in sig.parameters or "isTaskDone" in sig.parameters:
                 args += (dataType(ret),)
-            if "value" in sig.parameters and not func.startswith("Write"):
+            if "value" in sig.parameters and func.startswith("ReadAnalogScalarF64"):  # I wonder what others will need this?
+                args += (ctypes.byref(PyDAQmx.float64()),)
+            elif "value" in sig.parameters and not func.startswith("Write"):
                 args += (dataType(ret),)
+
             if "reserved" in sig.parameters and len(args) < len(sig.parameters):
                     args += (None,)
             try:
                 fn(*args)
             except:
-                print("Error drivers/nidaq/nidaq.py in setting args: args= ", args)
+                # give a lot of information for troubleshootingprint("\n\nError drivers/nidaq/nidaq.py in setting args: args= ", args)
+                print("    cfuncInfo types, ", cfuncInfo["arg_type"])
+                print("            ret: ", ret)
+                print("    args: ", args)
+                print("    sig parameters: ", sig.parameters)
+                print("    fn: ", fn)
+                print("    func: ", func, "\n")
+                traceback.print_exc()
+                traceback.print_stack(limit=9)
             return ret.value
         else:
             return fn(*args)
@@ -155,7 +170,6 @@ class _NIDAQ:
 
     def createSuperTask(self):
         from . import SuperTask
-
         return SuperTask.SuperTask(self)
 
     def interpretMode(self, mode):
