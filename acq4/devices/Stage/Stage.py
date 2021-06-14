@@ -707,7 +707,12 @@ class StageInterface(Qt.QWidget):
                 axLabel = Qt.QLabel(axisName)
                 axLabel.setMaximumWidth(15)
                 globalPosLabel = Qt.QLabel('0')
+                # make the z positionmore visible. Perhaps this should be a
+                # setting in the config file. 
+                # use a fixed font to prevent the position from bouncing around
+                globalPosLabel.setFont(Qt.QFont('Courier', 16))
                 stagePosLabel = Qt.QLabel('0')
+                # stagePosLabel.setFont(Qt.QFont('Courier', 12))
                 self.posLabels[axis] = (globalPosLabel, stagePosLabel)
                 widgets = [axLabel, globalPosLabel, stagePosLabel]
                 if cap['limits'][axis]:
@@ -754,9 +759,13 @@ class StageInterface(Qt.QWidget):
         globalPos = self.dev.globalPosition()
         stagePos = self.dev.getPosition()
         for i in self.posLabels:
-            text = pg.siFormat(globalPos[i], suffix='m', precision=5)
+            text = pg.siFormat(globalPos[i], suffix='m', precision=7)
+            # reformat to keep display from bouncing around
+            # this probably should be handled in siFormat as an option
+            zpos = text[:-2]
+            text = f"{float(zpos):>15.6f} {text[-2:]:2s}"
             self.posLabels[i][0].setText(text)
-            self.posLabels[i][1].setText(str(stagePos[i]))
+            self.posLabels[i][1].setText(f"{stagePos[i]:>15.7f}")
 
     def updateLimits(self):
         limits = self.dev.getLimits()
@@ -771,7 +780,7 @@ class StageInterface(Qt.QWidget):
                     check.setText(pfx)
                     check.setChecked(False)
                 else:
-                    check.setText(pfx + ' %s' % pg.siFormat(limit, suffix='m'))
+                    check.setText(pfx + ' %s' % pg.siFormat(limit, suffix='m', precision=6))
                     check.setChecked(True)
 
     def limitCheckClicked(self, b):
