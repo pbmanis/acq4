@@ -624,8 +624,8 @@ class _CameraClass:
         res = self.call('pl_exp_setup_seq', self.hCam, frames, 1, rgn, expMode, exp)
         #res = LIB.pl_exp_setup_seq(self.hCam, frames, 1, rgn, expMode, exp)
         ssize = res[6]
-        
-        if len(self.buf.data) != ssize:
+        bufsize = 2*numpy.prod(self.buf.data.shape)
+        if bufsize != ssize:
             raise Exception('Created wrong size buffer! (%d != %d) Error: %s' %(len(self.buf.data), ssize, self.pvcam.error()))
         self.call('pl_exp_start_seq', self.hCam, self.buf.ctypes.data)   ## Warning: this memory is not locked, may cause errors if the system starts swapping.
         #LIB.pl_exp_start_seq(self.hCam, self.buf.ctypes.data)   ## Warning: this memory is not locked, may cause errors if the system starts swapping.
