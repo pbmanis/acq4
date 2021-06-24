@@ -731,10 +731,17 @@ class SequencerThread(Thread):
     def stop(self):
         with self.lock:
             self._stop = True
+            dev = self.prot["imager"].getDevice()
+            dev.stop()
+            self.sigMessage.emit("[ stopped.. ]")
 
     def pause(self, p):
         with self.lock:
             self._paused = p
+            if self._paused:
+                self.sigMessage.emit("[ paused.. ]")
+            else:
+                self.sigMessage.emit("[ unpaused.. ]")
 
     def newFrame(self, frame):
         with self.lock:
@@ -744,7 +751,7 @@ class SequencerThread(Thread):
         try:
             self.runSequence()
         except Exception as e:
-            if e.message == "stopped":
+            if e == "stopped":
                 return
             raise
 
@@ -766,9 +773,13 @@ class SequencerThread(Thread):
             try:
                 for depthIndex in range(len(depths)):
                     # Focus motor is unreliable; ask a few times if needed.
+                    if depthIndex == 0:  # let the first iteration take time in case we are far away from requested value
+                        waittime = 2.0
+                    else:
+                        waittime = 0.3
                     for i in range(5):
                         try:
-                            self.setFocusDepth(depthIndex, depths)
+                            self.setFocusDepth(depthIndex, depths, waittime)
                             break
                         except RuntimeError:
                             if i == 4:
@@ -812,23 +823,29 @@ class SequencerThread(Thread):
 
         self.sigMessage.emit("[ running  %s  %s ]" % (itermsg, depthmsg))
 
-    def setFocusDepth(self, depthIndex, depths):
+    def setFocusDepth(self, depthIndex, depths, waittime):
         imager = self.prot["imager"].getDevice()
         depth = depths[depthIndex]
         if depth is None:
             return
 
         dz = depth - imager.getFocusDepth()
+        imager.setFocusDepth(depth)
+        niterations = 20  # going for accuracy, not speed
+        minFocusAccuracy = 0.25e-6
+        time.sleep(waittime)
+        n = 0
+        zStep = dz
+        for n in range(niterations):  # iterative positioning until we get it close
+            focusError = abs(imager.getFocusDepth() - depth)
+            if focusError < minFocusAccuracy:
+                break
+            time.sleep(waittime)
 
-        # Avoid hysteresis:
-        if depths[0] > depths[-1] and dz > 0:
-            # stack goes downward
-            imager.setFocusDepth(depth + 20e-6).wait()
-        elif depths[0] < depths[-1] and dz < 0:
-            # stack goes upward
-            imager.setFocusDepth(depth - 20e-6).wait()
-
-        imager.setFocusDepth(depth).wait()
+        if n == niterations-1:
+            raise Exception(f"Requested focus missed ({focusError * 1e6:0.2f} um error)")
+        newd = imager.getFocusDepth()
+        print(f"Final focus error: {focusError*1e6:.2f} at position:{depth*1e6:.2f} ")
 
     def holdImagerFocus(self, hold):
         """Tell the focus controller to lock or unlock.
