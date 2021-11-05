@@ -29,7 +29,20 @@ class LaserDevGui(Qt.QWidget):
             self.ui.wavelengthGroup.setVisible(False)
         else:
             for x in self.dev.config.get('namedWavelengths', {}).keys():
-                self.ui.wavelengthCombo.addItem(x)
+                wl = self.dev.config.get('namedWavelengths', {}).get(x, None)
+                if wl is not None:
+                    if len(wl) == 1:
+                        self.ui.wavelengthSpin.setValue(wl)
+                    elif len(wl) > 1:
+                        gdd = wl[1]
+                        wl = wl[0]
+                        self.ui.wavelengthSpin.setValue(wl)
+                        gddValue = self.ui.GDDSpin.setValue(gdd)
+                    else:
+                        raise ValueError(f"Bad entry in devices.cfg for wavelength, GDD value: {x:s}, {1e9*wl:.0f}nm")
+
+                combo_item = f"{x:s} ({1e9*wl:.0f}nm)"
+                self.ui.wavelengthCombo.addItem(combo_item)
             self.ui.wavelengthSpin.setOpts(bounds=self.dev.getWavelengthRange())
                 
         if not self.dev.hasPCell:

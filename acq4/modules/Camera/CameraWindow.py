@@ -611,6 +611,7 @@ class ImageSequencer(Qt.QWidget):
             "imager": self.selectedImager(),
             "zStack": self.ui.zStackGroup.isChecked(),
             "timelapse": self.ui.timelapseGroup.isChecked(),
+            "tile": self.ui.tileGroup.isChecked(),
         }
         if prot["zStack"]:
             start = self.ui.zStartSpin.value()
@@ -630,6 +631,22 @@ class ImageSequencer(Qt.QWidget):
             prot["timelapseCount"] = 1
             prot["timelapseInterval"] = 0
 
+        if prot["tile"]:  # added 7/13/2021 pbm
+            x0 = self.ui.x0Spin.value()  # upper left corner
+            y0 = self.ui.y0Spin.value()
+            x1 = self.ui.x1Spin.value()  # lower right corner
+            y1 = self.ui.y1Spin.value()
+            xstep = self.ui.xStep.value()  # x direction step
+            ystep = self.ui.yStep.value()  # y direction step
+            xy = np.array(np.meshgrid(np.arange(x0, x1, xstep), 
+                                    np.arange(y0, y1, ystep)))
+            x = xy[0].flatten()
+            y = xy[1].flatten()
+
+            prot['tileXYValues'] = (x, y)  # sequential arrays
+        else:
+            prot['tileXYValues'] = ([], [])
+        
         return prot
 
     def startClicked(self, b):
@@ -655,6 +672,7 @@ class ImageSequencer(Qt.QWidget):
             self.ui.startBtn.setText("Stop")
             self.ui.zStackGroup.setEnabled(False)
             self.ui.timelapseGroup.setEnabled(False)
+            self.ui.tileGroup.setEnabled(False)
             self.ui.deviceCombo.setEnabled(False)
             self.thread.start(prot)
         except Exception:
@@ -668,6 +686,7 @@ class ImageSequencer(Qt.QWidget):
         self.ui.startBtn.setText("Start")
         self.ui.startBtn.setChecked(False)
         self.ui.zStackGroup.setEnabled(True)
+        self.ui.tileGroup.setEnabled(True)
         self.ui.timelapseGroup.setEnabled(True)
         self.ui.deviceCombo.setEnabled(True)
         self.updateStatus()
@@ -686,8 +705,11 @@ class ImageSequencer(Qt.QWidget):
             depthmsg = "depth=0/%d" % (len(prot["zStackValues"]))
         else:
             depthmsg = ""
-
-        msg = "[ stopped  %s %s ]" % (itermsg, depthmsg)
+        if prot["tiles"]:
+            tilemsg = "tile=0/%d" % (len(prot["tileXYValues"][0]))
+        else:
+            tilemsg = ""
+        msg = "[ stopped  %s %s %s]" % (itermsg, depthmsg, tilemsg)
         self.ui.statusLabel.setText(msg)
 
     def newFrame(self, iface, frame):
@@ -759,10 +781,17 @@ class SequencerThread(Thread):
         prot = self.prot
         maxIter = prot["timelapseCount"]
         interval = prot["timelapseInterval"]
-        dev = self.prot["imager"].getDevice()
-
+        xypositions = prot['tileXYValues']
+        nTilePositions = xypositions.shape[0]*xypositions.shape[1]
+        if nTilePositions > 0 and maxIter > 0:
+            maxIter = maxIter*nTilePositions  # you probably don't want to do this, but...
+        elif nTilePositions > 0 and maxIter == 0:
+            maxIter = nTilePositions
         depths = prot["zStackValues"]
+        dev = self.prot["imager"].getDevice()
+        print("Imager device has: ", dir(dev))
         iter = 0
+        tileIndex = 0
         while True:
             start = time.time()
 
@@ -771,6 +800,10 @@ class SequencerThread(Thread):
             self.holdImagerFocus(True)
             self.openShutter(True)  # don't toggle shutter between stack frames
             try:
+                for tileIndex in range(len(xypositions[0])):  # will only execute if tiles are set
+                    stage.moveTo([xypositions[0][tileIndex], xypositions[1][tileIndex]],
+                          speed=mp285speed, fine = True, block=True) # move and wait until complete.
+
                 for depthIndex in range(len(depths)):
                     # Focus motor is unreliable; ask a few times if needed.
                     if depthIndex == 0:  # let the first iteration take time in case we are far away from requested value
@@ -790,9 +823,9 @@ class SequencerThread(Thread):
                                 )
 
                     frame = self.getFrame()
-                    self.recordFrame(frame, iter, depthIndex)
+                    self.recordFrame(frame, iter, depthIndex, tileIndex)
 
-                    self.sendStatusMessage(iter, maxIter, depthIndex, depths)
+                    self.sendStatusMessage(iter, maxIter, depthIndex, depths, tileIndex, tiles)
 
                     # check for stop / pause
                     self.sleep(until=0)
@@ -809,7 +842,7 @@ class SequencerThread(Thread):
 
             self.sleep(until=start + interval)
 
-    def sendStatusMessage(self, iter, maxIter, depthIndex, depths):
+    def sendStatusMessage(self, iter, maxIter, depthIndex, depths, tileIndex, tiles):
         if maxIter == 0:
             itermsg = "iter=%d" % (iter + 1)
         else:
@@ -820,8 +853,15 @@ class SequencerThread(Thread):
         else:
             depthstr = pg.siFormat(depths[depthIndex], suffix="m")
             depthmsg = "depth=%s %d/%d" % (depthstr, depthIndex + 1, len(depths))
+        if tiles[0] is None:
+            tilemsg = ""
+        else:
+            tilestrx = pg.siFormat(tiles[tileIndex][0], suffix="m")
+            tilestry = pg.siFormat(tiles[tileIndex][1], suffix="m")
+            ntiles = len(tilestrx)*len(tilestry)
+            tilemsg = "pos=%s, %s %d/%d" % (tilestrx, tilestry, tileindex+1, ntiles)
 
-        self.sigMessage.emit("[ running  %s  %s ]" % (itermsg, depthmsg))
+        self.sigMessage.emit("[ running  %s  %s  %s]" % (itermsg, depthmsg, tilemsg))
 
     def setFocusDepth(self, depthIndex, depths, waittime):
         imager = self.prot["imager"].getDevice()
@@ -856,6 +896,11 @@ class SequencerThread(Thread):
             raise Exception("Device %s is not connected to a focus controller." % idev)
         if hasattr(fdev, "setHolding"):
             fdev.setHolding(hold)
+
+    def setTilePosition(self, x, y):
+        """
+        Move the stage to the requested tile position
+        """
 
     def openShutter(self, open):
         idev = self.prot["imager"].getDevice()
