@@ -190,9 +190,9 @@ class ScannerDeviceGui(Qt.QWidget):
                     finished = False
                 
             ## Find a frame with a spot close to the center (within center 1/3)
-            cx = frames.shape[1] / 3
-            cy = frames.shape[2] / 3
-            centerSlice = blur(frames[:, cx:cx*2, cy:cy*2], (0, 5, 5)).max(axis=1).max(axis=1)
+            cx = int(frames.shape[1] / 3.0)
+            cy = int(frames.shape[2] / 3.0)
+            centerSlice = blur(frames[:,cx:cx*2, cy:cy*2], (0, 5, 5)).max(axis=1).max(axis=1)
             maxIndex = np.argmax(centerSlice)
             maxFrame = frames[maxIndex]
             dlg.setValue(5)
