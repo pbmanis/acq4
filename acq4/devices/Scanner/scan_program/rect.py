@@ -452,7 +452,7 @@ class RectScan(SystemSolver):
         stride = self.imageStride
         shape = self.imageShape
         offset = self.imageOffset + maxOffset * self.sampleRate / self.downsample
-        minSize = stride[0] * shape[0] + offset
+        minSize = int(stride[0] * shape[0] + offset)
         if data.shape[0] < minSize:
             appendShape = list(data.shape)
             appendShape[0] = 1 + minSize - data.shape[0]
