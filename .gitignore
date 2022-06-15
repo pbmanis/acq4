@@ -11,3 +11,5 @@ acq4.egg-info
 config/*
 !config/example/
 crash.log
+acq4_venv
+
