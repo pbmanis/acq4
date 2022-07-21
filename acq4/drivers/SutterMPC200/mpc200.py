@@ -244,7 +244,7 @@ class SutterMPC200(SerialDevice):
             cmd = b'M' + struct.pack('<lll', *ustepPos)
             self.write(cmd)
         else:
-            #self.write(b'O')  # position updates on (these are broken in mpc200?)
+            # self.write(b'O')  # position updates on (these are broken in mpc200?)
             # self.write(b'F')  # position updates off
             # self.read(1, term='\r')
             self.write(b'S')
