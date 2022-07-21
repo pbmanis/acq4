@@ -3,7 +3,7 @@ from __future__ import print_function
 
 import numpy
 import sip
-from pyqtgraph import mkPen
+from pyqtgraph import mkPen, disconnect
 
 from acq4.devices.Device import TaskGui
 from pyqtgraph.WidgetGroup import WidgetGroup
@@ -21,7 +21,7 @@ class MultiClampTaskGui(TaskGui):
     
     def __init__(self, dev, taskRunner):
         TaskGui.__init__(self, dev, taskRunner)
-        daqDev = self.dev.getDAQName()
+        daqDev = self.dev.getDAQName("primary")
         self.daqUI = self.taskRunner.getDevice(daqDev)
         
         self.traces = {}  ## Stores traces from a sequence to allow average plotting
@@ -154,7 +154,7 @@ class MultiClampTaskGui(TaskGui):
         params = {}
         ps = self.ui.waveGeneratorWidget.listSequences()
         for k in ps:
-            params[k] = range(len(ps[k]))
+            params[k] = list(range(len(ps[k])))
         waves = []
         runSequence(lambda p: waves.append(self.getSingleWave(p)), params, list(params.keys()))
 
@@ -321,7 +321,6 @@ class MultiClampTaskGui(TaskGui):
         self.mode = mode
         
     def setSignals(self, pri, sec):
-        #print "setSignals", pri, sec
         for c, s in [(self.ui.primarySignalCombo, pri), (self.ui.secondarySignalCombo, sec)]:
             if s is None:
                 continue
@@ -344,10 +343,6 @@ class MultiClampTaskGui(TaskGui):
     def quit(self):
         TaskGui.quit(self)
         if not sip.isdeleted(self.daqUI):
-            # Qt.QObject.disconnect(self.daqUI, Qt.SIGNAL('changed'), self.daqChanged)
-            try:
-                self.daqUI.sigChanged.disconnect(self.daqChanged)
-            except TypeError:
-                pass
+            disconnect(self.daqUI.sigChanged, self.daqChanged)
         self.ui.topPlotWidget.close()
         self.ui.bottomPlotWidget.close()

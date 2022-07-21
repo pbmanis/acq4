@@ -1,9 +1,10 @@
 from __future__ import print_function
 import numpy as np
 from collections import OrderedDict
+
+from ..Camera import Camera
 from ..Device import Device
 from acq4.util import Qt
-from ...Manager import getManager
 from acq4.util.Mutex import Mutex
 from pyqtgraph import ptime
 from .devgui import PatchPipetteDeviceGui
@@ -51,6 +52,7 @@ class PatchPipette(Device):
     def __init__(self, deviceManager, config, name):
         pipName = config.pop('pipetteDevice', None)
         self.pipetteDevice = deviceManager.getDevice(pipName)
+
         clampName = config.pop('clampDevice', None)
         self.clampDevice = None if clampName is None else deviceManager.getDevice(clampName)
 
@@ -123,16 +125,20 @@ class PatchPipette(Device):
     def scopeDevice(self):
         return self.pipetteDevice.scopeDevice()
 
-    def imagingDevice(self):
+    def imagingDevice(self) -> Camera:
         return self.pipetteDevice.imagingDevice()
 
-    def focusOnTip(self, speed):
+    def focusOnTip(self, speed, raiseErrors=False):
         imdev = self.imagingDevice()
-        return imdev.moveCenterToGlobal(self.pipetteDevice.globalPosition(), speed=speed)
+        fut = imdev.moveCenterToGlobal(self.pipetteDevice.globalPosition(), speed=speed)
+        if raiseErrors:
+            fut.raiseErrors("Error while focusing on pipette tip: {error}")
 
-    def focusOnTarget(self, speed):
+    def focusOnTarget(self, speed, raiseErrors=False):
         imdev = self.imagingDevice()
-        return imdev.moveCenterToGlobal(self.pipetteDevice.targetPosition(), speed=speed)
+        fut = imdev.moveCenterToGlobal(self.pipetteDevice.targetPosition(), speed=speed)
+        if raiseErrors:
+            fut.raiseErrors("Error while focusing on pipette target: {error}")
 
     def newPipette(self):
         """A new physical pipette has been attached; reset any per-pipette state.
@@ -227,11 +233,13 @@ class PatchPipette(Device):
         * increase suction if seal does not form
         """
 
-    def setState(self, state):
+    def setState(self, state, setActive=True):
         """Attempt to set the state (out, bath, seal, whole cell, etc.) of this patch pipette.
 
         The actual resulting state is returned.
         """
+        if setActive:
+            self.setActive(True)
         return self._stateManager.requestStateChange(state)
 
     def listStates(self):
@@ -275,6 +283,8 @@ class PatchPipette(Device):
         self.emitNewEvent('pipette_transform_changed', {'globalPosition': pos})
 
     def setActive(self, active):
+        if self.active == active:
+            return
         self.active = active
         self.sigActiveChanged.emit(self, active)
         self.emitNewEvent('active_changed', {'active': active})
@@ -377,9 +387,9 @@ class PatchPipette(Device):
         self.enableTestPulse(False, block=True)
         self._stateManager.quit()
 
-    def goHome(self, speed):
+    def goHome(self, speed, **kwds):
         self.setState('out')
-        return self.pipetteDevice.goHome(speed)
+        return self.pipetteDevice.goHome(speed, **kwds)
 
     def _pipetteMoveStarted(self, pip, pos):
         self.sigMoveStarted.emit(self)

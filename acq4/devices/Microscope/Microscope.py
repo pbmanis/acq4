@@ -3,6 +3,8 @@ from __future__ import print_function
 
 import collections
 
+import numpy as np
+
 import pyqtgraph as pg
 
 from acq4.Manager import getManager
@@ -13,21 +15,27 @@ from acq4.modules.Camera import CameraModuleInterface
 from acq4.util import Qt
 from acq4.util.Mutex import Mutex
 from acq4.util.debug import printExc
+from acq4.util.future import MultiFuture
 
 Ui_Form = Qt.importTemplate('.deviceTemplate')
 
 
 class Microscope(Device, OptomechDevice):
     """
-    The Microscope device class is used primarily to manage the transformation and calibration changes associated with multi-objective scopes.
-    
-    * Maintains list of objective positions (most scopes have 2-5 positions)
-    * For each position, maintains a list of possible objectives that may be found there
-      (this allows the experimenter to change the objective at a certain position 
-      during the experiment)
-    * Support for automatically selecting the correct objective position based on a Switch device
-    * Each objective has an offset and scale factor associated with it. This transormation is communicated
-      automatically to all rigidly-connected child devices.
+    The Microscope device class has several purposes:
+
+    * Acts as a parent for imaging and photostimulation devices
+    * Account for differences in magnification, focal plane, and xy offset between objectives
+        * Maintains list of objective slots (most scopes have 2-5 slots)
+        * For each slot, maintains a list of possible objectives that may be found there
+          (this allows the experimenter to change the objective at a certain slot
+          during the experiment)
+        * Support for automatically selecting the correct objective position based on a Switch device
+        * Each objective has an offset and scale factor associated with it. This transformation is communicated
+          automatically to all rigidly-connected child devices.
+    * Manage multiple parent stage devices (such as independent focus / xy stages)
+    * Manage attached light + filter devices
+    * Track the focus depth of sample surface
     """
 
     sigObjectiveChanged = Qt.Signal(object)  ## (objective, lastObjective)
@@ -55,11 +63,11 @@ class Microscope(Device, OptomechDevice):
         ##    switchPosition2: {objName1: objective1, objName2: objective, ...},
         ## }
 
-        for k1, objs in config['objectives'].items():  ## Set default values for each objective
-            self.objectives[k1] = collections.OrderedDict()
-            for k2, o in objs.items():
-                obj = Objective(o, self, (k1, k2))
-                self.objectives[k1][k2] = obj
+        for slot_name, objs in config['objectives'].items():  ## Set default values for each objective
+            self.objectives[slot_name] = collections.OrderedDict()
+            for obj_name, o in objs.items():
+                obj = Objective(o, self, (slot_name, obj_name))
+                self.objectives[slot_name][obj_name] = obj
                 # obj.sigTransformChanged.connect(self.objectiveTransformChanged)
 
         ## Keep track of the objective currently in use for each position
@@ -88,7 +96,8 @@ class Microscope(Device, OptomechDevice):
                 printExc("Could not set initial objective state:")
         else:
             self.switchDevice = None
-            self.objectiveIndexChanged(0)
+            firstObj = next(iter(self.objectives))
+            self.objectiveIndexChanged(firstObj)
 
         cal = self.readConfigFile('calibration')
         if 'surfaceDepth' in cal:
@@ -215,7 +224,7 @@ class Microscope(Device, OptomechDevice):
     def globalPosition(self):
         """Return the global position of the scope's center axis at the focal plane.
         """
-        return self.mapToGlobal(Qt.QVector3D(0, 0, 0))
+        return self.mapToGlobal(pg.Vector(0, 0, 0))
 
     def setGlobalPosition(self, pos, speed='fast'):
         """Move the microscope such that its center axis is at a specified global position.
@@ -224,26 +233,31 @@ class Microscope(Device, OptomechDevice):
         accordingly.
 
         Return a MoveFuture instance.
-
-        Note: If the xy positioning device is different from the z positioning
-        device, then the MoveFuture returned only corresponds to the xy motion.
         """
-        pd = self.positionDevice()
-        fd = self.focusDevice()
+        pos = np.asarray(pos)
+        positionDevice = self.positionDevice()
+        focusDevice = self.focusDevice()
 
-        if len(pos) == 3 and fd is not pd:
+        if len(pos) == 3 and focusDevice is not positionDevice:
             z = pos[2]
-            self.setFocusDepth(z)
+            zFuture = self.setFocusDepth(z)
             pos = pos[:2]
+        else:
+            zFuture = None
+
         if len(pos) == 2:
             pos = list(pos) + [self.getFocusDepth()]
 
         # Determine how to move the xy(z) stage to react the new center position
         gpos = self.globalPosition()
-        sgpos = pd.globalPosition()
+        sgpos = positionDevice.globalPosition()
         sgpos2 = pg.Vector(sgpos) + (pg.Vector(pos) - gpos)
         sgpos2 = [sgpos2.x(), sgpos2.y(), sgpos2.z()]
-        return pd.moveToGlobal(sgpos2, speed)
+        xyFuture = positionDevice.moveToGlobal(sgpos2, speed)
+        if zFuture is None:
+            return xyFuture
+        else:
+            return MultiFuture([zFuture, xyFuture])
 
     def writeCalibration(self):
         cal = {'surfaceDepth': self.getSurfaceDepth()}
@@ -317,7 +331,11 @@ class Objective(OptomechDevice):
 
     def scope(self):
         return self._scope
-        
+
+    @property
+    def radius(self):
+        return self._config.get('radius')
+
     def __repr__(self):
         return "<Objective %s.%s offset=%0.2g,%0.2g scale=%0.2g>" % (self._scope.name(), self.name(), self.offset().x(), self.offset().y(), self.scale().x())
 
@@ -339,24 +357,24 @@ class ScopeGUI(Qt.QWidget):
         self.switchN = len(self.objList)
         self.objWidgets = {}
         self.blockSpinChange = False
-        row = 1
-        for i in self.objList:
+        for row, obj in enumerate(self.objList, start=1):
             ## For each objective, create a set of widgets for selecting and updating.
             c = Qt.QComboBox()
-            r = Qt.QRadioButton(i)
+            r = Qt.QRadioButton(obj)
 
             xs = pg.SpinBox(step=1e-6, suffix='m', siPrefix=True)
             ys = pg.SpinBox(step=1e-6, suffix='m', siPrefix=True)
             zs = pg.SpinBox(step=1e-6, suffix='m', siPrefix=True)
-            ss = pg.SpinBox(step=1e-7, bounds=(1e-10, None))
+            xyss = pg.SpinBox(step=1e-7, bounds=(1e-10, None))
+            zss = pg.SpinBox(step=1e-7, bounds=(1e-10, None))
 
-            xs.index = ys.index = zs.index = ss.index = i  ## used to determine which row has changed
-            widgets = (r, c, xs, ys, zs, ss)
+            xs.index = ys.index = zs.index = xyss.index = zss.index = obj  ## used to determine which row has changed
+            widgets = (r, c, xs, ys, zs, xyss, zss)
             for col, w in enumerate(widgets):
                 self.ui.objectiveLayout.addWidget(w, row, col)
-            self.objWidgets[i] = widgets
+            self.objWidgets[obj] = widgets
 
-            for o in self.objList[i].values():
+            for o in self.objList[obj].values():
                 c.addItem(o.name(), o)
                 o.sigTransformChanged.connect(self.updateSpins)
 
@@ -370,8 +388,9 @@ class ScopeGUI(Qt.QWidget):
             xs.sigValueChanged.connect(self.offsetSpinChanged)
             ys.sigValueChanged.connect(self.offsetSpinChanged)
             zs.sigValueChanged.connect(self.offsetSpinChanged)
-            ss.sigValueChanged.connect(self.scaleSpinChanged)
-            row += 1
+            xyss.sigValueChanged.connect(self.scaleSpinChanged)
+            zss.sigValueChanged.connect(self.scaleSpinChanged)
+
         self.updateSpins()
 
     def objectiveChanged(self, obj):
@@ -399,7 +418,7 @@ class ScopeGUI(Qt.QWidget):
         if self.blockSpinChange:
             return
         index = spin.index
-        (r, combo, xs, ys, zs, ss) = self.objWidgets[index]
+        (r, combo, xs, ys, zs, xyss, zss) = self.objWidgets[index]
         obj = combo.itemData(combo.currentIndex())
         if callable(getattr(obj, "toPyObject", None)):
             obj = obj.toPyObject()
@@ -413,27 +432,31 @@ class ScopeGUI(Qt.QWidget):
         if self.blockSpinChange:
             return
         index = spin.index
-        (r, combo, xs, ys, zs, ss) = self.objWidgets[index]
+        (r, combo, xs, ys, zs, xyss, zss) = self.objWidgets[index]
         obj = combo.itemData(combo.currentIndex())
         if callable(getattr(obj, "toPyObject", None)):
             obj = obj.toPyObject()
         obj.sigTransformChanged.disconnect(self.updateSpins)
         try:
-            obj.setScale(ss.value())
+            obj.setScale((xyss.value(), xyss.value(), zss.value()))
         finally:
             obj.sigTransformChanged.connect(self.updateSpins)
 
     def updateSpins(self):
         for k, w in self.objWidgets.items():
-            (r, combo, xs, ys, zs, ss) = w
+            (r, combo, xs, ys, zs, xyss, zss) = w
             obj = combo.itemData(combo.currentIndex())
             if callable(getattr(obj, "toPyObject", None)):
                 obj = obj.toPyObject()
+
             offset = obj.offset()
             xs.setValue(offset.x())
             ys.setValue(offset.y())
             zs.setValue(offset.z())
-            ss.setValue(obj.scale().x())
+
+            scale = obj.scale()
+            xyss.setValue(scale.x())
+            zss.setValue(scale.z())
 
 
 class ScopeCameraModInterface(CameraModuleInterface):
@@ -479,6 +502,7 @@ class ScopeCameraModInterface(CameraModuleInterface):
     def setSurfaceClicked(self):
         focus = self.getDevice().getFocusDepth()
         self.getDevice().setSurfaceDepth(focus)
+        self.transformChanged()
 
     def surfaceDepthChanged(self, depth):
         self.surfaceLine.setValue(depth)
@@ -501,7 +525,7 @@ class ScopeCameraModInterface(CameraModuleInterface):
 
         sdepth = self.getDevice().getSurfaceDepth()
         if sdepth is not None:
-            depth = fpos[2] - sdepth
+            depth = focus - sdepth
             self.depthLabel.setValue(depth)
 
     def focusDragged(self):

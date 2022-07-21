@@ -1,8 +1,10 @@
 import threading
+from time import sleep
 
 import acq4.util.Qt as Qt
 from acq4.devices.Device import Device
 from acq4.drivers.sensapex import UMP
+from acq4.util.Thread import Thread
 from acq4.util.future import Future
 
 
@@ -12,8 +14,6 @@ class SensapexObjectiveChanger(Device):
     def __init__(self, dm, config, name):
         Device.__init__(self, dm, config, name)
 
-        if dm.config.get("drivers", {}).get("sensapex", {}).get("driverPath", None) is not None:
-            UMP.set_library_path(dm.config["drivers"]["sensapex"]["driverPath"])
         address = config.pop('address', None)
         group = config.pop('group', None)
         ump = UMP.get_ump(address=address, group=group)
@@ -21,6 +21,8 @@ class SensapexObjectiveChanger(Device):
 
         self._lastPos = None
         self.getLensPosition()
+        self._pos_poller = _PositionPollThread(self, config.get("pollInterval", 2))
+        self._pos_poller.start()
 
     def setLensPosition(self, pos):
         return ObjectiveChangeFuture(self, pos)
@@ -41,6 +43,18 @@ class SensapexObjectiveChanger(Device):
     def getSwitch(self, name):
         assert name == 'lens_position'
         return self.getLensPosition()
+
+
+class _PositionPollThread(Thread):
+    def __init__(self, dev, poll_interval):
+        Thread.__init__(self)
+        self._dev = dev
+        self._poll_interval = poll_interval
+
+    def run(self):
+        while True:
+            self._dev.getLensPosition()
+            sleep(self._poll_interval)
 
 
 class ObjectiveChangeFuture(Future):

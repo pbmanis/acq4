@@ -1,5 +1,7 @@
 from __future__ import print_function, division
 import time, threading, functools
+import warnings
+
 import numpy as np
 import scipy.optimize, scipy.ndimage
 from pyqtgraph import ptime
@@ -53,7 +55,7 @@ class TestPulseThread(Thread):
         self._lastTask = None
 
         self._clampDev = self.dev.clampDevice
-        self._daqName = self._clampDev.getDAQName()
+        self._daqName = self._clampDev.getDAQName("primary")
         self._clampName = self._clampDev.name()
         self._manager = getManager()
 
@@ -104,7 +106,7 @@ class TestPulseThread(Thread):
             except self.StopRequested:
                 break
             except Exception:
-                printExc("Error in test pulse thread:")
+                printExc("Error in test pulse thread (will try again):", msgType='warning')
                 time.sleep(2.0)
 
     def runOnce(self, _checkStop=False):
@@ -270,6 +272,14 @@ class TestPulse(object):
         return self.taskParams['clampMode']
 
     def analysis(self):
+        if self.taskParams.get('ignoreWarnings', True):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                return self._doAnalysis()
+        else:
+            return self._doAnalysis()
+
+    def _doAnalysis(self):
         with self._analysisLock:
             if self._analysis is not None:
                 return self._analysis
@@ -298,7 +308,6 @@ class TestPulse(object):
                 analysis['peakResistance'] = params['amplitude'] / (peakValue - baseValue)
                 analysis['steadyStateResistance'] = np.abs(params['amplitude'] / (steadyValue - baseValue))
                 tauGuess = 3e-3
-                yOffsetBounds = [-10e-9, 10e-9]
             else:
                 bridge = self.data._info[-1]['ClampState']['ClampParams']['BridgeBalResist']
                 bridgeOn = self.data._info[-1]['ClampState']['ClampParams']['BridgeBalEnable']
@@ -309,7 +318,6 @@ class TestPulse(object):
                 analysis['peakResistance'] = bridge + (peakValue - baseValue) / params['amplitude']
                 analysis['steadyStateResistance'] = np.abs(bridge + (steadyValue - baseValue) / params['amplitude'])
                 tauGuess = 15e-3
-                yOffsetBounds = [-150e-3, 100e-3]
 
             analysis['peakResistance'] = np.clip(analysis['peakResistance'], 0, 20e9)
             analysis['steadyStateResistance'] = np.clip(analysis['steadyStateResistance'], 0, 20e9)
@@ -323,10 +331,6 @@ class TestPulse(object):
                 peakValue - steadyValue,  # amp
                 tauGuess,  # tau
                 steadyValue,  # yoffset
-            )
-            bounds = (
-                np.array([yOffsetBounds[0], 50e-6, yOffsetBounds[0]]),
-                np.array([yOffsetBounds[1], 500e-3, yOffsetBounds[1]])
             )
             xoffset = params['preDuration']
             pulseData = pulse.asarray()
@@ -349,19 +353,18 @@ class TestPulse(object):
                 Q = (pulseData - yoffset).sum() * dt
                 Rin = analysis['steadyStateResistance']
                 Vc = params['amplitude']
-                Rs_denom = (Q * Rin + tau * Vc)
-                if Rs_denom != 0.0:
-                    # Rs = (Rin * tau * Vc) / Rs_denom
-                    Rs = analysis['peakResistance']
-                    Rm = Rin - Rs
-                    Cm = (Rin**2 * Q) / (Rm**2 * abs(Vc))
+                Rs = analysis['peakResistance']
+                Rm = Rin - Rs
+                Cm_denom = (Rm**2 * abs(Vc))
+                if Cm_denom != 0.0:
+                    analysis['capacitance'] = (Rin**2 * Q) / Cm_denom
                 else:
-                    Rs = 0
-                    Rm = 0
-                    Cm = 0
-                analysis['capacitance'] = Cm
-            else:
-                analysis['capacitance'] = tau / analysis['steadyStateResistance']
+                    analysis['capacitance'] = 0
+            else:  # IC mode
+                if analysis['steadyStateResistance'] > 0:
+                    analysis['capacitance'] = tau / analysis['steadyStateResistance']
+                else:
+                    analysis['capacitance'] = np.nan
 
             # # detect bad fits
             # noise = (pulseData - scipy.ndimage.gaussian_filter(pulseData, 3)).std()

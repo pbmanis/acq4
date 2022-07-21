@@ -62,6 +62,12 @@ class SutterMPC200(Stage):
             SutterMPC200._monitor = MonitorThread(self)
             SutterMPC200._monitor.start()
 
+    def axes(self):
+        if 'axes' in self.config:
+            return self.config['axes']
+        else:
+            return ('x', 'y')
+
     def capabilities(self):
         """Return a structure describing the capabilities of this device"""
         if 'capabilities' in self.config:
@@ -118,13 +124,11 @@ class SutterMPC200(Stage):
             return self._lastMove.targetPos
 
     def quit(self):
-        self._monitor.stop()
+        SutterMPC200._monitor.stop()  # only one thread for all
+        # self._monitor.stop()  # this was never set to anything but None
         Stage.quit(self)
 
-    def _move(self, abs, rel, speed, linear):
-        # convert relative to absolute position, fill in Nones with current position.
-        pos = self._toAbsolutePosition(abs, rel)
-
+    def _move(self, pos, speed, linear):
         # convert speed to values accepted by MPC200
         if speed == 'slow':
             speed = self.slowSpeed
