@@ -89,25 +89,32 @@ class LogWindow(Qt.QMainWindow):
 
     def __init__(self, manager):
         global WIN
+        print("LogWindow: Initing")
         Qt.QMainWindow.__init__(self)
         WIN = self
         self.setWindowTitle("Log")
         path = os.path.dirname(__file__)
         self.setWindowIcon(Qt.QIcon(os.path.join(path, "logIcon.png")))
+        print("now logwidget")
+        self.manager = manager
         self.wid = LogWidget(self, manager)
+        print("ok, widgeted")
         self.wid.ui.input = Qt.QLineEdit()
         self.wid.ui.gridLayout.addWidget(self.wid.ui.input, 2, 0, 1, 3)
         self.wid.ui.dirLabel.setText("Current Storage Directory: None")
         self.setCentralWidget(self.wid)
         self.resize(1000, 500)
         self.manager = manager
+        print("self.manager: ", self.manager)
         self.entriesSaved = 0
         self.entriesVisible = 0
         self.logFile = None
         # start a new temp log file, destroying anything left over from the last session.
+        print("writing configfile to: ", self.filename())
         configfile.writeConfigFile("", self.fileName())
         # weak references to all Log Buttons get added to this list, so it's easy to make them all do things, like flash red.
         self.buttons = []
+        print("Window set up, now RLock")
         self.lock = RLock()
         self.errorDialog = ErrorDialog()
 
@@ -345,14 +352,15 @@ class LogWindow(Qt.QMainWindow):
         self.errorDialog.disable(disable)
 
 
-class LogWidget(Qt.QWidget):
+class LogWidget(Qt.QtWidgets.QWidget):
     dirFilter: Union[str, bool]
     sigDisplayEntry = Qt.Signal(object)  # for thread-safetyness
     sigAddEntry = Qt.Signal(object)  # for thread-safetyness
     sigScrollToAnchor = Qt.Signal(object)  # for internal use.
 
     def __init__(self, parent, manager):
-        Qt.QWidget.__init__(self, parent)
+        Qt.QtWidgets.QWidget.__init__(self, parent)
+
         self.ui = LogWidgetTemplate()
         self.manager = manager
         self.ui.setupUi(self)
@@ -791,7 +799,7 @@ class ErrorDialog(Qt.QDialog):
         self.nextBtn.hide()
         self.logBtn = Qt.QPushButton("Show Log...")
         self.btnLayout.addWidget(self.logBtn)
-        self.btnLayoutWidget = Qt.QWidget()
+        self.btnLayoutWidget = Qt.QtWidgets.QWidget()
         self.layout.addWidget(self.btnLayoutWidget)
         self.btnLayoutWidget.setLayout(self.btnLayout)
         self.btnLayout.addStretch()
