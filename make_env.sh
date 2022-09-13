@@ -12,9 +12,9 @@ else
     echo "No previous environment - ok to proceed"
 fi
 
-python3.9 -m venv $ENVNAME || exit 1
+python3.10 -m venv $ENVNAME || exit 1
 source $ENVNAME/bin/activate || exit 1
-pip3 install --upgrade pip  # be sure pip is up to date in the new env.
+python3 -m pip install --upgrade pip # be sure pip is up to date in the new env.
 pip3 install wheel  # seems to be missing (note singular)
 pip3 install cython
 pip3 install requests
@@ -28,7 +28,7 @@ source $ENVNAME/bin/activate
 # with the same version as we have provided
 # nrnivmodl cnmodel/mechanisms
 python --version
-python tools/rebuildUI.py pyqt6 -d acq4
+python tools/rebuildUI.py acq4
 #python tools/rebuildUI.py pyqt6 -d acq4/pyqtgraph -v -f
 python setup.py develop || exit 1
 source $ENVNAME/bin/activate
