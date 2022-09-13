@@ -68,7 +68,7 @@ def cleanup():
     getDataManager().cleanup()
 
 
-class DataManager(Qt.QObject):
+class DataManager(Qt.QtCore.QObject):
     """Class for creating and caching DirHandle objects to make sure there is only one manager object per file/directory. 
     This class is (supposedly) thread-safe.
     """
@@ -76,12 +76,12 @@ class DataManager(Qt.QObject):
     INSTANCE = None
     
     def __init__(self):
-        Qt.QObject.__init__(self)
+        Qt.QtCore.QObject.__init__(self)
         if DataManager.INSTANCE is not None:
             raise Exception("Attempted to create more than one DataManager!")
         DataManager.INSTANCE = self
         self.cache = {}
-        self.lock = Mutex(Qt.QMutex.Recursive)
+        self.lock = Mutex(Qt.QtCore.QRecursiveMutex)
         
     def getDirHandle(self, dirName, create=False):
         with self.lock:
@@ -179,18 +179,18 @@ class DataManager(Qt.QObject):
         
 
 
-class FileHandle(Qt.QObject):
+class FileHandle(Qt.QtCore.QObject):
     
-    sigChanged = Qt.Signal(object, object, object)  # (self, change, (args))
-    sigDelayedChange = Qt.Signal(object, object)  # (self, changes)
+    sigChanged = Qt.QtCore.Signal(object, object, object)  # (self, change, (args))
+    sigDelayedChange = Qt.QtCore.Signal(object, object)  # (self, changes)
     
     def __init__(self, path, manager):
-        Qt.QObject.__init__(self)
+        Qt.QtCore.QObject.__init__(self)
         self.manager = manager
         self.delayedChanges = []
         self.path = os.path.abspath(path)
         self.parentDir = None
-        self.lock = Mutex(Qt.QMutex.Recursive)
+        self.lock = Mutex(Qt.QtCore.QMutex.Recursive)
         if Qt.QApplication.instance() is not None:
             self.sigproxy = SignalProxy(self.sigChanged, slot=self.delayedChange)
         else:

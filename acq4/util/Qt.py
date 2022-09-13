@@ -7,7 +7,7 @@ import os
 import sys
 
 # try importing Qt libraries in order of preference
-qtLibs = ['PyQt5', 'PyQt4', 'PySide', 'PySide2', None]
+qtLibs = ['PyQt6', 'PyQt5', 'PyQt4', 'PySide', 'PySide2', None]
 for mod in qtLibs:
     if mod is None:
         raise Exception("Could not import any Qt libraries (tried PyQt5, PyQt4, PySide, PySide2).")
@@ -69,6 +69,8 @@ def loadUiType(uiFile, package=None):
         from PyQt4.uic import compileUi
     elif QT_LIB == PYQT5:
         from PyQt5.uic import compileUi
+    elif QT_LIB == PYQT6:
+        from PyQt6.uic import compileUi
 
     import xml.etree.ElementTree as xml
     
