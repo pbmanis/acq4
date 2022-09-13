@@ -29,10 +29,12 @@ def installExceptionHandler():
 
 def createLogWindow(manager):
     from .LogWindow import LogWindow
-
+    print("createLogWindow entry")
     global LOG_UI
+    print("log ui: ", LOG_UI)
     assert LOG_UI is None
     LOG_UI = LogWindow(manager)
+    print("LogWindow is created")
     return LOG_UI
 
 
@@ -46,7 +48,7 @@ def printExc(msg="", indent=4, prefix="|", msgType="error"):
         if hasattr(acq4, "Manager"):
             acq4.Manager.logExc(msg=msg, msgType=msgType)
     except Exception:
-        pgdebug.printExc("[failed to log this error to manager]")
+        pgdebug.printExc(f"[failed to log this error to manager] {msgType}: {msg}")
 
 
 def logMsg(msg, **kwargs):
@@ -70,7 +72,7 @@ def logMsg(msg, **kwargs):
             print("    " + str(kwargs))
             sys.excepthook(*sys.exc_info())
     else:
-        print("Can't log message; no log created yet.")
+        print("Can't log message; no log created yet.", LOG_UI)
         # print args
         print(kwargs)
 
