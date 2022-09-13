@@ -34,9 +34,7 @@ from pyqtgraph import configfile
 from pyqtgraph.util.mutex import Mutex
 from .util import DataManager, ptime, Qt
 from .util.HelpfulException import HelpfulException
-
-from .util.debug import logMsg, createLogWindow, logExc # logExc needed by debug
-from six.moves import map
+from .util.debug import logExc, logMsg, createLogWindow # logExc needed by debug
 
 
 def __reload__(old):
@@ -81,7 +79,7 @@ class Manager(Qt.QObject):
         self.disableDevs = []
         self.disableAllDevs = False
         self.alreadyQuit = False
-        self.taskLock = Mutex(Qt.QMutex.Recursive)
+        self.taskLock = Mutex(Qt.QtCore.QRecursiveMutex)
         self._folderTypes = None
 
         try:
@@ -286,6 +284,7 @@ class Manager(Qt.QObject):
         self.sigConfigChanged.emit()
 
     def _loadConfig(self, cfg):
+        print("***** Load config items: ", cfg.items())
         for key, val in cfg.items():
             try:
                 # Handle custom import / exec
@@ -527,6 +526,7 @@ class Manager(Qt.QObject):
 
     def listModules(self):
         """List names of currently loaded modules. """
+        print("List Modules #########")
         with self.lock:
             return list(self.modules.keys())
 
@@ -534,11 +534,17 @@ class Manager(Qt.QObject):
         """Returns the directory that is currently selected, or the directory of the file that is currently selected in Data Manager."""
         with self.lock:
             try:
+                # print("getModule")
+                # print("and? : ", self.getModule("Data Manager"))
+                # print("trying...")
                 f = self.getModule("Data Manager").selectedFile()
+                print("f0: ", f)
                 if not isinstance(f, DataManager.DirHandle):
                     f = f.parent()
+                print("f1: ", f)
             except Exception:
                 f = False
+                print("f is False exception")
                 logMsg("Can't find currently selected directory, Data Manager has not been loaded.", msgType='warning')
                 if self.exitOnError:
                     raise
@@ -546,9 +552,13 @@ class Manager(Qt.QObject):
 
     def getModule(self, name):
         """Return an already loaded module"""
+        print("looking for: ", name)
+        print(self.lock)
         with self.lock:
             name = str(name)
-            if name not in self.modules:
+            print("name: ", name)
+            print("self.modules: ", self.modules)
+            if name not in self.modules:  # this is where the exception is raised.
                 raise Exception("No module named %s" % name)
             return self.modules[name]
 
@@ -563,6 +573,7 @@ class Manager(Qt.QObject):
 
     def loadDefinedModule(self, name, forceReload=False):
         """Load a module and configure as defined in the config file"""
+        print("LoadDefinedModule: ", name)
         with self.lock:
             if name not in self.definedModules:
                 print("Module '%s' is not defined. Options are: %s" % (name, str(list(self.definedModules.keys()))))
@@ -667,6 +678,7 @@ class Manager(Qt.QObject):
 
     def showGUI(self):
         """Show the Manager GUI"""
+        print("SHOW GUI")
         if self.gui is None:
             self.gui = self.loadModule('Manager', 'Manager', {})
         self.gui.show()
@@ -815,6 +827,7 @@ class Manager(Qt.QObject):
 
     def quit(self):
         """Nicely request that all devices and modules shut down"""
+        exit()
         if not self.alreadyQuit:  ## Need this because multiple triggers can call this function during quit
             self.alreadyQuit = True
             lm = len(self.modules)
