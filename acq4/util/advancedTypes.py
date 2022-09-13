@@ -80,7 +80,7 @@ class ProtectedDict(dict):
         return copy.deepcopy(self._data_, memo)
 
 
-class ProtectedList(collections.Sequence):
+class ProtectedList(collections.abc.Sequence):
     """
     A class allowing read-only 'view' of a list or dict. 
     The object can be treated like a normal list, but will never modify the original list it points to.
@@ -154,7 +154,7 @@ class ProtectedList(collections.Sequence):
         raise Exception("This is a list. It does not poop.")
 
 
-class ProtectedTuple(collections.Sequence):
+class ProtectedTuple(collections.abc.Sequence):
     """
     A class allowing read-only 'view' of a tuple.
     The object can be treated like a normal tuple, but its contents will be returned as protected objects.
