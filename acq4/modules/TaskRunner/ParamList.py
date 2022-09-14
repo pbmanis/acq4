@@ -9,31 +9,32 @@ from acq4.util import Qt
 class ParamList(Qt.QTreeWidget):
     def __init__(self, *args):
         Qt.QTreeWidget.__init__(self, *args)
-        self.header().setSectionResizeMode(Qt.QHeaderView.ResizeToContents)
+        self.header().setSectionResizeMode(Qt.QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         self.setAnimated(False)
 
     checkStateMap = {
-        True: Qt.Qt.Checked,
-        False: Qt.Qt.Unchecked
+        True: Qt.QtCore.Qt.CheckState.Checked,
+        False: Qt.QtCore.Qt.CheckState.Unchecked
     }
 
     def updateList(self, dev, params):
         """Update the list of sequence parameters for dev."""
         # Catalog the parameters that already exist for this device:
         items = {}
-        for i in self.findItems(dev, Qt.Qt.MatchExactly | Qt.Qt.MatchRecursive, 0):
+        for i in self.findItems(dev, Qt.QtCore.Qt.MatchFlag.MatchExactly |
+            Qt.QtCore.Qt.MatchFlag.MatchRecursive, 0):
             items[str(i.text(1))] = i
         # Add new sequence parameters, update old ones
         for p in params:
             if p not in items:
                 item = Qt.QTreeWidgetItem([dev, p, str(len(params[p]))])
                 item.setFlags(
-                    Qt.Qt.ItemIsSelectable |
-                    Qt.Qt.ItemIsDragEnabled |
-                    Qt.Qt.ItemIsDropEnabled |
-                    Qt.Qt.ItemIsUserCheckable |
-                    Qt.Qt.ItemIsEnabled)
-                item.setCheckState(0, Qt.Qt.Checked)
+                    Qt.QtCore.Qt.ItemFlag.ItemIsSelectable |
+                    Qt.QtCore.Qt.ItemFlag.ItemIsDragEnabled |
+                    Qt.QtCore.Qt.ItemFlag.ItemIsDropEnabled |
+                    Qt.QtCore.Qt.ItemFlag.ItemIsUserCheckable |
+                    Qt.QtCore.Qt.ItemFlag.ItemIsEnabled)
+                item.setCheckState(0, Qt.QtCore.Qt.CheckState.Unchecked)
                 items[p] = item
                 if dev == 'protocol' and p == 'repetitions':
                     self.insertTopLevelItem(0, item)
@@ -92,7 +93,7 @@ class ParamList(Qt.QTreeWidget):
                 item = self.findItem(dev2, param2)
                 if item is None:
                     continue
-                item.setCheckState(0, ParamList.checkStateMap[enabled])
+                item.setCheckState(ParamList.checkStateMap[enabled])
                 o2.append(self.takeItem(item))
 
         ## Re-add items from param list in correct order
@@ -114,7 +115,7 @@ class ParamList(Qt.QTreeWidget):
     def itemData(self, item):
         dev = str(item.text(0))
         param = str(item.text(1))
-        enab = (item.checkState(0) == Qt.Qt.Checked)
+        enab = (item.checkState(0) == True)
         return (dev, param, enab)
 
     def topLevelItems(self):
@@ -124,7 +125,8 @@ class ParamList(Qt.QTreeWidget):
         return items
 
     def findItem(self, dev, param):
-        items = self.findItems(dev, Qt.Qt.MatchExactly | Qt.Qt.MatchRecursive, 0)
+        items = self.findItems(dev, Qt.QtCore.Qt.MatchFlag.MatchExactly | 
+            Qt.QtCore.Qt.MatchFlag.MatchRecursive, 0)
         for i in items:
             p = i.paramData[1]
             if p == param:

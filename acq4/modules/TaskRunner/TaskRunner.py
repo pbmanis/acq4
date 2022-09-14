@@ -24,7 +24,8 @@ from acq4.util.HelpfulException import HelpfulException
 from acq4.util.SequenceRunner import runSequence
 from acq4.util.StatusBar import StatusBar
 from acq4.util.Thread import Thread
-from acq4.util.debug import printExc, Profiler, logMsg, Mutex
+from acq4.util.debug import printExc, Profiler, logMsg
+from acq4.util.Mutex import Mutex, RecursiveMutex
 from acq4.util.future import Future
 from . import analysisModules
 from ..Module import Module
@@ -40,10 +41,11 @@ class Window(Qt.QMainWindow):
         self.pr = pr
 
         self.stateFile = os.path.join('modules', self.pr.name + '_ui.cfg')
-        uiState = getManager().readConfigFile(self.stateFile)
-        if 'geometry' in uiState:
-            geom = Qt.QRect(*uiState['geometry'])
-            self.setGeometry(geom)
+        if os.path.isfile(self.stateFile):
+            uiState = getManager().readConfigFile(self.stateFile)
+            if 'geometry' in uiState:
+                geom = Qt.QRect(*uiState['geometry'])
+                self.setGeometry(geom)
 
     def closeEvent(self, ev):
         geom = self.geometry()
@@ -135,8 +137,10 @@ class TaskRunner(Module):
 
         for m in analysisModules.MODULES:
             item = Qt.QListWidgetItem(m, self.ui.analysisList)
-            item.setFlags(Qt.Qt.ItemIsSelectable | Qt.Qt.ItemIsEnabled | Qt.Qt.ItemIsUserCheckable)
-            item.setCheckState(False)
+            item.setFlags(Qt.QtCore.Qt.ItemFlag.ItemIsSelectable | 
+                          Qt.QtCore.Qt.ItemFlag.ItemIsEnabled |
+                        Qt.QtCore.Qt.ItemFlag.ItemIsUserCheckable)
+            item.setCheckState(Qt.QtCore.Qt.CheckState.Checked)
 
         self.taskThread = TaskThread(self)
 
@@ -175,7 +179,7 @@ class TaskRunner(Module):
             item = self.ui.deviceList.findItems(dev, Qt.Qt.MatchExactly)[0]
         except:
             raise Exception('Requested device %s does not exist!' % dev)
-        item.setCheckState(True)
+        item.setCheckState(Qt.QtCore.Qt.CheckState.Checked)
         self.deviceItemClicked(item)
 
         return self.docks[dev].widget()
@@ -221,11 +225,13 @@ class TaskRunner(Module):
 
         ## Make sure flags and checkState are correct for all items
         for d in self.devListItems:
-            self.devListItems[d].setFlags(Qt.Qt.ItemIsSelectable | Qt.Qt.ItemIsEnabled | Qt.Qt.ItemIsUserCheckable)
+            self.devListItems[d].setFlags(Qt.QtCore.Qt.ItemFlag.ItemIsSelectable |
+                            Qt.QtCore.Qt.ItemFlag.ItemIsEnabled |
+                            Qt.QtCore.Qt.ItemFlag.ItemIsUserCheckable)
             if d in protList:
-                self.devListItems[d].setCheckState(True)
+                self.devListItems[d].setCheckState(Qt.QtCore.Qt.CheckState.Checked)
             else:
-                self.devListItems[d].setCheckState(False)
+                self.devListItems[d].setCheckState(Qt.QtCore.Qt.CheckState.Checked)
 
     def deviceItemClicked(self, item):
         """Respond to clicks in the device list. Add/remove devices from the current task and update docks."""
@@ -381,14 +387,21 @@ class TaskRunner(Module):
 
                 if d in self.docks:
                     dock = Qt.QDockWidget(d)
-                    dock.setFeatures(dock.AllDockWidgetFeatures)
-                    dock.setAllowedAreas(Qt.Qt.BottomDockWidgetArea | Qt.Qt.TopDockWidgetArea)
+                    # dock.setFeatures(dock.AllDockWidgetFeatures)
+                    dock.setFeatures(dock.DockWidgetFeature.DockWidgetMovable |
+                        dock.DockWidgetFeature.DockWidgetFloatable |
+                        dock.DockWidgetFeature.DockWidgetClosable |
+                        dock.DockWidgetFeature.DockWidgetVerticalTitleBar  # or maybe not?
+                        )
+                    dock.setAllowedAreas(Qt.QtCore.Qt.DockWidgetArea.BottomDockWidgetArea |
+                         Qt.QtCore.Qt.DockWidgetArea.TopDockWidgetArea)
                     dock.setObjectName(d)
                     dock.setWidget(dw)
                     dock.setAutoFillBackground(True)
-                    dw.setSizePolicy(Qt.QSizePolicy.Expanding, Qt.QSizePolicy.Expanding)
+                    dw.setSizePolicy(Qt.QtWidgets.QSizePolicy.Policy.Expanding,
+                            Qt.QtWidgets.QSizePolicy.Policy.Expanding)
                     self.docks[d] = dock
-                    self.win.addDockWidget(Qt.Qt.BottomDockWidgetArea, dock)
+                    self.win.addDockWidget(Qt.QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, dock)
                     if self.firstDock is None:
                         self.firstDock = dock
                     else:
@@ -963,7 +976,7 @@ class TaskThread(Thread):
         Thread.__init__(self)
         self.ui = ui
         self.dm = self.ui.manager
-        self.lock = Mutex(Qt.QMutex.Recursive)
+        self.lock = RecursiveMutex()
         self.stopThread = True
         self.abortThread = False
         self.paused = False
