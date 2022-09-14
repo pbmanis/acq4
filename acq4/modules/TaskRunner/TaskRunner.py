@@ -136,7 +136,7 @@ class TaskRunner(Module):
         for m in analysisModules.MODULES:
             item = Qt.QListWidgetItem(m, self.ui.analysisList)
             item.setFlags(Qt.Qt.ItemIsSelectable | Qt.Qt.ItemIsEnabled | Qt.Qt.ItemIsUserCheckable)
-            item.setCheckState(Qt.Qt.Unchecked)
+            item.setCheckState(False)
 
         self.taskThread = TaskThread(self)
 
@@ -175,7 +175,7 @@ class TaskRunner(Module):
             item = self.ui.deviceList.findItems(dev, Qt.Qt.MatchExactly)[0]
         except:
             raise Exception('Requested device %s does not exist!' % dev)
-        item.setCheckState(Qt.Qt.Checked)
+        item.setCheckState(True)
         self.deviceItemClicked(item)
 
         return self.docks[dev].widget()
@@ -223,14 +223,14 @@ class TaskRunner(Module):
         for d in self.devListItems:
             self.devListItems[d].setFlags(Qt.Qt.ItemIsSelectable | Qt.Qt.ItemIsEnabled | Qt.Qt.ItemIsUserCheckable)
             if d in protList:
-                self.devListItems[d].setCheckState(Qt.Qt.Checked)
+                self.devListItems[d].setCheckState(True)
             else:
-                self.devListItems[d].setCheckState(Qt.Qt.Unchecked)
+                self.devListItems[d].setCheckState(False)
 
     def deviceItemClicked(self, item):
         """Respond to clicks in the device list. Add/remove devices from the current task and update docks."""
         name = str(item.text())
-        if item.checkState() == Qt.Qt.Unchecked:
+        if item.checkState() == False:
             self.currentTask.removeDevice(name)
         else:
             self.currentTask.addDevice(name)
@@ -238,9 +238,9 @@ class TaskRunner(Module):
 
     def analysisItemClicked(self, item):
         name = str(item.text())
-        if item.checkState() == Qt.Qt.Checked:
+        if item.checkState() == True:
             if self.createAnalysisDock(name) is False:
-                item.setCheckState(Qt.Qt.Unchecked)
+                item.setCheckState(False)
         else:
             self.removeAnalysisDock(name)
 
@@ -265,7 +265,7 @@ class TaskRunner(Module):
                 self.win.tabifyDockWidget(self.firstDock, dock)
 
             items = self.ui.analysisList.findItems(mod, Qt.Qt.MatchExactly)
-            items[0].setCheckState(Qt.Qt.Checked)
+            items[0].setCheckState(True)
 
             return True
         except:
@@ -285,7 +285,7 @@ class TaskRunner(Module):
         self.win.removeDockWidget(dock)
         del self.analysisDocks[mod]
         items = self.ui.analysisList.findItems(mod, Qt.Qt.MatchExactly)
-        items[0].setCheckState(Qt.Qt.Unchecked)
+        items[0].setCheckState(False)
 
     def fileChanged(self, handle, change, args):
         if change == 'renamed' or change == 'moved':
@@ -457,7 +457,7 @@ class TaskRunner(Module):
     def loadTask(self, handle):
         prof = Profiler('TaskRunner.loadTask', disabled=True)
         try:
-            Qt.QApplication.setOverrideCursor(Qt.QCursor(Qt.Qt.WaitCursor))
+            Qt.QApplication.setOverrideCursor(Qt.QtGui.QCursor(Qt.QtCore.Qt.CursorShape.WaitCursor))
             self.stopSequence()
             self.stopSingle()
 
