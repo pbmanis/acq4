@@ -110,7 +110,7 @@ class FileLoader(Qt.QWidget):
         for name in itemNames:
             item = Qt.QTreeWidgetItem([name])
             if parentName is not None:
-                parent = self.ui.fileTree.findItems(parentName, Qt.Qt.MatchExactly)[0]
+                parent = self.ui.fileTree.findItems(parentName, Qt.QtCore.Qt.MatchFlag.MatchExactly)[0]
                 parent.addChild(item)
             else:
                 self.ui.fileTree.addTopLevelItem(item)

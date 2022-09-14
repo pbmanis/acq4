@@ -38,7 +38,9 @@ class Map:
         self.header = list(self.mapFields.keys())[2:]
         
         self.item = Qt.QTreeWidgetItem([""] * len(self.header))
-        self.item.setFlags(Qt.Qt.ItemIsSelectable| Qt.Qt.ItemIsEditable| Qt.Qt.ItemIsEnabled)
+        self.item.setFlags(Qt.QtCore.Qt.ItemFlag.ItemIsSelectable|
+                            Qt.QtCore.Qt.ItemFlag.ItemIsEditable| 
+                            Qt.QtCore.Qt.ItemFlag.ItemIsEnabled)
         self.item.map = self
         self.item.setExpanded(True)
         self.rowID = None

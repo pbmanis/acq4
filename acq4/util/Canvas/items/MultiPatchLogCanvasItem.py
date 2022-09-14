@@ -128,7 +128,7 @@ class MultiPatchLogCtrlWidget(Qt.QWidget):
 
         self.timeSlider = Qt.QSlider()
         self.layout.addWidget(self.timeSlider, 0, 0)
-        self.timeSlider.setOrientation(Qt.Qt.Horizontal)
+        self.timeSlider.setOrientation(Qt.QtCore.Qt.Orientation.Horizontal)
         self.timeSlider.setMinimum(0)
 
         self.timeLabel = Qt.QLabel()

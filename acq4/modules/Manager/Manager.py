@@ -109,11 +109,11 @@ class Manager(Module):
                 group["required width"] = max(minSize.width(), group.get("required width", 0))
                 group["required height"] = max(minSize.height(), group.get("required height", 0))
 
-        orient = Qt.Qt.Vertical
+        orient = Qt.QtCore.Qt.Orientation.Vertical
         heightUsedThisColumn = 0
         for group in sorted(groups, key=lambda g: (g["required height"], g["required width"])):
             if heightUsedThisColumn + group["required height"] > heightSoFar:
-                orient = Qt.Qt.Horizontal
+                orient = Qt.QtCore.Qt.Orientation.Horizontal
                 heightUsedThisColumn = 0
             firstDock = None
             for dev in group["device names"]:
@@ -123,8 +123,8 @@ class Manager(Module):
                     firstDock = dock
                 else:
                     self.win.tabifyDockWidget(firstDock, dock)
-            if orient == Qt.Qt.Horizontal:
-                orient = Qt.Qt.Vertical
+            if orient == Qt.QtCore.Qt.Orientation.Horizontal:
+                orient = Qt.QtCore.Qt.Orientatoin.Vertical
             else:
                 heightUsedThisColumn += group["required height"]
 
@@ -207,7 +207,7 @@ class Manager(Module):
 
     def loadModule(self, mod):
         try:
-            Qt.QApplication.setOverrideCursor(Qt.QCursor(Qt.Qt.CursorShape.WaitCursor))
+            Qt.QApplication.setOverrideCursor(Qt.QCursor(Qt.QtCore.Qt.CursorShape.WaitCursor))
             self.manager.loadModule(mod)
             self.showMessage("Loaded module '%s'." % mod, 10000)
         finally:
@@ -220,7 +220,7 @@ class Manager(Module):
         # self.showMessage("Loaded module '%s'." % mod, 10000)
 
     def loadConfig(self):
-        
+
         cfg = str(self.ui.configList.currentItem().text())
         self.manager.loadDefinedConfig(cfg)
         self.updateModList()

@@ -26,9 +26,9 @@ class MockStage(Stage):
         
         # Global key press handling
         self.modifierScales = {
-            Qt.Qt.Key_Control: 4.0,
-            Qt.Qt.Key_Alt: 0.25,
-            Qt.Qt.Key_Shift: 0.1,
+            Qt.QtCore.Qt.Key.Key_Control: 4.0,
+            Qt.QtCore.Qt.Key.Key_Alt: 0.25,
+            Qt.QtCore.Qt.Key.Key_Shift: 0.1,
         }
         self.keyDirections = np.array([
             [0, 0, 1],

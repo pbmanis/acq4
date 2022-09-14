@@ -67,6 +67,8 @@ import acq4.analysis.modules.Photostim.Scan as Scan
 from acq4.analysis.modules.Photostim.Map import Map
 import acq4.analysis.tools.poissonScore as poissonScore
 import acq4.util.flowchart.EventDetection as FCEventDetection
+from acq4.util import debug
+from acq4.util import HelpfulException
 from six.moves import range
 
 

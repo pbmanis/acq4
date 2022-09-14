@@ -571,7 +571,7 @@ class PipetteCamModInterface(CameraModuleInterface):
         self.target.setVisible(not hide and self._haveTarget)
 
     def sceneMouseClicked(self, ev):
-        if ev.button() != Qt.Qt.LeftButton:
+        if ev.button() != Qt.QtCore.Qt.Key.LeftButton:
             return
 
         if self.ui.setCenterBtn.isChecked():

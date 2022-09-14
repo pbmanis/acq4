@@ -23,14 +23,14 @@ class LaserTaskGui(DAQGenericTaskGui):
         self.setLayout(self.layout)
         
         self.splitter1 = Qt.QSplitter()
-        self.splitter1.setOrientation(Qt.Qt.Horizontal)
+        self.splitter1.setOrientation(Qt.QtCore.Qt.Orientation.Horizontal)
         self.layout.addWidget(self.splitter1)
         
         self.ctrlLayout = Qt.QVBoxLayout()
         wid1 = Qt.QWidget()
         wid1.setLayout(self.ctrlLayout)
         self.plotSplitter = Qt.QSplitter()
-        self.plotSplitter.setOrientation(Qt.Qt.Vertical)
+        self.plotSplitter.setOrientation(Qt.QtCore.Qt.Orientation.Vertical)
         self.splitter1.addWidget(wid1)
         self.splitter1.addWidget(self.plotSplitter)
         wid2 = Qt.QWidget()

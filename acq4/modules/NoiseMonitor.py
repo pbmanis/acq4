@@ -150,7 +150,7 @@ class ChannelRecorder(Qt.QSplitter):
         self.resetDisplay = True
         self.showNewRecords = True
 
-        Qt.QSplitter.__init__(self, Qt.Qt.Vertical)
+        Qt.QSplitter.__init__(self, Qt.QtCore.Qt.Orientation.Vertical)
 
         self.plot = pg.PlotWidget(labels={'left': ('Primary', self.units), 'bottom': ('Time', 's')}, title="%s (%s)" % (dev, mode))
         self.plot.setDownsampling(auto=True)
