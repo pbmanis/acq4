@@ -35,7 +35,7 @@ class Loader(DirTreeLoader):
         return True
         
 
-#w = DirTreeWidget(defaultFlags=Qt.Qt.ItemIsUserCheckable | Qt.Qt.ItemIsEnabled, defaultCheckState=False)
+#w = DirTreeWidget(defaultFlags=Qt.QtCore.Qt.ItemFlag.ItemIsUserCheckable | Qt.QtCore.Qt.ItemFlag.ItemIsEnabled, defaultCheckState=False)
 w = Loader(dh)
 w.show()
 

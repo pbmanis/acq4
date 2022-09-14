@@ -116,7 +116,7 @@ def export_panel(pgitem, ax):
         x, y = item.getData()
         opts = item.opts
         pen = fn.mkPen(opts['pen'])
-        if pen.style() == Qt.Qt.NoPen:
+        if pen.style() == Qt.QtCore.Qt.PenStyle.NoPen:
             linestyle = ''
         else:
             linestyle = '-'

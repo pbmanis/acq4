@@ -553,7 +553,8 @@ class LogWidget(Qt.QtWidgets.QWidget):
 
             if isMax:
                 # can't scroll to end until the web frame has processed the html change
-                # frame.setScrollBarValue(Qt.Qt.Vertical, frame.scrollBarMaximum(Qt.Qt.Vertical))
+                # frame.setScrollBarValue(Qt.QtCore.Qt.OrientationVertical, 
+                #   frame.scrollBarMaximum(Qt.QtCore.Qt.Orientation.Vertical))
 
                 # Calling processEvents anywhere inside an error handler is forbidden
                 # because this can lead to Qt complaining about paint() recursion.

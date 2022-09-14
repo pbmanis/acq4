@@ -1482,7 +1482,8 @@ class pbm_ImageAnalysis(AnalysisModule):
                     #     self.MPL_plots.plot([x1, x2], [y1, y2],
                     #         linestyle = '--', color='grey', marker='o', linewidth=minline)
                     # else:
-                    #     pn = pg.mkPen(width=minline, color=[128, 128, 128, 192], style=Qt.Qt.DashLine)
+                    #     pn = pg.mkPen(width=minline, color=[128, 128, 128, 192],
+                    #        style=Qt.QtCore.Qt.PenStyle.DashLine)
                     #     plt.plot([x1, x2], [y1, y2], pen = pn)
                 else:
                     lw = maxline*(abs(self.IXC_Strength[i, j])-threshold)/(maxStr-threshold)+minline

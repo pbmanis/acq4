@@ -87,25 +87,25 @@ def init():
 def keyPressEvent(ev):
     k = ev.key()
     mod = ev.modifiers()
-    if k == Qt.Qt.Key_Right:
-        if mod & Qt.Qt.ControlModifier:
+    if k == Qt.QtCoreQt.Key.Key_Right:
+        if mod & Qt.QtCore.Qt.KeyboardModifier.ControlModifier:
             copyLabel(1)
         ui.zSlider.setValue(ui.zSlider.value()+1)
-    elif k == Qt.Qt.Key_Left:
-        if mod & Qt.Qt.ControlModifier:
+    elif k == Qt.QtCore.Qt.Key.Key_Left:
+        if mod & Qt.QtCore.Qt.KeyboardModifier.ControlModifier:
             copyLabel(-1)
         ui.zSlider.setValue(ui.zSlider.value()-1)
-    elif k == Qt.Qt.Key_Equal:
+    elif k == Qt.QtCore.Qt.Key.Key_Equal:
         ui.radiusSpin.setValue(ui.radiusSpin.value()+1)
-    elif k == Qt.Qt.Key_Minus:
+    elif k == Qt.QtCore.Qt.Key.Key_Minus:
         ui.radiusSpin.setValue(ui.radiusSpin.value()-1)
-    elif k == Qt.Qt.Key_Space:
+    elif k == Qt.QtCore.Qt.Key.Key_Space:
         if labelImg.isVisible():
             labelImg.setVisible(False)
         else:
             updateLabelImage()
             labelImg.setVisible(True)
-    elif k == Qt.Qt.Key_G:
+    elif k == Qt.QtCore.Qt.Key.Key_G:
         ui.greyCheck.toggle()
     else:
         ev.ignore()
@@ -124,7 +124,7 @@ def draw(src, dst, mask, srcSlice, dstSlice, ev):
     mod = ev.modifiers()
     mask = mask[srcSlice]
     src = src[srcSlice].astype(l.dtype)
-    if mod & Qt.Qt.ShiftModifier:
+    if mod & Qt.QtCore.Qt.KeyboardModifier.ShiftModifier:
         #src = 1-src
         l[dstSlice] &= ~(src * 2**ui.labelSpin.value())
     #l[dstSlice] = l[dstSlice] * (1-mask) + src * mask
@@ -156,7 +156,8 @@ def addLabel(info=None):
     
     l = info['id']
     item = Qt.QTreeWidgetItem([str(l), info['name'], ''])
-    item.setFlags(item.flags() | Qt.Qt.ItemIsEditable | Qt.Qt.ItemIsUserCheckable)
+    item.setFlags(item.flags() | Qt.Qtcore.Qt.ItemFlag.ItemIsEditable | 
+                Qt.QtCore.Qt.ItemFlag.ItemIsUserCheckable)
     if info['visible']:
         item.setCheckState(0, True)
     else:

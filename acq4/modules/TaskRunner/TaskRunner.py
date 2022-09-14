@@ -176,7 +176,7 @@ class TaskRunner(Module):
         """Return the taskGui for dev. Used by some devices to detect changes in others."""
         ## Create or re-enable the device if needed
         try:
-            item = self.ui.deviceList.findItems(dev, Qt.Qt.MatchExactly)[0]
+            item = self.ui.deviceList.findItems(dev, Qt.QtCore.Qt.MatchFlag.MatchExactly)[0]
         except:
             raise Exception('Requested device %s does not exist!' % dev)
         item.setCheckState(Qt.QtCore.Qt.CheckState.Checked)
@@ -255,13 +255,14 @@ class TaskRunner(Module):
             m = analysisModules.createAnalysisModule(mod, self)
             dock = Qt.QDockWidget(mod)
             dock.setFeatures(dock.AllDockWidgetFeatures)
-            dock.setAllowedAreas(Qt.Qt.BottomDockWidgetArea | Qt.Qt.TopDockWidgetArea)
+            dock.setAllowedAreas(Qt.QtCore.Qt.DockWidgetArea.BottomDockWidgetArea |
+                 Qt.QtCore.Qt.DockWIdgetArea.TopDockWidgetArea)
             dock.setObjectName(mod)
             dock.setWidget(m)
             dock.setAutoFillBackground(True)
 
             self.analysisDocks[mod] = dock
-            self.win.addDockWidget(Qt.Qt.BottomDockWidgetArea, dock)
+            self.win.addDockWidget(Qt.QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, dock)
             if self.firstDock is None:
                 self.firstDock = dock
             else:
@@ -270,7 +271,7 @@ class TaskRunner(Module):
                 Qt.QApplication.sendPostedEvents(dock, 0)  # required to ensure new tab is visible
                 self.win.tabifyDockWidget(self.firstDock, dock)
 
-            items = self.ui.analysisList.findItems(mod, Qt.Qt.MatchExactly)
+            items = self.ui.analysisList.findItems(mod, Qt.QtCore.Qt.MatchFlag.MatchExactly)
             items[0].setCheckState(True)
 
             return True
@@ -290,7 +291,7 @@ class TaskRunner(Module):
             self.firstDock = None
         self.win.removeDockWidget(dock)
         del self.analysisDocks[mod]
-        items = self.ui.analysisList.findItems(mod, Qt.Qt.MatchExactly)
+        items = self.ui.analysisList.findItems(mod, Qt.QtCore.Qt.MatchFlag.MatchExactly)
         items[0].setCheckState(False)
 
     def fileChanged(self, handle, change, args):

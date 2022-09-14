@@ -14,7 +14,7 @@ class ScatterPlotter(Qt.QSplitter):
     
     def __init__(self):
         Qt.QSplitter.__init__(self)
-        self.setOrientation(Qt.Qt.Horizontal)
+        self.setOrientation(Qt.QtCore.Qt.Orientation.Horizontal)
         self.plot = pg.PlotWidget()
         self.addWidget(self.plot)
         self.ctrl = Qt.QWidget()
@@ -45,7 +45,7 @@ class ScatterPlotter(Qt.QSplitter):
 
     def itemChanged(self, item, col):
         gi = self.scans[item.scan][0]
-        if item.checkState(0) == Qt.Qt.Checked:
+        if item.checkState(0) == True:
             gi.show()
         else:
             gi.hide()
@@ -57,7 +57,8 @@ class ScatterPlotter(Qt.QSplitter):
         self.updateAll()
 
     def addScan(self, scanDict):
-        plot = pg.ScatterPlotItem(pen=Qt.QPen(Qt.Qt.NoPen), brush=pg.mkBrush((255, 255, 255, 100)))
+        plot = pg.ScatterPlotItem(pen=Qt.QPen(Qt.QtCore.Qt.PenStyle.NoPen), 
+                                brush=pg.mkBrush((255, 255, 255, 100)))
         self.plot.addItem(plot)
         plot.sigClicked.connect(self.plotClicked)
         
@@ -66,7 +67,7 @@ class ScatterPlotter(Qt.QSplitter):
         #print "Adding:", scan.name
         for scan in scanDict.values():
             item = Qt.QTreeWidgetItem([scan.name()])
-            item.setCheckState(0, Qt.Qt.Checked)
+            item.setCheckState(0, True)
             item.scan = scan
             self.scanList.addTopLevelItem(item)
             self.scans[scan] = [plot, item, False]
@@ -106,7 +107,7 @@ class ScatterPlotter(Qt.QSplitter):
 
     def updateAll(self):
         for s in self.scans:
-            if self.scans[s][1].checkState(0) == Qt.Qt.Checked:
+            if self.scans[s][1].checkState(0) == True:
                 self.updateScan(s)
     
     def updateColumns(self, scan):

@@ -205,7 +205,6 @@ class ConfLoader(DirTreeLoader):
         DirTreeLoader.__init__(self, path)
 
     def new(self):
-        print("new")
         return True
 
     def load(self, handle):

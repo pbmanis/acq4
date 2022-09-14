@@ -133,17 +133,18 @@ class Black(Qt.QWidget):
         if self.cancelPressed:
             p.fillRect(self.cancelRect, pg.mkBrush(80, 0, 0))
         p.drawRect(self.cancelRect)
-        p.drawText(self.cancelRect, Qt.Qt.AlignHCenter | Qt.Qt.AlignVCenter, "Cancel")
+        p.drawText(self.cancelRect, Qt.QtCore.Qt.AlignmentFlag.AlignHCenter |
+                Qt.QtCore.Qt.AlignmentFlag.AlignVCenter, "Cancel")
         p.end()
 
     def mousePressEvent(self, ev):
-        if ev.button() == Qt.Qt.LeftButton and self.cancelRect.contains(ev.pos()):
+        if ev.button() == Qt.QtCore.Qt.Key.LeftButton and self.cancelRect.contains(ev.pos()):
             ev.accept()
             self.cancelPressed = True
             self.update()
 
     def mouseReleaseEvent(self, ev):
-        if ev.button() == Qt.Qt.LeftButton:
+        if ev.button() == Qt.QtCore.Qt.Key.LeftButton:
             if self.cancelRect.contains(ev.pos()) and self.cancelPressed:
                 self.sigCancelClicked.emit()
             self.cancelPressed = False
@@ -241,7 +242,7 @@ class Imager(Module):
         self.win.resize(500, 900)  # make the window big enough to use on a large monitor...
 
         self.w1 = Qt.QSplitter()  # divide l, r
-        self.w1.setOrientation(Qt.Qt.Horizontal)
+        self.w1.setOrientation(Qt.QtCore.Qt.Orientation.Horizontal)
         self.win.setCentralWidget(self.w1)  # w1 is the "main window" splitter
 
         self.dockarea = pg.dockarea.DockArea()

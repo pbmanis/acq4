@@ -13,10 +13,10 @@ class CortexROI(ROI.PolyLineROI):
         ROI.PolyLineROI.__init__(self, [[0,0], [2,0], [2,1], [0,1]], pos=pos, closed=True, pen=pg.mkPen(50,50, 255, 200))
         
         ## don't let the user add handles to the sides, only to the top and bottom
-        self.segments[0].setAcceptedMouseButtons(Qt.Qt.NoButton)
-        #self.segments[1].setAcceptedMouseButtons(Qt.Qt.NoButton) ## there was a change in PolylineROI that affected the order of segments, so now 0 and 2 are the sides instead of 1 and 3 (2013.12.12)
-        self.segments[2].setAcceptedMouseButtons(Qt.Qt.NoButton)
-        #self.segments[3].setAcceptedMouseButtons(Qt.Qt.NoButton)
+        self.segments[0].setAcceptedMouseButtons(Qt.QtCore.Qt.MouseButton.NoButton)
+        #self.segments[1].setAcceptedMouseButtons(Qt.QtCore.Qt.MouseButton.QNoButton) ## there was a change in PolylineROI that affected the order of segments, so now 0 and 2 are the sides instead of 1 and 3 (2013.12.12)
+        self.segments[2].setAcceptedMouseButtons(Qt.QtCore.Qt.MouseButton.NoButton)
+        #self.segments[3].setAcceptedMouseButtons(Qt.QtCore.Qt.MouseButton.NoButton)
 
         if state is not None:
             self.setState(state)
@@ -103,7 +103,7 @@ class CortexROI(ROI.PolyLineROI):
         for i, q in enumerate(quads):
             w = abs(Point((q[0]+(q[3]-q[0])/2.)-(q[1]+(q[2]-q[1])/2.)).length())
             widths.append(w)
-            if Qt.QPolygonF(q).containsPoint(Qt.QPointF(0., 0.0002), Qt.Qt.OddEvenFill):
+            if Qt.QPolygonF(q).containsPoint(Qt.QPointF(0., 0.0002), Qt.QtCore.Qt.FillRule.OddEvenFill):
                 ind = i
         mids = (quads[ind][0]+(quads[ind][3]-quads[ind][0])/2.),(quads[ind][1]+(quads[ind][2]-quads[ind][1])/2.)
         xPos = -(Point(mids[0]).length()*math.sin(Point(mids[0]).angle(Point(0,1)))*(math.pi/180.))

@@ -76,7 +76,7 @@ class XKeys(Device):
 
         self._callbacks = {}
         # use queued signal here to ensure events are processed in GUI thread
-        self.sigStateChanged.connect(self._handleCallbacks, Qt.Qt.QueuedConnection)
+        self.sigStateChanged.connect(self._handleCallbacks, Qt.QtCore.Qt.ConnectionType.QueuedConnection)
 
     def setBacklights(self, state, **kwds):
         self.dev.setBacklights(state, **kwds)

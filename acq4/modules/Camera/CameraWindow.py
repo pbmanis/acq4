@@ -82,7 +82,8 @@ class CameraWindow(Qt.QMainWindow):
         # Add explanatory label if no devices were found
         if not haveDevs:
             label = Qt.QLabel("No imaging devices available")
-            label.setAlignment(Qt.Qt.AlignHCenter | Qt.Qt.AlignVCenter)
+            label.setAlignment(Qt.QtCore.Qt.AlignmentFlag.AlignHCenter |
+                 Qt.QtCore.Qt.AlignmentFlag.AlignVCenter)
             dock = dockarea.Dock(name="nocamera", widget=label, size=(100, 500), hideTitle=True)
             self.cw.addDock(dock, "left", self.gvDock)
 

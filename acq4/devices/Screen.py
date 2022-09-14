@@ -17,7 +17,7 @@ class Screen(Device):
         Device.__init__(self, dm, config, name)
         dm.declareInterface(name, ['screen'], self)
         self.blanker = ScreenBlanker()
-        self.sigBlankScreen.connect(self.blankRequested, Qt.Qt.QueuedConnection)
+        self.sigBlankScreen.connect(self.blankRequested, Qt.QtCore.Qt.ConnectionType.QueuedConnection)
 
     def taskInterface(self, taskRunner):
         return ScreenTaskGui(self, taskRunner)

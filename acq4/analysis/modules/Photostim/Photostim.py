@@ -52,7 +52,7 @@ class Photostim(AnalysisModule):
         self.mapLayout = Qt.QVBoxLayout()
         self.mapCtrl.setLayout(self.mapLayout)
         self.mapLayout.splitter = Qt.QSplitter()
-        self.mapLayout.splitter.setOrientation(Qt.Qt.Vertical)
+        self.mapLayout.splitter.setOrientation(Qt.QtCore.Qt.Orientation.Vertical)
         self.mapLayout.splitter.setContentsMargins(0,0,0,0)
         self.mapLayout.addWidget(self.mapLayout.splitter)
         self.mapLayout.splitter.addWidget(self.analysisCtrl)
@@ -252,7 +252,7 @@ class Photostim(AnalysisModule):
     def scanPointClicked(self, plotItem, points):
         try:
             point = points[0]
-            Qt.QApplication.setOverrideCursor(Qt.QCursor(Qt.Qt.WaitCursor))
+            Qt.QApplication.setOverrideCursor(Qt.QtGui.QCursor(Qt.QtCore.Qt.CursorShape.WaitCursor))
             #print "clicked:", point.data()
             plot = self.getElement("Data Plot")
             plot.clear()
@@ -283,7 +283,7 @@ class Photostim(AnalysisModule):
         #raise Exception('blah')
         #print points
         try:
-            Qt.QApplication.setOverrideCursor(Qt.QCursor(Qt.Qt.WaitCursor))
+            Qt.QApplication.setOverrideCursor(Qt.QtGui.QCursor(Qt.QtCore.Qt.CursorShape.WaitCursor))
             plot = self.getElement("Data Plot")
             plot.clear()
             eTable = self.getElement("Event Table")

@@ -138,7 +138,7 @@ class ManipulatorAxesCalibrationWindow(Qt.QWidget):
             self.addPointBtn.setText("add point")
 
     def cameraModuleClicked(self, ev):
-        if ev.button() != Qt.Qt.LeftButton:
+        if ev.button() != Qt.QtCore.Qt.Key.LeftButton:
             return
 
         camera = self.getCameraDevice()

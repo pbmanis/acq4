@@ -198,7 +198,7 @@ class EventFitter(CtrlNode):
     def eventFilter(self, obj, event):
         if self.selectedFit is None:
             return False
-        if event.type() == Qt.QEvent.KeyPress and event.key() == Qt.Qt.Key_Delete:
+        if event.type() == Qt.QEvent.KeyPress and event.key() == Qt.QtCore.Qt.Key.Key_Delete:
             self.deleteSelected()
             return True
         return False

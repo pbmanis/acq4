@@ -915,7 +915,7 @@ class Loader(pg.LayoutWidget):
                 dlg += 1
                 if dlg.wasCanceled():
                     raise Exception("User cancelled map list construction; some maps may not be displayed.")
-        self.tree.sortItems(0, Qt.Qt.AscendingOrder)
+        self.tree.sortItems(0, Qt.QtCore.Qt.SortOrder.AscendingOrder)
             
     def load(self):
         sel = self.tree.selectedItems()

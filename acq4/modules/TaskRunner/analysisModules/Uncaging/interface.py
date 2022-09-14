@@ -273,7 +273,7 @@ class Task:
             alpha = self.state['alphaSlider']
             spot = Qt.QGraphicsEllipseItem(Qt.QRectF(-0.5, -0.5, 1, 1))
             spot.setBrush(Qt.QBrush(Qt.QColor(r*255, g*255, b*255, alpha)))
-            spot.setPen(Qt.QPen(Qt.Qt.NoPen))
+            spot.setPen(Qt.QPen(Qt.QtCore.Qt.PenStyle.NoPen))
             p = f['scanner']['position']
             s = f['scanner']['spotSize']
             self.items.append([spot, p, [s, s]])

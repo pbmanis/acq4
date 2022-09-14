@@ -107,9 +107,9 @@ class ParamList(Qt.QTreeWidget):
 
         ## Enable drop for top-level items, disable for all others.
         for i in self.topLevelItems():
-            i.setFlags(i.flags() | Qt.Qt.ItemIsDropEnabled)
+            i.setFlags(i.flags() | Qt.QtCore.Qt.ItemFlag.ItemIsDropEnabled)
             for j in range(i.childCount()):
-                i.child(j).setFlags(i.flags() & (~Qt.Qt.ItemIsDropEnabled))
+                i.child(j).setFlags(i.flags() & (~Qt.QtCore.Qt.ItemFlag.ItemIsDropEnabled))
             i.setExpanded(True)
 
     def itemData(self, item):
@@ -161,6 +161,7 @@ class ParamList(Qt.QTreeWidget):
 
     def removeDevice(self, dev):
         """Remove all parameters for a specific device"""
-        items = self.findItems(dev, Qt.Qt.MatchExactly | Qt.Qt.MatchRecursive, 0)
+        items = self.findItems(dev, Qt.QtCore.Qt.MatchFlag.MatchExactly | 
+                Qt.QtCore.Qt.MatchFlag.MatchRecursive, 0)
         for i in items:
             self.takeItem(i)

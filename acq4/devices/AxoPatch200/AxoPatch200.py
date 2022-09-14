@@ -473,17 +473,17 @@ class AxoPatchTaskGui(DAQGenericTaskGui):
         self.setLayout(self.layout)
         
         self.splitter1 = Qt.QSplitter()
-        self.splitter1.setOrientation(Qt.Qt.Horizontal)
+        self.splitter1.setOrientation(Qt.QtCore.Qt.Orientation.Horizontal)
         self.layout.addWidget(self.splitter1)
         
         self.splitter2 = Qt.QSplitter()
-        self.splitter2.setOrientation(Qt.Qt.Vertical)
+        self.splitter2.setOrientation(Qt.QtCore.Qt.Orientation.Vertical)
         self.modeCombo = Qt.QComboBox()
         self.splitter2.addWidget(self.modeCombo)
         self.modeCombo.addItems(self.dev.listModes())
         
         self.splitter3 = Qt.QSplitter()
-        self.splitter3.setOrientation(Qt.Qt.Vertical)
+        self.splitter3.setOrientation(Qt.QtCore.Qt.Orientation.Vertical)
         
         (w1, p1) = self.createChannelWidget('primary')
         (w2, p2) = self.createChannelWidget('command')

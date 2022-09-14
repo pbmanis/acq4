@@ -337,7 +337,7 @@ class MultiPatchWindow(Qt.QWidget):
             self._setTargetPips = []
 
     def cameraModuleClicked_calibrate(self, ev):
-        if ev.button() != Qt.Qt.LeftButton:
+        if ev.button() != Qt.QtCore.Qt.Key.LeftButton:
             return
 
         # Set next pipette position from mouse click
@@ -359,7 +359,7 @@ class MultiPatchWindow(Qt.QWidget):
             self.updateXKeysBacklight()
 
     def cameraModuleClicked_setTarget(self, ev):
-        if ev.button() != Qt.Qt.LeftButton:
+        if ev.button() != Qt.QtCore.Qt.Key.LeftButton:
             return
 
         # Set next pipette position from mouse click

@@ -20,7 +20,7 @@ class STDPFileLoader(FileLoader):
         files = self.ui.dirTree.selectedFiles()
         #self.loadFile(fh)
         try:
-            Qt.QApplication.setOverrideCursor(Qt.QCursor(Qt.Qt.WaitCursor))
+            Qt.QApplication.setOverrideCursor(Qt.QtGui.QCursor(Qt.QtCore.Qt.CursorShape.WaitCursor))
             for fh in files:
                 if self.host is None:
                     self.sigFileLoaded.emit(fh)
@@ -39,7 +39,7 @@ class STDPFileLoader(FileLoader):
         files = self.ui.dirTree.selectedFiles()
         #self.loadFile(fh)
         try:
-            Qt.QApplication.setOverrideCursor(Qt.QCursor(Qt.Qt.WaitCursor))
+            Qt.QApplication.setOverrideCursor(Qt.QtGui.QCursor(Qt.QtCore.Qt.CursorShape.WaitCursor))
             for fh in files:
                 if self.host is None:
                     self.sigFileLoaded.emit(fh)

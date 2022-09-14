@@ -449,20 +449,20 @@ class PSPReversal(AnalysisModule):
         if forcestate is not None:
             if forcestate:
                 region['region'].show()
-                region['state'].setChecked(Qt.Qt.Checked)
+                region['state'].setChecked(True)
                 region['shstate'] = True
             else:
                 region['region'].hide()
-                region['state'].setChecked(Qt.Qt.Unchecked)
+                region['state'].setChecked(False)
                 region['shstate'] = False
         else:
             if not region['shstate']:
                 region['region'].show()
-                region['state'].setChecked(Qt.Qt.Checked)
+                region['state'].setChecked(True)
                 region['shstate'] = True
             else:
                 region['region'].hide()
-                region['state'].setChecked(Qt.Qt.Unchecked)
+                region['state'].setChecked(False)
                 region['shstate'] = False
 
     def uniq(self, inlist):
@@ -1243,7 +1243,7 @@ class PSPReversal(AnalysisModule):
                 file_ok = os.path.exists(fullpath)
                 if not file_ok:  # get the directory handle and take it from there
                     continue
-                self.ctrl.PSPReversal_KeepT.setChecked(Qt.Qt.Unchecked)  # make sure this is unchecked
+                self.ctrl.PSPReversal_KeepT.setChecked(False)  # make sure this is unchecked
                 dh = self.dataManager().manager.dirHandle(fullpath)
                 if not self.loadFileRequested([dh]):  # note: must pass a list
                     print('failed to load requested file: ', fullpath)
@@ -1252,7 +1252,7 @@ class PSPReversal(AnalysisModule):
                 self.analysis_summary['Drugs'] = thiscell['manip'][p]
                 # alt_flag = bool(thiscell['alternation'])
                 # self.analysis_parameters['alternation'] = alt_flag
-                # self.ctrl.PSPReversal_Alternation.setChecked((Qt.Qt.Unchecked, Qt.Qt.Checked)[alt_flag])
+                # self.ctrl.PSPReversal_Alternation.setChecked((False, True)[alt_flag])
                 # if 'junctionpotential' in thiscell:
                 #     self.analysis_parameters['junction'] = thiscell['junctionpotential']
                 #     self.ctrl.PSPReversal_Junction.setValue(float(thiscell['junctionpotential']))
@@ -1761,8 +1761,8 @@ class PSPReversal(AnalysisModule):
         """
         if self.ctrl.PSPReversal_KeepAnalysis.isChecked() is False:
             self.iv_plot.clear()
-            self.iv_plot.addLine(x=0, pen=pg.mkPen('888', width=0.5, style=Qt.Qt.DashLine))
-            self.iv_plot.addLine(y=0, pen=pg.mkPen('888', width=0.5, style=Qt.Qt.DashLine))
+            self.iv_plot.addLine(x=0, pen=pg.mkPen('888', width=0.5, style=Qt.QtCore.Qt.PenStyle.DashLine))
+            self.iv_plot.addLine(y=0, pen=pg.mkPen('888', width=0.5, style=Qt.QtCore.Qt.PenStyle.DashLine))
         jp = self.analysis_parameters['junction']  # get offsets for voltage
         ho = float(self.holding) * 1e3
         offset = jp + ho  # combine
@@ -2090,7 +2090,7 @@ class PSPReversal(AnalysisModule):
     #     if not fpar:
     #         print 'PSPReversal::update_tauh: tau_h fitting failed - see log'
     #         return
-    #     redpen = pg.mkPen('r', width=1.5, style=Qt.Qt.DashLine)
+    #     redpen = pg.mkPen('r', width=1.5, style=Qt.QtCore.Qt.PenStyle.DashLine)
     #     if self.fit_curve is None:
     #         self.fit_curve = self.data_plot.plot(xf[0], yf[0],
     #                                              pen=redpen)

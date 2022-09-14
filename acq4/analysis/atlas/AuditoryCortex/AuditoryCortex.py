@@ -35,7 +35,8 @@ class AuditoryCortex(Atlas.Atlas):
         quads = self.state['quadrilaterals']
         ind=None
         for i, q in enumerate(quads):
-            if Qt.QPolygonF([Qt.QPointF(*x) for x in q]).containsPoint(Qt.QPointF(pos), Qt.Qt.OddEvenFill):
+            if Qt.QPolygonF([Qt.QPointF(*x) for x in q]).containsPoint(Qt.QPointF(pos),
+                 Qt.QtCore.Qt.FillRule.OddEvenFill):
                 ind = i
         if ind == None: ## in case pos is outside the quadrilaterals
             bestMin = 1000

@@ -57,7 +57,7 @@ class ColorMapper(Qt.QWidget):
         Qt.QWidget.blockSignals(self, self._signalBlock > 0)
         
     def event(self, event): ## This is because QComboBox does not emit the editingFinished signal when enter is pressed.
-        if event.type() == Qt.QEvent.KeyPress and event.key() == Qt.Qt.Key_Return:
+        if event.type() == Qt.QEvent.KeyPress and event.key() == Qt.QtCore.Qt.Key.Key_Return:
             self.editDone()
             return True
         return False

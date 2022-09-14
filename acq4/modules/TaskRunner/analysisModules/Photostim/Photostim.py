@@ -81,7 +81,7 @@ class PhotostimModule(AnalysisModule):
         self.currentTask = p
         self.tasks[name] = p
         item = Qt.QListWidgetItem(name)
-        item.setCheckState(Qt.Qt.Checked)
+        item.setCheckState(True)
         self.ui.taskList.addItem(item)
         self.ui.taskList.setCurrentItem(item)
 
@@ -116,7 +116,7 @@ class PhotostimModule(AnalysisModule):
             
     def itemClicked(self, item):
         task = self.tasks[str(item.text())]
-        if item.checkState() == Qt.Qt.Checked:
+        if item.checkState() == True:
             task.show()
         else:
             task.hide()
