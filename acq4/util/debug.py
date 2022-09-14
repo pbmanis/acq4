@@ -29,12 +29,12 @@ def installExceptionHandler():
 
 def createLogWindow(manager):
     from .LogWindow import LogWindow
-    print("createLogWindow entry")
+
     global LOG_UI
-    print("log ui: ", LOG_UI)
+
     assert LOG_UI is None
     LOG_UI = LogWindow(manager)
-    print("LogWindow is created")
+    
     return LOG_UI
 
 
@@ -73,8 +73,7 @@ def logMsg(msg, **kwargs):
             sys.excepthook(*sys.exc_info())
     else:
         print("Can't log message; no log created yet.", LOG_UI)
-        # print args
-        print(kwargs)
+
 
 
 def logExc(msg, *args, **kwargs):

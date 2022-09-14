@@ -5,7 +5,7 @@ import weakref
 
 from pyqtgraph.configfile import readConfigFile, writeConfigFile, appendConfigFile
 from acq4.util.debug import printExc
-from six.moves import map
+# from six.moves import map
 
 """
 DataManager.py - DataManager, FileHandle, and DirHandle classes 
@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
 import re, shutil
 import time
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import Mutex, RecursiveMutex
 from pyqtgraph import SignalProxy, BusyCursor, OrderedDict
 from acq4.util import Qt
 if not hasattr(Qt.QtCore, 'Signal'):
@@ -81,7 +81,7 @@ class DataManager(Qt.QtCore.QObject):
             raise Exception("Attempted to create more than one DataManager!")
         DataManager.INSTANCE = self
         self.cache = {}
-        self.lock = Mutex(Qt.QtCore.QRecursiveMutex)
+        self.lock = RecursiveMutex()
         
     def getDirHandle(self, dirName, create=False):
         with self.lock:
@@ -190,7 +190,7 @@ class FileHandle(Qt.QtCore.QObject):
         self.delayedChanges = []
         self.path = os.path.abspath(path)
         self.parentDir = None
-        self.lock = Mutex(Qt.QtCore.QMutex.Recursive)
+        self.lock = RecursiveMutex()
         if Qt.QApplication.instance() is not None:
             self.sigproxy = SignalProxy(self.sigChanged, slot=self.delayedChange)
         else:

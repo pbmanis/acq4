@@ -23,7 +23,7 @@ class DirTreeWidget(Qt.QTreeWidget):
         self.allowRename = allowRename
         self.currentDir = None
         self.sortMode = sortMode
-        self.setEditTriggers(Qt.QAbstractItemView.SelectedClicked)
+        self.setEditTriggers(Qt.QtWidgets.QAbstractItemView.EditTrigger.SelectedClicked)
         self.items = {}
         self.itemExpanded.connect(self.itemExpandedEvent)
         self.itemChanged.connect(self.itemChangedEvent)
@@ -336,7 +336,7 @@ class DirTreeWidget(Qt.QTreeWidget):
         """Called whenever an item in the tree is expanded; responsible for loading children if they have not been loaded yet."""
         if not item.childrenLoaded:
             try:
-                Qt.QApplication.setOverrideCursor(Qt.QCursor(Qt.Qt.WaitCursor))
+                Qt.QApplication.setOverrideCursor(Qt.QCursor(Qt.QtCore.Qt.CursorShape.WaitCursor))
                 ## Display loading message before starting load
                 loading = None
                 if item.handle.isDir():
@@ -396,23 +396,28 @@ class FileTreeItem(Qt.QTreeWidgetItem):
 
         if self.handle.isDir():
             self.setExpanded(False)
-            self.setChildIndicatorPolicy(Qt.QTreeWidgetItem.ShowIndicator)
-            self.setFlags(Qt.Qt.ItemIsSelectable|Qt.Qt.ItemIsDropEnabled|Qt.Qt.ItemIsEnabled)
+            self.setChildIndicatorPolicy(Qt.QtWidgets.QTreeWidgetItem.ChildIndicatorPolicy.ShowIndicator)
+            self.setFlags(
+                Qt.QtCore.Qt.ItemFlag.ItemIsSelectable|
+                Qt.QtCore.Qt.ItemFlag.ItemIsDropEnabled|
+                Qt.QtCore.Qt.ItemFlag.ItemIsEnabled)
             self.setForeground(0, Qt.QBrush(Qt.QColor(0, 0, 150)))
         else:
-            self.setFlags(Qt.Qt.ItemIsSelectable|Qt.Qt.ItemIsEnabled)
+            # print(dir(Qt.QtWidgets.QTreeWidgetItem))
+            self.setFlags(Qt.QtCore.Qt.ItemFlag.ItemIsSelectable|
+                          Qt.QtCore.Qt.ItemFlag.ItemIsEnabled)
 
         if allowMove:
-            self.setFlag(Qt.Qt.ItemIsDragEnabled)
+            self.setFlag(Qt.QtCore.Qt.ItemFlag.ItemIsDragEnabled)
         if allowRename:
-            self.setFlag(Qt.Qt.ItemIsEditable)
+            self.setFlag(Qt.QtCore.Qt.ItemFlag.ItemIsEditable)
 
         if checkState is not None:
-            self.setFlag(Qt.Qt.ItemIsUserCheckable)
+            self.setFlag(Qt.QtCore.Qt.ItemFlag.ItemIsUserCheckable)
             if checkState:
-                self.setCheckState(0, Qt.Qt.Checked)
+                self.setCheckState(0, True)
             else:
-                self.setCheckState(0, Qt.Qt.Unchecked)
+                self.setCheckState(0, False)
         self.expandState = False
         self.handle.sigChanged.connect(self.handleChanged)
         self.updateBoldState()
@@ -429,18 +434,18 @@ class FileTreeItem(Qt.QTreeWidgetItem):
             info = self.handle.info()
             font = self.font(0)
             if ('important' in info) and (info['important'] is True):
-                font.setWeight(Qt.QFont.Bold)
+                font.setWeight(Qt.QFont.Weight.Bold)
             else:
-                font.setWeight(Qt.QFont.Normal)
+                font.setWeight(Qt.QFont.Weight.Normal)
             self.setFont(0, font)
 
     def handleChanged(self, handle, change, *args):
         #print "handleChanged:", change
         if change == 'children':
             if self.handle.hasChildren() > 0:
-                self.setChildIndicatorPolicy(Qt.QTreeWidgetItem.ShowIndicator)
+                self.setChildIndicatorPolicy(Qt.QtWidgets.QTreeWidgetItem.ChildIndicatorPolicyShowIndicator)
             else:
-                self.setChildIndicatorPolicy(Qt.QTreeWidgetItem.DontShowIndicatorWhenChildless)
+                self.setChildIndicatorPolicy(Qt.QtWidgets.QTreeWidgetItem.ChildIndicatorPolicy.DontShowIndicatorWhenChildless)
         elif change == 'meta':
             self.updateBoldState()
 
@@ -460,6 +465,6 @@ class FileTreeItem(Qt.QTreeWidgetItem):
 
     def setChecked(self, c):
         if c:
-            self.setCheckState(0, Qt.Qt.Checked)
+            self.setCheckState(0, True)
         else:
-            self.setCheckState(0, Qt.Qt.Unchecked)
+            self.setCheckState(0, False)

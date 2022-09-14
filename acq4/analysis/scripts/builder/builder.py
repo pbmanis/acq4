@@ -158,9 +158,9 @@ def addLabel(info=None):
     item = Qt.QTreeWidgetItem([str(l), info['name'], ''])
     item.setFlags(item.flags() | Qt.Qt.ItemIsEditable | Qt.Qt.ItemIsUserCheckable)
     if info['visible']:
-        item.setCheckState(0, Qt.Qt.Checked)
+        item.setCheckState(0, True)
     else:
-        item.setCheckState(0, Qt.Qt.Unchecked)
+        item.setCheckState(0, False)
     btn = pg.ColorButton(color=info['color'])
     ui.labelTree.addTopLevelItem(item)
     ui.labelTree.setItemWidget(item, 2, btn)
@@ -190,7 +190,7 @@ def writeMeta():
             'id': k,
             'name': str(v['item'].text(1)),
             'color': pg.colorStr(v['btn'].color()),
-            'visible': v['item'].checkState(0) == Qt.Qt.Checked
+            'visible': v['item'].checkState(0) == True
         } )
     label._info[-1]['labels'] = meta
     label.writeMeta(labelFile)
@@ -235,7 +235,7 @@ def renderLabels(z, sl=None, overlay=False):
     val = ui.labelSlider.value()/128.
     
     for k, v in labelInfo.items():
-        if not v['item'].checkState(0) == Qt.Qt.Checked:
+        if not v['item'].checkState(0) == True:
             continue
         c = pg.colorTuple(v['btn'].color())
         mask = (lsl&(2**k) > 0)

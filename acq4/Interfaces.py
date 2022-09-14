@@ -6,7 +6,7 @@ import weakref
 import six
 
 
-from pyqtgraph.util.mutex import Mutex
+from pyqtgraph.util.mutex import Mutex, RecursiveMutex
 from acq4.util import Qt
 
 
@@ -51,7 +51,7 @@ class InterfaceDirectory(Qt.QObject):
     
     def __init__(self):
         Qt.QObject.__init__(self)
-        self.lock = Mutex(Mutex.Recursive)
+        self.lock = RecursiveMutex()
         self.nameList = {}                           # maps objName:typeName:None
         self.typeList = {}                           # maps typeName:objName:object
         

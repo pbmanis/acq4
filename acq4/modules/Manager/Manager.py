@@ -60,7 +60,7 @@ class Manager(Module):
                 if dock is None:
                     continue
                 self._deviceDocksByName[d] = dock
-                self.win.addDockWidget(Qt.Qt.RightDockWidgetArea, dock)
+                self.win.addDockWidget(Qt.QtCore.Qt.DockWidgetArea.RightDockWidgetArea, dock)
 
                 # By default, we stack all docks
                 if firstDock is None:
@@ -76,7 +76,7 @@ class Manager(Module):
         if dw is None:
             return None
         dock = Qt.QDockWidget(deviceName)
-        dock.setFeatures(dock.DockWidgetMovable | dock.DockWidgetFloatable)
+        dock.setFeatures(dock.DockWidgetFeature.DockWidgetMovable | dock.DockWidgetFeature.DockWidgetFloatable)
         dock.setObjectName(deviceName)
         dock.setWidget(dw)
         return dock
@@ -118,7 +118,7 @@ class Manager(Module):
             firstDock = None
             for dev in group["device names"]:
                 dock = self._deviceDocksByName[dev]
-                self.win.addDockWidget(Qt.Qt.RightDockWidgetArea, dock, orient)
+                self.win.addDockWidget(Qt.QtCore.Qt.DockWidgetArea.RightDockWidgetArea, dock, orient)
                 if firstDock is None:
                     firstDock = dock
                 else:
@@ -199,7 +199,7 @@ class Manager(Module):
 
     def loadConfiguredModule(self, mod):
         try:
-            Qt.QApplication.setOverrideCursor(Qt.QCursor(Qt.Qt.WaitCursor))
+            Qt.QApplication.setOverrideCursor(Qt.QtGui.QCursor(Qt.QtCore.Qt.CursorShape.WaitCursor))
             self.manager.loadDefinedModule(mod)
             self.showMessage("Loaded module configuration '%s'." % mod, 10000)
         finally:
@@ -207,7 +207,7 @@ class Manager(Module):
 
     def loadModule(self, mod):
         try:
-            Qt.QApplication.setOverrideCursor(Qt.QCursor(Qt.Qt.WaitCursor))
+            Qt.QApplication.setOverrideCursor(Qt.QCursor(Qt.Qt.CursorShape.WaitCursor))
             self.manager.loadModule(mod)
             self.showMessage("Loaded module '%s'." % mod, 10000)
         finally:
@@ -220,7 +220,7 @@ class Manager(Module):
         # self.showMessage("Loaded module '%s'." % mod, 10000)
 
     def loadConfig(self):
-        # print "LOAD CONFIG"
+        
         cfg = str(self.ui.configList.currentItem().text())
         self.manager.loadDefinedConfig(cfg)
         self.updateModList()

@@ -53,7 +53,7 @@ class DataManager(Module):
         self.ui.splitter.setSizes([int(w * 0.4), int(w * 0.6)])
         self.ui.logDock.hide()
         self.dialog = None
-        self.ui.fileTreeWidget.setSelectionMode(Qt.QAbstractItemView.ExtendedSelection)
+        self.ui.fileTreeWidget.setSelectionMode(Qt.QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         try:
             self.baseDirChanged()
         except Exception:
@@ -150,7 +150,7 @@ class DataManager(Module):
         bd = self.manager.getBaseDir()
         if self.dialog is None:
             self.dialog = FileDialog()
-            self.dialog.setFileMode(Qt.QFileDialog.DirectoryOnly)
+            self.dialog.setFileMode(Qt.QtWidgets.QFileDialog.FileMode.Directory)
             self.dialog.filesSelected.connect(self.setBaseDir)
         if bd is not None:
             self.dialog.setDirectory(bd.name())

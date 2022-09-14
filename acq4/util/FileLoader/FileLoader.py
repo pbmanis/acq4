@@ -71,7 +71,7 @@ class FileLoader(Qt.QWidget):
         
     def loadFile(self, files):
         try:
-            Qt.QApplication.setOverrideCursor(Qt.QCursor(Qt.Qt.WaitCursor))
+            Qt.QApplication.setOverrideCursor(Qt.QtGui.QCursor(Qt.QtCore.Qt.CursorShape.WaitCursor))
             for fh in files:
                 if self.host is None:
                     self.sigFileLoaded.emit(fh)
@@ -91,8 +91,8 @@ class FileLoader(Qt.QWidget):
         ## double-check with user to avoid accidental button presses
         if len(self.loaded) > 0:
             response = Qt.QMessageBox.question(self.ui.clearBtn, "Warning", "Really clear all items?", 
-                Qt.QMessageBox.Ok|Qt.QMessageBox.Cancel)
-            if response != Qt.QMessageBox.Ok:
+                Qt.QtWidgets.QMessageBox.StandardButton.Ok|Qt.QtWidgets.QMessageBox.StandardButton.Cancel)
+            if response != Qt.QtWidgets.QMessageBox.StandardButton.Ok:
                 return
         else:
             return

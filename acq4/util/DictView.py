@@ -9,13 +9,13 @@ from six.moves import range
 from six.moves import zip
 
 
-class DictView(Qt.QTreeWidget):
+class DictView(Qt.QtWidgets.QTreeWidget):
     def __init__(self, data, parent=None):
         Qt.QTreeWidget.__init__(self, parent)
         self.setData(data)
         self.setColumnCount(2)
         self.setHeaderLabels(['key', 'value'])
-        self.setVerticalScrollMode(self.ScrollPerPixel)
+        self.setVerticalScrollMode(self.ScrollMode.ScrollPerPixel)
         
     def setData(self, data):
         """data should be a dictionary."""

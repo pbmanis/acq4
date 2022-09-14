@@ -16,7 +16,11 @@ from acq4.util import Qt
 class Mutex(PGMutex):
     def __init__(self, *args, **kargs):
         kargs['debug'] = False
-        PGMutex.__init__(self, *args, **kargs)
+        if args[0].__name__ == 'QRecursiveMutex':
+            raise ValueError("Call RecursiveMutex instead")
+            # PGRecursiveMutex.__init__(self, **kargs)
+        else:
+            PGMutex.__init__(self, *args, **kargs)
 
 
 class RecursiveMutex(PGRecursiveMutex):
@@ -51,7 +55,7 @@ class ThreadsafeWrapper(object):
         self.__TSOwrapped_object__ = obj
 
         if reentrant:
-            self.__TSOwrap_lock__ = Mutex(Qt.QMutex.Recursive)
+            self.__TSOwrap_lock__ = RecursiveMutex()
         else:
             self.__TSOwrap_lock__ = Mutex()
         self.__TSOrecursive__ = recursive

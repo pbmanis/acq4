@@ -89,37 +89,31 @@ class LogWindow(Qt.QMainWindow):
 
     def __init__(self, manager):
         global WIN
-        print("LogWindow: Initing")
         Qt.QMainWindow.__init__(self)
         WIN = self
         self.setWindowTitle("Log")
         path = os.path.dirname(__file__)
         self.setWindowIcon(Qt.QIcon(os.path.join(path, "logIcon.png")))
-        print("now logwidget")
         self.manager = manager
         self.wid = LogWidget(self, manager)
-        print("ok, widgeted")
         self.wid.ui.input = Qt.QLineEdit()
         self.wid.ui.gridLayout.addWidget(self.wid.ui.input, 2, 0, 1, 3)
         self.wid.ui.dirLabel.setText("Current Storage Directory: None")
         self.setCentralWidget(self.wid)
         self.resize(1000, 500)
         self.manager = manager
-        print("self.manager: ", self.manager)
         self.entriesSaved = 0
         self.entriesVisible = 0
         self.logFile = None
         # start a new temp log file, destroying anything left over from the last session.
-        print("writing configfile to: ", self.filename())
         configfile.writeConfigFile("", self.fileName())
         # weak references to all Log Buttons get added to this list, so it's easy to make them all do things, like flash red.
         self.buttons = []
-        print("Window set up, now RLock")
         self.lock = RLock()
         self.errorDialog = ErrorDialog()
 
         self.wid.ui.input.returnPressed.connect(self.textEntered)
-        self.sigLogMessage.connect(self.queuedLogMsg, Qt.Qt.QueuedConnection)
+        self.sigLogMessage.connect(self.queuedLogMsg, Qt.QtCore.Qt.ConnectionType.QueuedConnection)
 
     def queuedLogMsg(self, args):  # called indirectly when logMsg is called from a non-gui thread
         self.logMsg(*args[0], **args[1])
@@ -385,14 +379,13 @@ class LogWidget(Qt.QtWidgets.QWidget):
         self.entryArray = self.entryArrayBuffer[:0]
 
         self.filtersChanged()
-
-        self.sigDisplayEntry.connect(self.displayEntry, Qt.Qt.QueuedConnection)
-        self.sigAddEntry.connect(self.addEntry, Qt.Qt.QueuedConnection)
+        self.sigDisplayEntry.connect(self.displayEntry, Qt.QtCore.Qt.ConnectionType.QueuedConnection)
+        self.sigAddEntry.connect(self.addEntry, Qt.QtCore.Qt.ConnectionType.QueuedConnection)
         self.ui.exportHtmlBtn.clicked.connect(self.exportHtml)
         self.ui.filterTree.itemChanged.connect(self.setCheckStates)
         self.ui.importanceSlider.valueChanged.connect(self.filtersChanged)
         self.ui.output.anchorClicked.connect(self.linkClicked)
-        self.sigScrollToAnchor.connect(self.scrollToAnchor, Qt.Qt.QueuedConnection)
+        self.sigScrollToAnchor.connect(self.scrollToAnchor, Qt.QtCore.Qt.ConnectionType.QueuedConnection)
 
     def loadFile(self, f):
         """Load the file, f. f must be able to be read by configfile.py"""
@@ -473,10 +466,10 @@ class LogWidget(Qt.QtWidgets.QWidget):
         if item == self.ui.filterTree.topLevelItem(1):
             if item.checkState(0):
                 for i in range(item.childCount()):
-                    item.child(i).setCheckState(0, Qt.Qt.Checked)
+                    item.child(i).setCheckState(0, True)
         elif item.parent() == self.ui.filterTree.topLevelItem(1):
             if not item.checkState(0):
-                self.ui.filterTree.topLevelItem(1).setCheckState(0, Qt.Qt.Unchecked)
+                self.ui.filterTree.topLevelItem(1).setCheckState(0, False)
         self.filtersChanged()
 
     def filtersChanged(self):
@@ -498,9 +491,9 @@ class LogWidget(Qt.QtWidgets.QWidget):
 
     def updateDirFilter(self, dh=None):
         if self.ui.filterTree.topLevelItem(0).checkState(0):
-            if dh is None:
+            if self.manager.getDirOfSelectedFile() is not False and dh is None:
                 self.dirFilter = self.manager.getDirOfSelectedFile().name()
-            else:
+            elif dh is not None:
                 self.dirFilter = dh.name()
         else:
             self.dirFilter = False
@@ -773,7 +766,7 @@ class LogWidget(Qt.QtWidgets.QWidget):
 class ErrorDialog(Qt.QDialog):
     def __init__(self):
         Qt.QDialog.__init__(self)
-        self.setWindowFlags(Qt.Qt.Window)
+        # self.setWindowFlags(Qt.QtCore.WindowFlags)
         self.setWindowTitle("ACQ4 Error")
         self.layout = Qt.QVBoxLayout()
         self.layout.setContentsMargins(3, 3, 3, 3)
@@ -781,7 +774,7 @@ class ErrorDialog(Qt.QDialog):
         self.messages = []
 
         self.msgLabel = Qt.QLabel()
-        self.msgLabel.setSizePolicy(Qt.QSizePolicy.Expanding, Qt.QSizePolicy.Expanding)
+        self.msgLabel.setSizePolicy(Qt.QtWidgets.QSizePolicy.Policy.Expanding, Qt.QtWidgets.QSizePolicy.Policy.Expanding)
         self.layout.addWidget(self.msgLabel)
         self.msgLabel.setMaximumWidth(800)
         self.msgLabel.setMinimumWidth(500)
@@ -857,7 +850,7 @@ class ErrorDialog(Qt.QDialog):
             self.open()
             if w is not None:
                 cp = w.geometry().center()
-                self.setGeometry(cp.x() - self.width() / 2.0, cp.y() - self.height() / 2.0, self.width(), self.height())
+                self.setGeometry(int(cp.x() - self.width() / 2.0), int(cp.y() - self.height() / 2.0), self.width(), self.height())
         self.raise_()
 
     @staticmethod

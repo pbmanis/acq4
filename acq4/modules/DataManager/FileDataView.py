@@ -11,7 +11,7 @@ class FileDataView(Qt.QSplitter):
     def __init__(self, parent):
         Qt.QSplitter.__init__(self, parent)
         #self.manager = Manager.getManager()
-        self.setOrientation(Qt.Qt.Vertical)
+        self.setOrientation(Qt.QtCore.Qt.Orientation.Vertical)
         self.current = None
         self.currentType = None
         self.widgets = []
@@ -88,7 +88,7 @@ class FileDataView(Qt.QSplitter):
                 self.addWidget(w)
                 self.widgets.append(w)
                 h = self.size().height()
-                self.setSizes([h*0.8, h*0.2])
+                self.setSizes([int(h*0.8), int(h*0.2)])
             else:
                 self.dictWidget.setData(data._info)
             

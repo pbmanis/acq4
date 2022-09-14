@@ -21,7 +21,7 @@ class FocusEventCatcher(Qt.QObject):
         Qt.QObject.__init__(self)
         
     def eventFilter(self, obj, event):
-        if event.type() == Qt.QEvent.FocusOut:
+        if event.type() == Qt.QtGui.QFocusEvent.Type.FocusOut:
             self.sigLostFocus.emit(obj)
         return False
 
