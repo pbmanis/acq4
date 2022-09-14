@@ -11,7 +11,7 @@ from acq4.devices.Device import Device, DeviceTask
 from pyqtgraph import siFormat
 from pyqtgraph.debug import Profiler
 from acq4.util import Qt
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import Mutex, RecursiveMutex
 from acq4.util.debug import printExc
 from pyqtgraph.metaarray import MetaArray, axis
 
@@ -87,7 +87,7 @@ class DAQGeneric(Device):
 
     def __init__(self, dm, config, name):
         Device.__init__(self, dm, config, name)
-        self._DGLock = Mutex(Qt.QMutex.Recursive)  ## protects access to _DGHolding, _DGConfig
+        self._DGLock = RecursiveMutex()  ## protects access to _DGHolding, _DGConfig
         ## Do some sanity checks here on the configuration
 
         # 'channels' key is expected; for backward compatibility we just use the top-level config.
