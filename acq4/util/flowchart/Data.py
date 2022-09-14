@@ -55,7 +55,7 @@ class SubtreeNode(Node):
 
     def itemChanged(self, item):
         fname = item.handle.name(relativeTo=self.root)
-        if item.checkState(0) == Qt.Qt.Checked:
+        if item.checkState(0) == True:
             if fname not in self.files:
                 self.files.add(fname)
                 self.addOutput(fname)
