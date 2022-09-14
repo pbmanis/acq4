@@ -9,6 +9,7 @@ from acq4.util import Qt
 import pyqtgraph as pg
 from pyqtgraph import SpinBox
 from pyqtgraph import GradientWidget
+from pyqtgraph.debug import printExc
 import numpy as np
 import os
 import pyqtgraph.configfile as configfile
@@ -57,7 +58,7 @@ class ColorMapper(Qt.QWidget):
         Qt.QWidget.blockSignals(self, self._signalBlock > 0)
         
     def event(self, event): ## This is because QComboBox does not emit the editingFinished signal when enter is pressed.
-        if event.type() == Qt.QEvent.KeyPress and event.key() == Qt.QtCore.Qt.Key.Key_Return:
+        if event.type() == Qt.QtCore.QEvent.Type.KeyPress and event.key() == Qt.QtCore.Qt.Key.Key_Return:
             self.editDone()
             return True
         return False

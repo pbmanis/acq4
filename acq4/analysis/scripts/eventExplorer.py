@@ -63,7 +63,7 @@ if 'events' not in locals():
     layout.addWidget(postRgnStopSpin)
 
     spl1 = Qt.QSplitter()
-    spl1.setOrientation(Qt.Qt.Vertical)
+    spl1.setOrientation(Qt.QtCore.Qt.Orientation.Vertical)
     layout.addWidget(spl1, row=1, col=0, rowspan=1, colspan=8)
 
     pw1 = pg.PlotWidget()
@@ -72,7 +72,7 @@ if 'events' not in locals():
     pw1.setLabel('bottom', 'Decay Tau', 's')
 
     spl2 = Qt.QSplitter()
-    spl2.setOrientation(Qt.Qt.Horizontal)
+    spl2.setOrientation(Qt.QtCore.Qt.Orientation.Horizontal)
     spl1.addWidget(spl2)
 
     pw2 = pg.PlotWidget(labels={'bottom': ('time', 's')})
@@ -136,7 +136,7 @@ if 'events' not in locals():
         
     cells = db.select(siteView, ['CellDir'], distinct=True)
     cells = [c['CellDir'] for c in cells]
-    cells.sort(lambda a,b: cmp(a.name(), b.name()))
+    cells.sort(lambda a,b: (a.name() > b.name()) - (a.name() < b.name()))
     
     cellCombo.addItem('')
     for c in cells:

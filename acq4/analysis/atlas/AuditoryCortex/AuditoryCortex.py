@@ -10,6 +10,7 @@ import numpy as np
 import pyqtgraph as pg
 import scipy
 from acq4.util.debug import Profiler
+from acq4.util import advancedTypes
 from six.moves import range
 
 
@@ -273,7 +274,7 @@ class PreviousAuditoryCortex(Atlas.Atlas):
             self.ctrl = Qt.QWidget()
             self.ui = CtrlTemplate.Ui_Form()
             self.ui.setupUi(self.ctrl)
-            self.stateGroup = pyqtgraph.WidgetGroup(self.ctrl)
+            self.stateGroup = pg.WidgetGroup(self.ctrl)
             self.ui.slicePlaneCombo.clear()
             for sp in self.slicePlanes:
                 self.ui.slicePlaneCombo.addItem(sp)
