@@ -80,7 +80,7 @@ class ImageCanvasItem(CanvasItem):
         CanvasItem.__init__(self, item, **opts)
 
         self.splitter = Qt.QSplitter()
-        self.splitter.setOrientation(Qt.Qt.Vertical)
+        self.splitter.setOrientation(Qt.QtCore.Qt.Orientation.Vertical)
         self.layout.addWidget(self.splitter, self.layout.rowCount(), 0, 1, 2)
         
         self.filterGroup = pg.GroupBox("Image Filter")
@@ -109,7 +109,7 @@ class ImageCanvasItem(CanvasItem):
         self.autoBtn.setChecked(True)
         self.layout.addWidget(self.autoBtn, self.layout.rowCount()-1, 1, 1, 1)
 
-        self.timeSlider = Qt.QSlider(Qt.Qt.Horizontal)
+        self.timeSlider = Qt.QSlider(Qt.QtCore.Qt.Orientation.Horizontal)
         self.layout.addWidget(self.timeSlider, self.layout.rowCount(), 0, 1, 2)
         self.timeSlider.valueChanged.connect(self.timeChanged)
 
@@ -146,7 +146,7 @@ class ImageCanvasItem(CanvasItem):
 
     def imgModeChanged(self):
         mode = str(self.imgModeCombo.currentText())
-        self.graphicsItem().setCompositionMode(getattr(Qt.QPainter, 'CompositionMode_' + mode))
+        self.graphicsItem().setCompositionMode(getattr(Qt.QPainter.CompositionMode, 'CompositionMode_' + mode))
 
     def filterStateChanged(self):
         self.updateImage()
@@ -172,7 +172,7 @@ class ImageCanvasItem(CanvasItem):
         if showTime:
             self.timeSlider.setMinimum(0)
             self.timeSlider.setMaximum(data.shape[0]-1)
-            self.graphicsItem().setImage(data[self.timeSlider.value()], autoLevels=self.autoBtn.isChecked())
+            self.graphicsItem().setImage(data[self.timeSlider.value()].view(np.ndarray), autoLevels=self.autoBtn.isChecked())
         else:
             self.graphicsItem().setImage(data, autoLevels=self.autoBtn.isChecked())
 

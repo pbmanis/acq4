@@ -308,7 +308,7 @@ def long_Eval(line):
     colonFound = False
     inquote = False
     for c in line:
-        if c is '{':
+        if c == '{':
             continue
         if (c == ',' or c == '}') and colonFound and not inpunct and not inquote: # separator is ','
             r = eval('{%s}' % sp)
@@ -484,7 +484,7 @@ def findspikes(xin, vin, thresh, t0=None, t1= None, dt=1.0, mode=None, interpola
     sp = list(set.intersection(set(spv),set(sps))) # intersection defines putative spikes
     sp.sort() # make sure all detected events are in order (sets is unordered)
     sp = tuple(sp) # convert to tuple
-    if sp is ():
+    if len(sp) == 0:
         return(st, spk) # nothing detected
     dx = 1
     mingap = int(0.0005/dt) # 0.5 msec between spikes (a little unphysiological...)

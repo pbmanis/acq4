@@ -23,6 +23,7 @@ import numpy as np
 import scipy
 from acq4.util import Qt
 from acq4.analysis.AnalysisModule import AnalysisModule
+from acq4.util.HelpfulException import HelpfulException
 import pyqtgraph as pg
 import acq4.util.matplotlibexporter as matplotlibexporter
 import acq4.analysis.tools.Utility as Utility  # pbm's utilities...
@@ -187,7 +188,7 @@ class IVCurve(AnalysisModule):
             #    self.label_up(self.tailPlot, 'V (V)', 'I (A)', 'Tail Current')
 
             # Add a color scale
-        self.color_scale = pg.GradientLegend((20, 150), (-10, -10))
+        self.color_scale = pg.GradientLegend((3, 150), (-10, -10))
         self.data_plot.scene().addItem(self.color_scale)
         self.ctrl.pushButton.clicked.connect(functools.partial(self.initialize_regions,
                                                                reset=True))
@@ -243,20 +244,20 @@ class IVCurve(AnalysisModule):
         if forcestate is not None:
             if forcestate:
                 region['region'].show()
-                region['state'].setChecked(Qt.Qt.Checked)
+                region['state'].setChecked(True)
                 region['shstate'] = True
             else:
                 region['region'].hide()
-                region['state'].setChecked(Qt.Qt.Unchecked)
+                region['state'].setChecked(False)
                 region['shstate'] = False
         else:
             if not region['shstate']:
                 region['region'].show()
-                region['state'].setChecked(Qt.Qt.Checked)
+                region['state'].setChecked(True)
                 region['shstate'] = True
             else:
                 region['region'].hide()
-                region['state'].setChecked(Qt.Qt.Unchecked)
+                region['state'].setChecked(False)
                 region['shstate'] = False
 
     def displayFISI_ISI(self):
@@ -829,8 +830,8 @@ class IVCurve(AnalysisModule):
                 continue
             trspikes = OrderedDict()
             if printSpikeInfo:
-                print(np.array(self.Clamps.values))
-                print(len(self.Clamps.traces))
+                print("IVCurve 832: Commands: ", np.array(self.Clamps.values))
+                print("IVCurve 833: # traces: ", len(self.Clamps.traces))
             (rmp[i], r2) = Utility.measure('mean', self.Clamps.time_base, self.Clamps.traces[i],
                                            0.0, self.Clamps.tstart)            
             (iHold[i], r2) = Utility.measure('mean', self.Clamps.time_base, self.Clamps.cmd_wave[i],
@@ -1131,7 +1132,9 @@ class IVCurve(AnalysisModule):
         self.tau_fits = {}
         for k, whichdata in enumerate(self.whichdata):
             yFit[k] = fitfunc[0](fitPars[k], xFit[k], C=None)  # +self.ivbaseline[whichdata]
-            self.tau_fits[k] = self.data_plot.plot(xFit[k]+self.tauwin[0], yFit[k], pen=pg.mkPen('r', width=2, style=Qt.Qt.DashLine))
+            self.tau_fits[k] = self.data_plot.plot(
+                xFit[k]+self.tauwin[0], yFit[k], 
+                pen=pg.mkPen('r', width=2, style=Qt.QtCore.Qt.PenStyle.DashLine))
         
     def update_Tauh(self, region=None, printWindow=False):
         """ compute tau (single exponential) from the onset of the markers
@@ -1198,7 +1201,7 @@ class IVCurve(AnalysisModule):
                                                fitPars=initpars)
         if not fpar:
             raise Exception('IVCurve::update_Tauh: tau_h fitting failed - see log')
-        bluepen = pg.mkPen('b', width=2.0, style=Qt.Qt.DashLine)
+        bluepen = pg.mkPen('b', width=2.0, style=Qt.QtCore.Qt.PenStyle.DashLine)
         if len(self.tauh_fits.keys()) > 0:
             [self.tauh_fits[k].clear() for k in self.tauh_fits.keys()]
         self.tauh_fits = {}
@@ -1305,9 +1308,9 @@ class IVCurve(AnalysisModule):
             # this makes the assumption that:
             # successive trials are in order (as are commands)
             # commands are not repeated...
-            if len(self.ivss_cmd) > 0 and len(self.ivss) > 0:
+            if len(self.ivss_cmd) > 1 and len(self.ivss) > 1:
                 self.r_in = np.max(np.diff
-                                   (self.ivss) / np.diff(self.ivss_cmd))
+                                   (self.ivss.view(np.ndarray)) / np.diff(self.ivss_cmd))
                 self.ctrl.IVCurve_Rin.setText(u'%9.1f M\u03A9' % (self.r_in * 1.0e-6))
                 self.analysis_summary['Rin'] = self.r_in*1.0e-6
             else:

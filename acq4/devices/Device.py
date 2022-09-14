@@ -8,7 +8,7 @@ import weakref
 import acq4
 from acq4.Interfaces import InterfaceMixin
 from acq4.util import Qt
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import Mutex, RecursiveMutex
 from acq4.util.debug import printExc
 
 
@@ -26,7 +26,7 @@ class Device(InterfaceMixin, Qt.QObject):  # QObject calls super, which is disas
         # However, under some circumstances we might try to run two concurrent tasks from the same 
         # thread (eg, due to calling processEvents() while waiting for the task to complete). We
         # don't have a good solution for this problem at present..
-        self._lock_ = Mutex(Qt.QMutex.Recursive)
+        self._lock_ = RecursiveMutex()
         self._lock_tb_ = None
         self.dm = deviceManager
         self.dm.declareInterface(name, ['device'], self)
