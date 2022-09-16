@@ -115,8 +115,8 @@ class STDPAnalyzer(AnalysisModule):
         self.ctrl.averageCheck.setChecked(True)
         self.ctrl.averageTimeSpin.setOpts(suffix='s', siPrefix=True, dec=True, value=60, step=1)
         self.ctrl.averageNumberSpin.setOpts(step=1, dec=True)
-        self.ctrl.startExcludeAPsSpin.setOpts(suffix='s', siPrefix=True, dec=True, value=0, step=1, minstep=0.001)
-        self.ctrl.endExcludeAPsSpin.setOpts(suffix='s', siPrefix=True, dec=True, value=0.25, step=1, minstep=0.001)
+        self.ctrl.startExcludeAPsSpin.setOpts(suffix='s', siPrefix=True, dec=True, value=0, step=1, minStep=0.001)
+        self.ctrl.endExcludeAPsSpin.setOpts(suffix='s', siPrefix=True, dec=True, value=0.25, step=1, minStep=0.001)
         self.averageCtrl.sigChanged.connect(self.averageCtrlChanged)
 
         self.analysisCtrl = pg.WidgetGroup(self.ctrl.analysisGroup)
