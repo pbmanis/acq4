@@ -4,7 +4,7 @@ from __future__ import print_function
 from acq4.devices.Laser import Laser, LaserTask
 from acq4.drivers.Coherent import Coherent
 from acq4.util import Qt
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 from acq4.util.Thread import Thread
 import acq4.util.debug as debug
 import time
@@ -16,9 +16,9 @@ class CoherentLaser(Laser):
         self.port = config['port']-1  ## windows com ports start at COM1, pyserial ports start at 0
         self.baud = config.get('baud', 19200)
         self.driver = Coherent(self.port, self.baud)
-        self.driverLock = Mutex(Qt.QMutex.Recursive)  ## access to low level driver calls
+        self.driverLock = RecursiveMutex()  ## access to low level driver calls
         
-        self.coherentLock = Mutex(Qt.QMutex.Recursive)  ## access to self.attributes
+        self.coherentLock = RecursiveMutex()  ## access to self.attributes
         self.coherentPower = 0
         self.coherentWavelength = 0
         
@@ -125,7 +125,7 @@ class CoherentThread(Thread):
 
     def __init__(self, dev, driver, lock):
         Thread.__init__(self)
-        self.lock = Mutex(Qt.QMutex.Recursive)
+        self.lock =RecursiveMutex()
         self.dev = dev
         self.driver = driver
         self.driverLock = lock

@@ -7,13 +7,13 @@ import time
 import acq4.util.ptime as ptime
 from acq4.devices.Camera import Camera, CameraTask
 from acq4.drivers.pvcam import PVCam as PVCDriver
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 from six.moves import range
 
 
 class PVCam(Camera):
     def __init__(self, *args, **kargs):
-        self.camLock = Mutex(Mutex.Recursive)  ## Lock to protect access to camera
+        self.camLock = RecursiveMutex()  ## Lock to protect access to camera
         self.ringSize = 50
         Camera.__init__(self, *args, **kargs)  ## superclass will call setupCamera when it is ready.
         self.acqBuffer = None

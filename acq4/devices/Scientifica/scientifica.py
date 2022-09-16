@@ -5,7 +5,7 @@ import numpy as np
 from acq4.util import Qt
 from ..Stage import Stage, MoveFuture, StageInterface
 from acq4.drivers.Scientifica import Scientifica as ScientificaDriver
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 from acq4.util.Thread import Thread
 from pyqtgraph import debug, ptime, SpinBox
 
@@ -192,7 +192,7 @@ class MonitorThread(Thread):
     """
     def __init__(self, dev, monitorObj):
         self.dev = dev
-        self.lock = Mutex(recursive=True)
+        self.lock = RecursiveMutex()
         self.monitorObj = monitorObj
         self.stopped = False
         self.interval = 0.3

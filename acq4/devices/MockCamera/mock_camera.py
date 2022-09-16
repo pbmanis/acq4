@@ -15,7 +15,7 @@ import acq4.util.functions as fn
 import acq4.util.ptime as ptime
 from acq4.devices.Camera import Camera, CameraTask
 from acq4.util import Qt
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 
 WIDTH = 512
 HEIGHT = 512
@@ -23,7 +23,7 @@ HEIGHT = 512
 
 class MockCamera(Camera):
     def __init__(self, manager, config, name):
-        self.camLock = Mutex(Mutex.Recursive)  # Lock to protect access to camera
+        self.camLock = RecursiveMutex()  # Lock to protect access to camera
         self.ringSize = 100
         self.frameId = 0
         self.noise = np.random.normal(size=10000000, loc=100, scale=10)  # pre-generate noise for use in images

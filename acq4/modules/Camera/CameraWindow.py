@@ -16,7 +16,7 @@ from six.moves import range
 
 import acq4.Manager as Manager
 from acq4.util import Qt
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 from acq4.util.StatusBar import StatusBar
 from acq4.util.Thread import Thread
 from acq4.util.debug import Profiler
@@ -720,7 +720,7 @@ class SequencerThread(Thread):
         self._stop = False
         self._frame = None
         self._paused = False
-        self.lock = Mutex(recursive=True)
+        self.lock = RecursiveMutex()
 
     def start(self, protocol):
         if self.isRunning():

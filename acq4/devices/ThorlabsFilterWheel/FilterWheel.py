@@ -10,7 +10,7 @@ from acq4.devices.Microscope import Microscope
 from acq4.devices.OptomechDevice import OptomechDevice
 from acq4.drivers.ThorlabsFW102C.thorFW102cDriver import FilterWheelDriver
 from acq4.util import Qt
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 from acq4.util.Thread import Thread
 from six.moves import map
 from six.moves import range
@@ -72,8 +72,8 @@ class FilterWheel(Device, OptomechDevice):
         
         
         self.driver = FilterWheelDriver(self.port, self.baud)
-        self.driverLock = Mutex(Qt.QtCore.QMutex.Recursive)  ## access to low level driver calls
-        self.filterWheelLock = Mutex(Qt.QtCore.QMutex.Recursive)  ## access to self.attributes
+        self.driverLock = RecursiveMutex()  ## access to low level driver calls
+        self.filterWheelLock = RecursiveMutex()  ## access to self.attributes
         
         
         self.filters = OrderedDict()
@@ -334,7 +334,7 @@ class FilterWheelThread(Thread):
 
     def __init__(self, dev, driver, lock):
         Thread.__init__(self)
-        self.lock = Mutex(Qt.QtCore.QMutex.Recursive)
+        self.lock = RecursiveMutex()
         self.dev = dev
         self.driver = driver
         self.driverLock = lock

@@ -278,7 +278,8 @@ class ImagingCtrl(Qt.QWidget):
         fr.sigRemoveRequested.disconnect(self.removePinnedFrame)
 
     def clearPinnedFramesClicked(self):
-        if Qt.QMessageBox.question(self, "Really?", "Clear all pinned frames?", Qt.QMessageBox.Ok | Qt.QMessageBox.Cancel) == Qt.QMessageBox.Ok:
+        if Qt.QMessageBox.question(self, "Really?", "Clear all pinned frames?", 
+        Qt.QMessageBox.ButtonRole.AcceptRole | Qt.QMessageBox.ButtonRole.RejectRole) == Qt.QMessageBox.ButtonRole.AcceptRole:
             self.clearPinnedFrames()
 
     def clearPinnedFrames(self):

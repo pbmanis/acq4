@@ -17,7 +17,7 @@ from acq4.devices.Microscope import Microscope
 from acq4.devices.OptomechDevice import OptomechDevice
 from acq4.util import Qt
 from acq4.util import imaging
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 from acq4.util.Thread import Thread
 from acq4.util.debug import printExc
 from .CameraInterface import CameraInterface
@@ -68,7 +68,7 @@ class Camera(DAQGeneric, OptomechDevice):
         DAQGeneric.__init__(self, dm, daqConfig, name)
         OptomechDevice.__init__(self, dm, config, name)
 
-        self.lock = Mutex(Mutex.Recursive)
+        self.lock = RecursiveMutex()
 
         self.camConfig = config
         self.stateStack = []
@@ -656,7 +656,7 @@ class CameraTask(DAQGenericTask):
 
 class CameraTaskResult:
     def __init__(self, task, frames, daqResult):
-        self.lock = Mutex(recursive=True)
+        self.lock = RecursiveMutex()
         self._task = task
         self._frames = frames
         self._daqResult = daqResult

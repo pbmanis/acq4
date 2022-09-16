@@ -529,6 +529,7 @@ class Manager(Qt.QObject):
         """List names of currently loaded modules. """
         print("List Modules #########")
         with self.lock:
+            print(f"# of modules loaded: {len(list(self.modules.keys())):d}")
             return list(self.modules.keys())
 
     def getDirOfSelectedFile(self):
@@ -550,6 +551,7 @@ class Manager(Qt.QObject):
         with self.lock:
             name = str(name)
             if name not in self.modules:  # this is where the exception is raised.
+                print("Module not found in : ", self.listModules())
                 raise Exception("No module named %s" % name)
             return self.modules[name]
 

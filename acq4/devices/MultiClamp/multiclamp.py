@@ -43,7 +43,7 @@ class MultiClamp(PatchClamp):
             'PipetteOffset',
         ]
 
-        self.stateLock = Mutex(Mutex.Recursive)  ## only for locking self.lastState and self.lastMode
+        self.stateLock = RecursiveMutex()  ## only for locking self.lastState and self.lastMode
         self.lastState = {}
         self.lastMode = None
         self._switchingToMode = None

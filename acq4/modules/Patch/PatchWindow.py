@@ -17,7 +17,7 @@ from pyqtgraph import WidgetGroup, MetaArray
 from pyqtgraph import siFormat
 from pyqtgraph.debug import Profiler
 from acq4.util import Qt
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 from acq4.util.StatusBar import StatusBar
 from acq4.util.Thread import Thread
 from acq4.util.debug import printExc
@@ -67,7 +67,7 @@ class PatchWindow(Qt.QMainWindow):
         }
         
         
-        self.paramLock = Mutex(Qt.QMutex.Recursive)
+        self.paramLock = RecursiveMutex()
 
         self.manager = dm
         self.clampName = clampName
@@ -89,7 +89,7 @@ class PatchWindow(Qt.QMainWindow):
             ws = Qt.QByteArray.fromPercentEncoding(six.b(uiState['window']))
             self.restoreState(ws)
             
-        self.ui.splitter_2.setSizes([self.width()/4, self.width()*3./4.])
+        self.ui.splitter_2.setSizes([int(self.width()/4), int(self.width()*3./4.)])
         self.ui.splitter.setStretchFactor(0, 30)
         self.ui.splitter.setStretchFactor(1, 10)
 
@@ -410,7 +410,7 @@ class PatchThread(Thread):
         self.manager = ui.manager
         self.clampName = ui.clampName
         Thread.__init__(self)
-        self.lock = Mutex(Qt.QMutex.Recursive)
+        self.lock = RecursiveMutex()
         self.stopThread = True
         self.paramsUpdated = True
     

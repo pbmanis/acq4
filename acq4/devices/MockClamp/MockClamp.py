@@ -10,7 +10,7 @@ from acq4.devices.DAQGeneric import DAQGeneric, DAQGenericTask, DAQGenericTaskGu
 from acq4.devices.PatchClamp import PatchClamp
 from pyqtgraph.WidgetGroup import WidgetGroup
 from acq4.util import Qt
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 from acq4.util.debug import printExc
 
 Ui_MockClampDevGui = Qt.importTemplate('.devTemplate')
@@ -26,7 +26,7 @@ class MockClamp(PatchClamp):
         PatchClamp.__init__(self, dm, config, name)
 
         # Generate config to use for DAQ 
-        self.devLock = Mutex(Mutex.Recursive)
+        self.devLock = RecursiveMutex()
 
         self.daqConfig = {
             'command': config['Command'],

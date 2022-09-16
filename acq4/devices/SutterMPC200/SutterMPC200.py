@@ -4,7 +4,7 @@ import time
 from acq4.util import Qt
 from ..Stage import Stage, MoveFuture
 from acq4.drivers.SutterMPC200 import SutterMPC200 as MPC200_Driver
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 from acq4.util.Thread import Thread
 from pyqtgraph import debug, ptime
 from six.moves import range
@@ -162,7 +162,7 @@ class SutterMPC200(Stage):
 class MonitorThread(Thread):
     def __init__(self, dev):
         self.dev = dev
-        self.lock = Mutex(recursive=True)
+        self.lock = RecursiveMutex()
         self.stopped = False
         self.interval = 0.3
         

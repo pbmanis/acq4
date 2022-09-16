@@ -1,7 +1,7 @@
 from __future__ import print_function
 from acq4.util import Qt
 from .Device import Device
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 from acq4.Interfaces import InterfaceMixin
 import pyqtgraph as pg
 import collections
@@ -149,7 +149,7 @@ class OptomechDevice(InterfaceMixin):
         self.__subdevices = collections.OrderedDict()
         self.__subdevice = None
 
-        self.__lock = Mutex(recursive=True, debug=False)
+        self.__lock = RecursiveMutex(debug=False)
         
         self.sigTransformChanged.connect(self.__emitGlobalTransformChanged)
         self.sigSubdeviceTransformChanged.connect(self.__emitGlobalSubdeviceTransformChanged)

@@ -9,7 +9,7 @@ import time
 
 from acq4.util import Qt, ptime
 import numpy as np
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 import pyqtgraph as pg
 from .calibration import ManipulatorAxesCalibrationWindow, StageAxesCalibrationWindow
 from ..Device import Device
@@ -61,7 +61,7 @@ class Stage(Device, OptomechDevice):
         self.isManipulator = config.get("isManipulator", False)
 
         self.config = config
-        self.lock = Mutex(Qt.QMutex.Recursive)
+        self.lock = RecursiveMutex()
 
         nAxes = len(self.axes())
         self._lastPos = [0] * nAxes

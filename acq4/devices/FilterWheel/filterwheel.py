@@ -45,7 +45,7 @@ class FilterWheel(Device, OptomechDevice):
     def __init__(self, dm, config, name):
         Device.__init__(self, dm, config, name)
         
-        self.lock = Mutex(Qt.QMutex.Recursive)
+        self.lock = RecursiveMutex()
         
         self._config = config
         self._filters = OrderedDict()

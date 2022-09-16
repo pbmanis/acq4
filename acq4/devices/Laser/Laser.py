@@ -2,7 +2,7 @@ from __future__ import print_function
 from acq4.util import Qt
 #import configfile
 from acq4.Manager import getManager, logExc, logMsg
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 from acq4.devices.DAQGeneric import DAQGeneric, DAQGenericTask
 from acq4.devices.OptomechDevice import OptomechDevice
 from .LaserDevGui import LaserDevGui
@@ -146,8 +146,8 @@ class Laser(DAQGeneric, OptomechDevice):
         DAQGeneric.__init__(self, manager, daqConfig, name)
         OptomechDevice.__init__(self, manager, config, name)
        
-        self.lock = Mutex(Qt.QMutex.Recursive)
-        self.variableLock = Mutex(Qt.QMutex.Recursive)
+        self.lock = RecursiveMutex()
+        self.variableLock = RecursiveMutex()
         self.calibrationIndex = None
         self.pCellCalibration = None
         self.getPowerHistory()

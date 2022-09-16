@@ -40,7 +40,7 @@ from acq4.modules.Camera import CameraModuleInterface
 from acq4.modules.Module import Module
 from acq4.util import Qt
 from acq4.util import imaging
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import Mutex, RecursiveMutex
 from acq4.util.Thread import Thread
 from acq4.util.debug import printExc
 
@@ -98,7 +98,6 @@ class ImagerWindow(Qt.QMainWindow):
     def __init__(self, module):
         self.hasQuit = False
         self.module = module  ## handle to the rest of the module class
-
         ## Create the main window
         Qt.QMainWindow.__init__(self)
 
@@ -164,13 +163,14 @@ class ScreenBlanker(Qt.QObject):
         Qt.QObject.__init__(self)
         self.cancelled = False
         self.widgets = []
-        d = Qt.QApplication.desktop()
-        for i in range(d.screenCount()):  # look for all screens
+#        d = Qt.QtWidgets.QApplication.desktop()
+        #for i in range(d.screenCount()):  # look for all screens
+        for i, d in enumerate(Qt.QtWidgets.QApplication.screens()):
             w = Black()
             w.hide()
             w.sigCancelClicked.connect(self.cancelClicked)
             self.widgets.append(w)
-            sg = d.screenGeometry(i)  # get the screen size
+            sg = d.geometry() # d.screenGeometry(i)  # get the screen size
             w.move(sg.x(), sg.y())  # put the widget there
 
     def blank(self):
@@ -178,7 +178,7 @@ class ScreenBlanker(Qt.QObject):
         for w in self.widgets:
             w.showFullScreen()
             w.show()
-        Qt.QApplication.processEvents()  # make it so
+        Qt.QtWidgets.QApplication.processEvents()  # make it so
 
     def unblank(self):
         for w in self.widgets:
@@ -1107,7 +1107,7 @@ class ImagingFrame(imaging.Frame):
     """Represents a single collected image frame and its associated metadata."""
 
     def __init__(self, data, rectscan, info):
-        self.lock = Mutex(recursive=True)  # because frame may be accesed by recording thread.
+        self.lock = RecursiveMutex()  # because frame may be accesed by recording thread.
         self._rectscan = rectscan
         self._decomb = (0, False)
         self._image = None
@@ -1149,7 +1149,7 @@ class ImagingThread(Thread):
         self._abort = False
         self._video = True
         self._closeShutter = True  # whether to close shutter at end of acquisition
-        self.lock = Mutex(recursive=True)
+        self.lock = RecursiveMutex()
         self.manager = acq4.Manager.getManager()
         self.laserDev = laserDev
         self.scannerDev = scannerDev

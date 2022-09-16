@@ -10,7 +10,7 @@ from pyqtgraph.WidgetGroup import WidgetGroup
 
 from acq4.devices.DAQGeneric import DAQGeneric, DAQGenericTask, DAQGenericTaskGui, DataMapping
 from acq4.util import Qt
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 from acq4.util.debug import printExc
 
 Ui_devGui = Qt.importTemplate('.devGuiTemplate')
@@ -152,8 +152,8 @@ class AxoPatch200(DAQGeneric):
         }
         
         self.config = config
-        self.modeLock = Mutex(Mutex.Recursive)   ## protects self.mdCanceled
-        self.devLock = Mutex(Mutex.Recursive)    ## protects self.holding, possibly self.config, ..others, perhaps?
+        self.modeLock = RecursiveMutex()   ## protects self.mdCanceled
+        self.devLock = RecursiveMutex()    ## protects self.holding, possibly self.config, ..others, perhaps?
         self.mdCanceled = False
         
         DAQGeneric.__init__(self, dm, daqConfig, name)

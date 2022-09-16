@@ -15,7 +15,7 @@ import acq4.util.ptime as ptime
 import ctypes
 from ctypes import byref, sizeof, c_long, c_ulong, c_ulonglong
 from numpy import empty, uint16, ascontiguousarray
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 from collections import OrderedDict
 import six
 modDir = os.path.dirname(__file__)
@@ -173,7 +173,7 @@ class QCameraClass:
         self.frameTimes = []
         self.i = 0
         self.stopSignal = True
-        self.mutex = Mutex(Mutex.Recursive)
+        self.mutex = RecursiveMutex()
         self.lastImage = (None,0)
         self.fnp1 = lib.AsyncCallback(self.callBack1)
         self.fnpNull = lib.AsyncCallback(self.doNothing)

@@ -3,7 +3,7 @@ from __future__ import print_function
 from acq4.util import Qt
 from ..Stage import Stage, StageInterface, MoveFuture
 from acq4.drivers.ThorlabsMFC1 import MFC1 as MFC1_Driver
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 from acq4.util.Thread import Thread
 from pyqtgraph import debug
 import time
@@ -117,7 +117,7 @@ class ThorlabsMFC1(Stage):
 class MonitorThread(Thread):
     def __init__(self, dev):
         self.dev = dev
-        self.lock = Mutex(recursive=True)
+        self.lock = RecursiveMutex()
         self.stopped = False
         self.interval = 0.3
         Thread.__init__(self)
