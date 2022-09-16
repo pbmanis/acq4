@@ -11,7 +11,7 @@ from acq4.Manager import logMsg
 from acq4.devices.OptomechDevice import OptomechDevice
 from acq4.util import Qt
 from acq4.util.HelpfulException import HelpfulException
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 from .DeviceGui import ScannerDeviceGui
 from .TaskGui import ScannerTaskGui
 from ..Device import Device, DeviceTask
@@ -27,7 +27,7 @@ class Scanner(Device, OptomechDevice):
         OptomechDevice.__init__(self, dm, config, name)
         
         self.config = config
-        self.lock = Mutex(Qt.QMutex.Recursive)
+        self.lock = RecursiveMutex()
         self.devGui = None
         self.lastRunTime = None
         self.calibrationIndex = None
@@ -259,7 +259,7 @@ class ScannerTask(DeviceTask):
         # We use this flag to exit from the sleep loop in start() in case the 
         # task is aborted during that time.
         self.aborted = False
-        self.abortLock = Mutex(recursive=True)
+        self.abortLock = RecursiveMutex()
         
     def getConfigOrder(self):
         deps = []

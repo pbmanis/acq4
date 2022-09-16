@@ -9,7 +9,7 @@ import time
 from acq4.devices.Device import Device
 from pyqtgraph.SignalProxy import SignalProxy
 from acq4.util import Qt
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 from acq4.util.Thread import Thread
 
 
@@ -122,7 +122,7 @@ class MouseThread(Thread):
     
     def __init__(self, dev, startState=None):
         Thread.__init__(self)
-        self.lock = Mutex(Qt.QMutex.Recursive)
+        self.lock = RecursiveMutex()
         self.dev = dev
         self.port = self.dev.port
         if startState is None:

@@ -26,7 +26,7 @@ import pyqtgraph as pg
 import pyqtgraph.reload as reload
 from pyqtgraph import configfile
 from pyqtgraph.debug import printExc, Profiler
-from pyqtgraph.util.mutex import Mutex, RecursiveMutex
+from pyqtgraph.util.mutex import RecursiveMutex
 from . import __version__
 from . import devices, modules
 from .Interfaces import InterfaceDirectory
@@ -917,7 +917,7 @@ class Task:
         self.command = command
         self.result = None
 
-        self.taskLock = Mutex(recursive=True)
+        self.taskLock = RecursiveMutex()
         self.deviceLock = None
 
         self.startedDevs = []
