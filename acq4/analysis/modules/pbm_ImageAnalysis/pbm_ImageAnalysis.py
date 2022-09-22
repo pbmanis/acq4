@@ -449,7 +449,7 @@ class pbm_ImageAnalysis(AnalysisModule):
         if self.downSample <= 0:
             self.downSample = 1  # same as "none"
         self.initDataState()
-
+        self.PMTInfo = None  # depends on whether we get that info or not.
         self.shiftFlag = False  # eventually, but at the moment it does NOT work
         self.getDataStruct()
 
@@ -619,6 +619,8 @@ class pbm_ImageAnalysis(AnalysisModule):
         Retrieve the original decombing value for the file, and reset the image
         :return:
         """
+        if self.PMTInfo is None:
+            return
         self.ctrl.ImagePhys_PMT_decomb.setValue(1e6*self.PMTInfo['decombInfo']['value'])
         self.ctrl.ImagePhys_PMT_auto_check.setChecked(self.PMTInfo['auto'])
         self.ctrl.ImagePhys_PMT_decomb_subpixel.setChecked(self.PMTInfo['subpixel'])
@@ -1878,9 +1880,9 @@ class pbm_ImageAnalysis(AnalysisModule):
         fd = open(fName, 'w')
         stringVals=''
         for col in range(0, data.shape[1]): # write a header for our formatting.
-            if col is 0:
+            if col == 0:
                 fd.write('time(index),')
-            elif col is 1:
+            elif col == 1:
                 fd.write('time(sec),')
         stringVals = ['R%03d' % x for x in range(0, data.shape[1]-2)]
         fd.write(",".join(stringVals) + "\n")
