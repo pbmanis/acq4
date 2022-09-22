@@ -13,7 +13,7 @@ from acq4.devices.OptomechDevice import OptomechDevice
 from acq4.devices.Stage import Stage
 from acq4.modules.Camera import CameraModuleInterface
 from acq4.util import Qt
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 from acq4.util.debug import printExc
 from acq4.util.future import MultiFuture
 
@@ -48,7 +48,7 @@ class Microscope(Device, OptomechDevice):
         OptomechDevice.__init__(self, dm, config, name)
 
         self.config = config
-        self.lock = Mutex(Qt.QMutex.Recursive)
+        self.lock = RecursiveMutex()
         self.switchDevice = None
         self.currentSwitchPosition = None
         self.currentObjective = None
