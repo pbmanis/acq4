@@ -110,6 +110,9 @@ class MosaicEditor(AnalysisModule):
         self.ui.atlasCombo.currentIndexChanged.connect(self.atlasComboChanged)
         self.ui.normalizeBtn.clicked.connect(self.normalizeImages)
         self.ui.tileShadingBtn.clicked.connect(self.rescaleImages)
+        self.ui.autoRangeBtn.clicked.connect(self.autoRangeImages)
+        self.ui.blendBtn.clicked.connect(self.blendImages)
+
         self.ui.mosaicApplyScaleBtn.clicked.connect(self.updateScaling)
         self.ui.mosaicFlipLRBtn.clicked.connect(self.flipLR)
         self.ui.mosaicFlipUDBtn.clicked.connect(self.flipUD)
@@ -263,22 +266,21 @@ class MosaicEditor(AnalysisModule):
         Use the min/max mosaic button to readjust the display scale after this
         automatic operation if the scaling is not to your liking.
         """
+        print("rescaleImages")
         nsel =  len(self.canvas.selectedItems())
         if nsel == 0:
             return
-       # print dir(self.selectedItems()[0].data)
         nxm = self.canvas.selectedItems()[0].data.shape
         meanImage = np.zeros((nxm[0], nxm[1]))
         nhistbins = 100
         # generate a histogram of the global levels in the image (all images selected)
         hm = np.histogram(np.dstack([x.data for x in self.canvas.selectedItems()]), nhistbins)
-        #$meanImage = np.mean(self.selectedItems().asarray(), axis=0)
         n = 0
         self.imageMax = 0.0
         for i in range(nsel):
             try:
                 meanImage = meanImage + np.array(self.canvas.selectedItems()[i].data)
-                imagemax = np.amax(np.amax(meanImage, axis=1), axis=0)
+                imagemax = np.amax(meanImage)
                 if imagemax > self.imageMax:
                     self.imageMax = imagemax
                 n = n + 1
@@ -297,32 +299,70 @@ class MosaicEditor(AnalysisModule):
 
         # now rescale each individually
         # rescaling is done against the global histogram, to keep the gain constant.
+        self.imageMax = 0
         for i in range(nsel):
             d = np.array(self.canvas.selectedItems()[i].data)
 #            hmd = np.histogram(d, 512) # return (count, bins)
             xh = d.shape # capture shape just in case it is not right (have data that is NOT !!)
-            # flatten the illumination using the blimg average illumination pattern
-            newImage = d # / blimg[0:xh[0], 0:xh[1]] # (d - imin)/(blimg - imin) # rescale image.
+            if d.shape != blimg.shape:
+                return
+                # flatten the illumination using the blimg average illumination pattern
+            newImage = d / blimg # (d - imin)/(blimg - imin) # rescale image.
             hn = np.histogram(newImage, bins = hm[1]) # use bins from global image
             n = np.argmax(hn[0])
             newImage = (hm[1][m]/hn[1][n])*newImage # rescale to the global max.
-            self.canvas.selectedItems()[i].updateImage(newImage)
-         #   self.canvas.selectedItems()[i].levelRgn.setRegion([0, 2.0])
-            self.canvas.selectedItems()[i].levelRgn.setRegion([0., self.imageMax])
+            imagemax = np.max(newImage)
+            if imagemax > self.imageMax:
+                self.imageMax = imagemax
+            self.canvas.selectedItems()[i].graphicsItem().updateImage(newImage)
+            # thisimage = self.canvas.selectedItems()[i].graphicsItem()
+
+        # self.imageMax = 0.0
+        # for i in range(nsel):
+        #     d = np.array(self.canvas.selectedItems()[i].data)
+        #     imagemax = np.amax(d)
+        #     if imagemax > self.imageMax:
+        #         self.imageMax = imagemax
+        print(self.imageMax)
+        for i in range(nsel):
+            thisimage = self.canvas.selectedItems()[i].graphicsItem()
+            thisimage.setLevels([0,self.imageMax])
     
     def normalizeImages(self):
-        self.canvas.view.autoRange()
+        """Normalize the images to the min/max of the selected
+        group of images in the canvas.
+        """
+        print("normalizeImages")
+        min_image = 1e6
+        max_image = -1.0
+        nsel =  len(self.canvas.selectedItems())
+        if nsel == 0:
+            return
+        for i in range(nsel):
+            thisimage = self.canvas.selectedItems()[i].graphicsItem()
+            d = thisimage.getHistogram()
+            if np.min(d) < min_image:
+                min_image = np.min(d)
+            if np.max(d) > max_image:
+                max_image = np.max(d)
+        for i in range(len(self.canvas.items)):
+            thisimage = self.canvas.items[i].graphicsItem()
+            thisimage.setLevels([min_image, max_image])
+
+        self.canvas.autoRange()
 
     def updateScaling(self):
         """
         Set all the selected images to have the scaling in the editor bar (absolute values)
         """
+        print("updateScaling")
         nsel =  len(self.canvas.selectedItems())
         if nsel == 0:
             return
         for i in range(nsel):
-            self.canvas.selectedItems()[i].levelRgn.setRegion([self.ui.mosaicDisplayMin.value(),
-                                                               self.ui.mosaicDisplayMax.value()])
+            thisimage = self.canvas.selectedItems()[i].graphicsItem()
+            thisimage.setLevels([self.ui.mosaicDisplayMin.value(),
+                                 self.ui.mosaicDisplayMax.value()])
 
     def flipUD(self):
         """
@@ -373,9 +413,10 @@ class MosaicEditor(AnalysisModule):
         before clearing. If the user declines, then this method returns False.
         """
         if ask and len(self.items) > 0:
-            response = Qt.QMessageBox.question(self.clearBtn, "Warning", "Really clear all items?", 
-                Qt.QMessageBox.Ok|Qt.QMessageBox.Cancel)
-            if response != Qt.QMessageBox.Ok:
+            response = Qt.QtWidgets.QMessageBox.question(self.clearBtn,
+                     "Warning", "Really clear all items?", 
+                Qt.QtWidgets.QMessageBox.StandardButton.Ok|Qt.QtWidgets.QMessageBox.StandardButton.Cancel)
+            if response != Qt.QtWidgets.QMessageBox.StandardButton.Ok:
                 return False
             
         self.canvas.clear()

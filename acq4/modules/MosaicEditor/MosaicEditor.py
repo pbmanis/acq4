@@ -378,8 +378,8 @@ class MosaicEditor(AnalysisModule):
             n = np.argmax(hn[0])
             newImage = (hm[1][m]/hn[1][n])*newImage # rescale to the global max.
             self.canvas.selectedItems()[i].updateImage(newImage)
-         #   self.canvas.selectedItems()[i].levelRgn.setRegion([0, 2.0])
-            self.canvas.selectedItems()[i].levelRgn.setRegion([0., self.imageMax])
+            thisimage = self.canvas.selectedItems()[i].graphicsItem()
+            thisimage.setLevels([0., self.imageMax])
 
     def normalizeImages(self):
         self.canvas.view.autoRange()
@@ -392,8 +392,9 @@ class MosaicEditor(AnalysisModule):
         if nsel == 0:
             return
         for i in range(nsel):
-            self.canvas.selectedItems()[i].levelRgn.setRegion([self.ui.mosaicDisplayMin.value(),
-                                                               self.ui.mosaicDisplayMax.value()])
+            thisimage = self.canvas.selectedItems()[i].graphicsItem()
+            thisimage.setLevels([self.ui.mosaicDisplayMin.value(),
+                                 self.ui.mosaicDisplayMax.value()])
 
     def flipUD(self):
         """
