@@ -356,8 +356,10 @@ class FileHandle(Qt.QtCore.QObject):
                 fd.close()
             else:
                 cls = filetypes.getFileType(typ)
-                data = cls.read(self, *args, **kargs)
-            
+                try:
+                    data = cls.read(self, *args, **kargs)
+                except:
+                    data = None
             return data
         
     def fileType(self):
