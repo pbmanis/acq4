@@ -242,7 +242,7 @@ def getClampFile(protoDH):
 
 
 def isClampFile(fh):
-    if fh.shortName() not in deviceNames['Clamp'] and fh.shortName()[:-3] not in deviceNames['Clamp']:
+    if fh is None or (fh.shortName() not in deviceNames['Clamp'] and fh.shortName()[:-3] not in deviceNames['Clamp']):
         return False
     else:
         return True
@@ -284,7 +284,8 @@ def getClampMode(data_handle, dir_handle=None):
     elif isClampFile(data_handle):
         data = data_handle.read(readAllData=False)
     else:
-        raise Exception('%s not a clamp file.' % data_handle)
+        print('%s is not a valid clamp file (the file structure may be corrupted).' % data_handle)
+        return None
     # if isClampFile(data_handle):
     #     data = data_handle.read(readAllData=False)
     # else:
@@ -318,6 +319,8 @@ def getClampHoldingLevel(data_handle):
         raise Exception('%s not a clamp file.' % data_handle.shortName())
 
     data = data_handle.read(readAllData=False)
+    if data is None:
+        return None
     info = data._info[-1]
     p1 = data_handle.parent()
     p2 = p1.parent()
@@ -365,6 +368,8 @@ def getWCCompSettings(data_handle):
     if not isClampFile(data_handle):
         raise Exception('%s not a clamp file.' % data_handle.shortName())
     data = data_handle.read(readAllData=False)
+    if data is None:
+        return None
     info = data._info[-1]
     d = {}
     if 'ClampState' in info.keys() and 'ClampParams' in info['ClampState'].keys():
@@ -698,12 +703,14 @@ class GetClamps():
                     print('PatchEPhys/GetClamps: Missing data in %s, element: %d' % (directory_name, i))
                     continue
             except:
-                raise Exception("Error loading data for protocol %s:" % directory_name)
+                print("Likely HDF5 Error loading data for protocol %s, element: %d" % (directory_name, i))
+                continue
             data_file = data_file_handle.read()
 
             self.data_mode = getClampMode(data_file, dir_handle=dh)
             if self.data_mode is None:
-                self.data_mode = ic_modes[0]  # set a default mode
+                return None
+                # self.data_mode = ic_modes[0]  # set a default mode
             if self.data_mode in ['vc']:  # should be "AND something"  - this is temp fix for Xuying's old data
                 self.data_mode = vc_modes[0]
             if self.data_mode in ['model_ic', 'model_vc']:  # lower case means model was run
@@ -754,7 +761,7 @@ class GetClamps():
                 self.values.append(sequence_values[i])
             else:
                 self.values.append(cmd[int(len(cmd) / 2)])
-        if traces is None or len(traces) == 0:
+        if traces is None or len(traces) == 0 or data_file_handle is None:
             print("PatchEPhys/GetClamps: No data found in this run...")
             return None
         self.RSeriesUncomp = 0.
