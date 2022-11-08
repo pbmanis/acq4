@@ -999,42 +999,40 @@ class IVCurve(AnalysisModule):
         Adds the classifying information according to Druckmann et al., Cerebral Cortex, 2013
         to the analysis summary
         """
- 
+        rate = np.nan
+        AHPDepth = np.nan
         (jthr, j150) = self.getIVCurrentThresholds()  # get the indices for the traces we need to pull data from
         if jthr == j150:
-            print('\n%s:' % self.filename)
-            print('Threshold current T and 1.5T the same: using next up value for j150')
-            print('jthr, j150, len(spikeShape): ', jthr, j150, len(self.spikeShape))
-            print('1 ', self.spikeShape[jthr][0]['current']*1e12)
-            print('2 ', self.spikeShape[j150+1][0]['current']*1e12)
-            print(' >> Threshold current: %8.3f   1.5T current: %8.3f, next up: %8.3f' % (self.spikeShape[jthr][0]['current']*1e12,
-                  self.spikeShape[j150][0]['current']*1e12, self.spikeShape[j150+1][0]['current']*1e12))
-            j150 = jthr + 1
-        if len(self.spikeShape[j150]) >= 1 and self.spikeShape[j150][0]['halfwidth'] is not None:
-            self.analysis_summary['AP1_Latency'] = (self.spikeShape[j150][0]['AP_Latency'] - self.spikeShape[j150][0]['tstart'])*1e3
-            self.analysis_summary['AP1_HalfWidth'] = self.spikeShape[j150][0]['halfwidth']*1e3
-        else:
-            self.analysis_summary['AP1_Latency'] = np.inf
-            self.analysis_summary['AP1_HalfWidth'] = np.inf
+            if jthr in list(self.spikeShape.keys()):
+                print('\n%s:' % self.filename)
+                print('Threshold current T and 1.5T the same: using next up value for j150')
+                print('jthr, j150, len(spikeShape): ', jthr, j150, len(self.spikeShape))
+                print('1 ', self.spikeShape[jthr][0]['current']*1e12)
+                print('2 ', self.spikeShape[j150+1][0]['current']*1e12)
+                print(' >> Threshold current: %8.3f   1.5T current: %8.3f, next up: %8.3f' % (self.spikeShape[jthr][0]['current']*1e12,
+                    self.spikeShape[j150][0]['current']*1e12, self.spikeShape[j150+1][0]['current']*1e12))
+                j150 = jthr + 1
+        if j150 in self.spikeShape.keys():
         
-        if len(self.spikeShape[j150]) >= 2 and self.spikeShape[j150][1]['halfwidth'] is not None:
-            self.analysis_summary['AP2_Latency'] = (self.spikeShape[j150][1]['AP_Latency'] - self.spikeShape[j150][1]['tstart'])*1e3
-            self.analysis_summary['AP2_HalfWidth'] = self.spikeShape[j150][1]['halfwidth']*1e3
-        else:
-            self.analysis_summary['AP2_Latency'] = np.inf
-            self.analysis_summary['AP2_HalfWidth'] = np.inf
+            if len(self.spikeShape[j150]) >= 1 and self.spikeShape[j150][0]['halfwidth'] is not None:
+                self.analysis_summary['AP1_Latency'] = (self.spikeShape[j150][0]['AP_Latency'] - self.spikeShape[j150][0]['tstart'])*1e3
+                self.analysis_summary['AP1_HalfWidth'] = self.spikeShape[j150][0]['halfwidth']*1e3
+            else:
+                self.analysis_summary['AP1_Latency'] = np.inf
+                self.analysis_summary['AP1_HalfWidth'] = np.inf
+            
+            if len(self.spikeShape[j150]) >= 2 and self.spikeShape[j150][1]['halfwidth'] is not None:
+                self.analysis_summary['AP2_Latency'] = (self.spikeShape[j150][1]['AP_Latency'] - self.spikeShape[j150][1]['tstart'])*1e3
+                self.analysis_summary['AP2_HalfWidth'] = self.spikeShape[j150][1]['halfwidth']*1e3
+            else:
+                self.analysis_summary['AP2_Latency'] = np.inf
+                self.analysis_summary['AP2_HalfWidth'] = np.inf
         
-        rate = len(self.spikeShape[j150])/self.spikeShape[j150][0]['pulseDuration']  # spikes per second, normalized for pulse duration
-        # first AHP depth
-        # print 'j150: ', j150
-        # print self.spikeShape[j150][0].keys()
-        # print self.spikeShape[j150]
-        AHPDepth = self.spikeShape[j150][0]['AP_beginV'] - self.spikeShape[j150][0]['trough_V']
+            rate = len(self.spikeShape[j150])/self.spikeShape[j150][0]['pulseDuration']  # spikes per second, normalized for pulse duration
+
+            AHPDepth = self.spikeShape[j150][0]['AP_beginV'] - self.spikeShape[j150][0]['trough_V']
         self.analysis_summary['FiringRate'] = rate
         self.analysis_summary['AHP_Depth'] = AHPDepth*1e3  # convert to mV
-        # pprint.pprint(self.analysis_summary)
-        # except:
-        #     raise ValueError ('Failed Classification for cell: %s' % self.filename)
 
     def update_Tau_membrane(self, peak_time=None, printWindow=False, whichTau=1, vrange=[-5., -20.]):
         """
