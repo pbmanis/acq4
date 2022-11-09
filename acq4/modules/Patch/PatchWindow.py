@@ -573,7 +573,10 @@ class PatchThread(Thread):
         #  v[1] is amplitude of exp
         #  v[2] is tau
         def expFn(v, t):
-            return (v[0]-v[1]) + v[1] * np.exp(-t / v[2])
+            if v[2] < 1e-4:
+                return v[1]*np.ones_like(t)
+            else:
+                return (v[0]-v[1]) + v[1] * np.exp(-t / v[2])
         # predictions
         ar = 10e6
         ir = 200e6
@@ -684,7 +687,10 @@ class PatchThread(Thread):
             if Rs_denom != 0.0:
                 Rs = (Rin * fitTau * Vc) / Rs_denom
                 Rm = Rin - Rs
-                Cm = (Rin**2 * Q) / (Rm**2 * Vc)
+                if Rm > 0.0:
+                    Cm = (Rin**2 * Q) / (Rm**2 * Vc)
+                else:
+                    Cm = 0.0
             else:
                 Rs = 0
                 Rm = 0
