@@ -78,7 +78,6 @@ class Stage(Device, OptomechDevice):
 
         self._limits = [(None, None)] * nAxes
         if 'limits' in config:
-            print(config['limits'])
             self.setLimits(**config['limits'])
 
         self._progressDialog = None
@@ -430,7 +429,6 @@ class Stage(Device, OptomechDevice):
         if speed <= 0:
             raise ValueError("Speed must be greater than 0")
         if len(self.axes()) != len(position):
-            print(self.axes(), position)
             raise ValueError(f"Position {position} should have length {len(self.axes()):d}, but got {len(position):d}")
         self.checkLimits(position)
 
@@ -515,8 +513,6 @@ class Stage(Device, OptomechDevice):
             assert len(limit) == 2
             if self.capabilities()['limits'][axis] is True:
                 self._setHardwareLimits(axis=axis, limit=limit)
-            print('tup _limits: ', tuple(self._limits[axis]))
-            print('tup limit: ', tuple(limit))
             if tuple(self._limits[axis]) != tuple(limit):
                 changed.append(axis)
                 self._limits[axis] = tuple(limit)
@@ -822,7 +818,6 @@ class StageInterface(Qt.QWidget):
         check = self.sender()
         axis, minmax = check.tag
         limit = list(self.dev.getLimits()[axis])
-        print('Limits: ', self.dev.getLimits())
         if b:
             limit[minmax] = self.dev.getPosition()[axis]
         else:
