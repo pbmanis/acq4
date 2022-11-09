@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+import numpy as np
 from acq4.util import Qt
 from ..Stage import Stage, StageInterface, MoveFuture
 from acq4.drivers.ThorlabsMFC1 import MFC1 as MFC1_Driver
@@ -23,6 +24,7 @@ class ThorlabsMFC1(Stage):
         self.dev = MFC1_Driver(self.port, **params)
         man.sigAbortAll.connect(self.dev.stop)
 
+
         # Optionally use ROE-200 z axis to control focus
         roe = config.pop('roe', None)
         self._roeDev = None
@@ -41,12 +43,15 @@ class ThorlabsMFC1(Stage):
         self.getPosition(refresh=True)
 
         # Optionally read limits from config
-        limits = list(config.pop('limits', (None, None)))
-        self.setLimits(z=limits)
+        self.setLimits() # z=(config.pop('limits', (None, None))))
 
         self._monitor = MonitorThread(self)
         self._monitor.start()
-        
+
+    def axes(self):
+        # device only has axes 'z', but must have all 3 re capabilities
+        return ('x', 'y', 'z')
+    
     def capabilities(self):
         # device only reads/writes z-axis
         return {
@@ -55,20 +60,25 @@ class ThorlabsMFC1(Stage):
             'limits': (False, False, True),
         }
 
+    def _setHardwareLimits(self, axis:int, limit:tuple):
+        if axis != 2:
+            raise ValueError("Thorlabs MFC1: Can only set z limits")
+        self._limits = ((None, None), (None, None), limit)
+
     def mfcPosChanged(self, pos, oldpos):
         self.posChanged(pos)
 
     def _getPosition(self):
         pos = self.dev.position() * self.scale[2]
-        if pos != self._lastPos:
-            oldpos = self._lastPos
-            self._lastPos = pos
+        if self._lastPos is None: ###
+            self.posChanged([0, 0, pos])
+        elif pos != self._lastPos[-1]: ###NEEDS TO BE FIXED: sometimes pos is tuple, sometimes 3 tuples!
             self.posChanged([0, 0, pos])
         return [0, 0, pos]
 
-    def _move(self, pos, speed, linear):
+    def _move(self, pos, speed, linear=None):
         pos = self._toAbsolutePosition(pos)
-        limits = self.getLimits()[2]
+        limits = self.getLimits()[-1]  # NEEDS TO BE FIXED: sometimes pos is tuple, sometimes 3 tuples!
         if limits[0] is not None:
             pos[2] = max(pos[2], limits[0])
         if limits[1] is not None:
@@ -90,10 +100,11 @@ class ThorlabsMFC1(Stage):
                 self._roeEnabled = True
             return
         dz = pos[2] - oldpos[2]
-        if dz == 0:
+        if np.abs(dz) < 1e-9: ###
             return
         target = self.dev.target_position() * self.scale[2] + dz
-        self.moveTo([0, 0, target], 'fast')
+        self.dev.set_holding(False)  ###
+        self._move([0, 0, target], 'fast')
 
     def deviceInterface(self, win):
         return MFC1StageInterface(self, win)
@@ -119,7 +130,7 @@ class MonitorThread(Thread):
         self.dev = dev
         self.lock = Mutex(recursive=True)
         self.stopped = False
-        self.interval = 0.3
+        self.interval = 0.1 ### was 0.3
         Thread.__init__(self)
 
     def start(self):
@@ -162,14 +173,16 @@ class MFC1StageInterface(StageInterface):
     def __init__(self, dev, win):
         StageInterface.__init__(self, dev, win)
         if dev._roeDev is not None:
+            self.btnLayout.setContentsMargins(0, 0, 0, 0)
             self.connectRoeBtn = Qt.QPushButton('Enable ROE')
             self.connectRoeBtn.setCheckable(True)
             self.connectRoeBtn.setChecked(True)
-            self.layout.addWidget(self.connectRoeBtn, self.nextRow, 0, 1, 2)
+            row = self.layout.rowCount()
+            self.layout.addWidget(self.connectRoeBtn, row, 0, 1, 1) # self.nextRow, 0, 1, 2)
             self.connectRoeBtn.toggled.connect(self.connectRoeToggled)
 
             self.setZeroBtn = Qt.QPushButton('Set Zero')
-            self.layout.addWidget(self.setZeroBtn, self.nextRow, 2, 1, 1)
+            self.layout.addWidget(self.setZeroBtn, row, 1, 1, 1)
             self.setZeroBtn.clicked.connect(self.setZeroClicked)
 
     def setZeroClicked(self):
