@@ -1,4 +1,7 @@
 from __future__ import print_function
+from collections import OrderedDict
+import numpy as np
+
 """
 Thorlabs MFC1 : microscope focus controller based on Trinamic TMCM-140-42-SE
 and PDx-140-42-SE.
@@ -48,32 +51,58 @@ class MFC1(object):
         # High values (~2000) cause the motor to overshoot the target position
         self.tracking_const = kwds.pop('tracking_const', 400)
         
-        params = dict(
-            maximum_current=100,
-            maximum_acceleration=1000,
-            maximum_speed=2000,
-            ramp_divisor=7,
-            pulse_divisor=3,
-            standby_current=0,
-            mixed_decay_threshold=-1,
-            encoder_prescaler=8192,   # causes encoder_position to have exactly the same resolution as the encoder itself
-            microstep_resolution=5,
-            fullstep_threshold=0,
-            stall_detection_threshold=0,
-            freewheeling=1,
-        )
+        """
+        Parameter dictionaries for two different firmware versions
+        """
+        params_1140 = OrderedDict([
+            ('maximum_current', 100),  # range is 0-255; in 32 steps. Do not make too hlarge
+            ('maximum_acceleration',100),
+            ('maximum_speed', 800),
+            ('ramp_divisor',2),
+            ('pulse_divisor',3),
+            ('standby_current',0),
+            ('encoder_prescaler', 1600),   # See note 6.2 in firmware manual for prescaler value
+            ('microstep_resolution',4), # Use 4 for 16 microsteps, and engage interpolation
+            ('step_interpolation_enable', 1),  # enable interpolation 1 for new controller
+            ('stallGuard2_threshold', 0), # for NEW firmware 1140 only
+            ('freewheeling',1),
+        ])
+        params_110_42 = OrderedDict([
+            ('maximum_current', 100),  # range is 0-255; in 32 steps. Do not make too hlarge
+            ('maximum_acceleration',200),  # lukes default 1000; I like 200
+            ('maximum_speed', 800),  # luke's max 2000, I like 800
+            ('ramp_divisor',2),  # lc default 7, I like 2
+            ('pulse_divisor',3),
+            ('standby_current',0),
+            ('mixed_decay_threshold',-1), # for old firmware only
+            ('encoder_prescaler', 8192),   #  8192 causes encoder_position to have exactly the same resolution as the encoder itself
+            ('microstep_resolution',5), # 32 microsteps. Use 4 and 16 and interpolation enable for
+            ('fullstep_threshold', 0), # for old firmware only
+            ('stall_detection_threshold', 0), # for old firmware only
+            ('freewheeling',1),
+        ])
 
         optional_params = ['mixed_decay_threshold', 'stall_detection_threshold', 'fullstep_threshold']
 
+        self.mcm = TMCM140(port, baudrate)
+        self.mcm.get_firmware()  ### 
+        self.mcm.stop_program()
+        self.mcm.stop()
+
+        # configure parameter dictionaries
+        if self.mcm.firmware_version.startswith(b'1140V'):
+            params = params_1140
+        elif self.mcm.firmware_version.startswith(b'140V4'):
+            params = params_110_42
+        else:
+            print('Firmware {:s} is not recognized; must be 1140V or 140V4'.format(self.mcm.firmware_version))
+            raise ValueError('Firmware version error')
         for k, v in kwds.items():
             if k not in params:
                 raise NameError("Unknown MFC1 parameter '%s'" % k)
             params[k] = v
-
-        self.mcm = TMCM140(port, baudrate)
-        self.mcm.stop_program()
-        self.mcm.stop()
-
+        # now set parameters
+        self.mcm.set_params(**params)
         for k,v in params.items():
             try:
                 self.mcm.set_param(k, v)
@@ -174,9 +203,15 @@ class MFC1(object):
         """Return the current encoder position.
         """
         pos = self.mcm['encoder_position']
+        nsamp = 8
+        pos_i = np.zeros(nsamp)
+        for i in range(nsamp):  # average
+            pos_i[i]= self.mcm['encoder_position']
+        pos = np.median(pos_i)  # clean up encoder measurement.
         if not self.program_running():
             # when program is not running, target position should follow actual position
             self._target_position = pos
+            self.set_holding(False)
         return pos
     
     @threadsafe
@@ -228,7 +263,7 @@ class MFC1(object):
         stat = self._move_status[id]
         if stat['status'] == 'moving' and not self.program_running():
             pos = self.position()
-            if abs(pos - stat['target']) <= 3:  # can we get the tolerance lower?
+            if abs(pos - stat['target']) <= 3:  # can we get the tolerance lower?  ### try 4?
                 stat['status'] = 'done'
             else:
                 stat['status'] = 'failed'

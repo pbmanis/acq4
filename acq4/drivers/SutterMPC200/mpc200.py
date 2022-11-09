@@ -108,13 +108,17 @@ class SutterMPC200(SerialDevice):
     def setDrive(self, drive):
         """Set the current drive (1-4)"""
         cmd = 'I' + chr(drive)
-        cmd = cmd.encode('utf8')  # turn into bytes
+        # cmd = cmd.encode('utf8')  # turn into bytes
         self.write(cmd)
         ret = self.read(2, term=b'\r')
-        if ord(ret) == drive:
-            return
-        else:
+        if ret == 'E':  # this defines error; should get Drive # but getting "I" instead... so check for E
             raise Exception('MPC200: Drive %d is not connected' % drive)
+        else:
+            return
+        # if ord(ret) == drive:
+        #     return
+        # else:
+        #     raise Exception('MPC200: Drive %d is not connected' % drive)
             
     @threadsafe
     def getDriveStatus(self):
@@ -156,7 +160,7 @@ class SutterMPC200(SerialDevice):
         ## request position
         self.write('C')
         try:
-            packet = self.read(length=14, timeout=2.0, term=b'\r')
+            packet = self.read(length=14, timeout=5.0, term=b'\r')
         except DataError as err:
             packet = err.data
             # If interrupt occurred, there will be an extra 'I' byte at the beginning
