@@ -229,7 +229,7 @@ class DirTreeWidget(Qt.QTreeWidget):
             self.forgetHandle(handle)
         if 'children' in changes:
             self.rebuildChildren(item)
-            item.setChildIndicatorPolicy(Qt.QTreeWidgetItem.ShowIndicator)
+            item.setChildIndicatorPolicy(Qt.QtWidgets.QTreeWidgetItem.ChildIndicatorPolicy.ShowIndicator)
 
     def addHandle(self, handle):
         if handle in self.items:
@@ -443,7 +443,7 @@ class FileTreeItem(Qt.QTreeWidgetItem):
         #print "handleChanged:", change
         if change == 'children':
             if self.handle.hasChildren() > 0:
-                self.setChildIndicatorPolicy(Qt.QtWidgets.QTreeWidgetItem.ChildIndicatorPolicyShowIndicator)
+                self.setChildIndicatorPolicy(Qt.QtWidgets.QTreeWidgetItem.ChildIndicatorPolicy.ShowIndicator)
             else:
                 self.setChildIndicatorPolicy(Qt.QtWidgets.QTreeWidgetItem.ChildIndicatorPolicy.DontShowIndicatorWhenChildless)
         elif change == 'meta':
