@@ -110,8 +110,8 @@ class MosaicEditor(AnalysisModule):
         self.ui.atlasCombo.currentIndexChanged.connect(self.atlasComboChanged)
         self.ui.normalizeBtn.clicked.connect(self.normalizeImages)
         self.ui.tileShadingBtn.clicked.connect(self.rescaleImages)
-        self.ui.autoRangeBtn.clicked.connect(self.autoRangeImages)
-        self.ui.blendBtn.clicked.connect(self.blendImages)
+       # self.ui.autoRangeBtn.clicked.connect(self.autoRangeImages)
+        # self.ui.blendBtn.clicked.connect(self.blendImages)
 
         self.ui.mosaicApplyScaleBtn.clicked.connect(self.updateScaling)
         self.ui.mosaicFlipLRBtn.clicked.connect(self.flipLR)
