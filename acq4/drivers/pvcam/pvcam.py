@@ -843,6 +843,11 @@ class _CameraClass:
 
         ## If this is an enum, return the string instead of the value
         if typ == LIB.TYPE_ENUM:
+            # print("param: ", param, 'val: ', val)
+            # print(self.enumTable[param])
+            if len(self.enumTable[param]) == 0:
+                return 0
+
             name = self.enumTable[param][1][val.value]
             
             #names = self.getEnumList(param)
