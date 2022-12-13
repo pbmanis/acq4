@@ -149,6 +149,7 @@ class CameraInterface(CameraModuleInterface):
                 bins = self.cam.listParams('binning')[0][0]
             except:
                 bins = self.cam.listParams('binningX')[0]
+            bins = list(bins) ## ensure this is a list, not a range()
             bins.sort()
             bins.reverse()
             for b in bins:
