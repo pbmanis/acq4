@@ -57,7 +57,7 @@ cameraDefaults = {
         ('CLEAR_CYCLES', 2),
     ],
         
-    'QUANTEM:512SC': [
+    b'QUANTEM:512SC': [
         ('READOUT_PORT', 0),  ## fastest for QuantEM
         ('SPDTAB_INDEX', 0),  ## Fastest option for QM512
         ('CLEAR_MODE', LIB.CLEAR_PRE_SEQUENCE),  ## Overlapping mode for QuantEM cameras
@@ -66,14 +66,15 @@ cameraDefaults = {
         ('binningY', 1, range(1,9)),
     ],
     
-    'Quantix57': [
+    b'Quantix57': [
         ('READOUT_PORT', 0),  ## Only option for Q57
         ('SPDTAB_INDEX', 2),  ## Fastest option for Q57
         ('binningX', 1, [1,2,3,4,8,12,16,24,32,48,64,128,256,512]),
         ('binningY', 1, [1,2,3,4,8,12,16,24,32,48,64,128,256,512]),
     ],
+
 }
-cameraDefaults['Quantix EEV57  '] = cameraDefaults['Quantix57']  ## different names, same camera.
+cameraDefaults[b'Quantix EEV57  '] = cameraDefaults[b'Quantix57']  ## different names, same camera.
 
 
 
@@ -359,7 +360,6 @@ class _CameraClass:
         defaults = OrderedDict([(p[0], p[1]) for p in cameraDefaults['ALL']])
         ranges = dict([(p[0], p[2:]) for p in cameraDefaults['ALL']])
         
-        
         if camType in cameraDefaults:
             print("Loading default settings for", camType)
             camDefaults = OrderedDict([(p[0], p[1]) for p in cameraDefaults[camType]])
@@ -367,7 +367,7 @@ class _CameraClass:
             defaults.update(camDefaults)
             ranges.update(camRanges)
         else:
-            print("Warning--camera model '%s' is unrecognized; default settings may be incorrect." % camType)
+            print("Warning--camera model '%s' is unrecognized; default settings may be incorrect." % camType, cameraDefaults)
         
         for k,v in ranges.items():
             #print self.paramAttrs[k], k, v
