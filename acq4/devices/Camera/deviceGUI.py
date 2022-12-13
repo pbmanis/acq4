@@ -51,6 +51,8 @@ class CameraDeviceGui(Qt.QWidget):
                 elif type(p[0]) is list:
                     #print k, val, p
                     params.append({'name': k, 'type': 'list', 'value': val, 'values': p[0]})
+                elif type(p[0]) is range:  ## make sure it is a list, not a range
+                    params.append({'name': k, 'type': 'list', 'value': val, 'values': list(p[0])})                    
                 else:
                     print("    Ignoring parameter '%s': %s" % (k, str(p)))
                     continue
