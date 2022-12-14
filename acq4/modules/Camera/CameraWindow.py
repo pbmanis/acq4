@@ -744,9 +744,11 @@ class SequencerThread(Thread):
     def run(self):
         try:
             self.runSequence()
+        except KeyError:
+            return
+        except RuntimeError:
+            return
         except Exception as e:
-            if e.message == "stopped":
-                return
             raise
 
     def runSequence(self):
