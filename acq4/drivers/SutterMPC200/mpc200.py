@@ -209,7 +209,7 @@ class SutterMPC200(SerialDevice):
         requested position). Exceptions contain the final position as `ex.lastPosition`.
         """
         assert drive is None or drive in range(1,5)
-        assert speed == 'fast' or speed in range(16)
+        assert speed == 'fast' or speed in range(16) or speed == 1e-5
 
         if drive is not None:
             self.setDrive(drive)
@@ -239,7 +239,10 @@ class SutterMPC200(SerialDevice):
         if timeout is None:
             # maximum distance to be travelled along any axis
             dist = (np.abs(ustepPos - currentPos) * self.scale).max()
-            v = self.speedTable[speed]
+            if speed in self.speedTable.keys():
+                v = self.speedTable[speed]
+            else:
+                v = 1e-5
             timeout = 1.0 + 1.5 * dist / v
             # print "dist, speed, timeout:", dist, v, timeout
 
@@ -289,7 +292,10 @@ class SutterMPC200(SerialDevice):
         cpos = np.array(self.getPos(drive)[1])
 
         dx = np.abs(np.array(pos) - cpos[:len(pos)]).max()
-        return dx / self.speedTable[speed]
+        if speed in self.speedTable.keys():
+            return dx / self.speedTable[speed]
+        else:
+            return 1.0 # secs  - fake it
 
     # Disabled--official word from Sutter is that the position updates sent during a move are broken.
     # def readMoveUpdate(self):
@@ -322,6 +328,7 @@ class SutterMPC200(SerialDevice):
         """Stop moving the active drive.
         """
         # lock before stopping if possible
+        print("mpc200.py - Requesting STOP")
         if self.lock.acquire(blocking=False):
             try:
                 self.write('\3')
