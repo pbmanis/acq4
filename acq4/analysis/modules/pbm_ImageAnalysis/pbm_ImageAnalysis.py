@@ -1595,7 +1595,7 @@ class pbm_ImageAnalysis(AnalysisModule):
     #         if self.datatype == 'int16':
     #             tr = tr / ourWidget.getArrayRegion(self.im_filt, self.imageItem, axes=(0,1)).mean(axis=1).mean(axis=0)
     #         sh = np.shape(self.FData)
-    #         if sh[0] is 0:
+    #         if sh[0] == 0:
     #             self.FData = atleast_2d(tr) # create a new trace in this place
     #             #sh = shape(self.FData)
     #         if sh[0] > ourWidget.ID: # did we move an existing widget?
@@ -1811,11 +1811,11 @@ class pbm_ImageAnalysis(AnalysisModule):
         """Compute the value that we are optimizing for the dithering."""
         trDither = ourWidget.getArrayRegion(self.normData[0], self.imageItem, axes=(1,2))
         trDither = trDither.mean(axis=2).mean(axis=1)  # compute average over the ROI against time
-        if ditherMode is 0:  # peak to peak
+        if ditherMode == 0:  # peak to peak
             tr_test = np.amax(trDither) - np.amin(trDither)
-        elif ditherMode is 1:  # baseline to peak
+        elif ditherMode == 1:  # baseline to peak
             tr_test = np.amax(trDither)
-        elif ditherMode is 2:  # standard deviation
+        elif ditherMode == 2:  # standard deviation
             tr_test = np.std(trDither)
         else:
             tr_test = 0.
