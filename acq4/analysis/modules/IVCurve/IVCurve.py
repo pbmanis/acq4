@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-from six.moves import range
+# from six.moves import range
 """
 IVCurve: Analysis module that analyzes current-voltage and firing
 relationships from current clamp data.
@@ -22,6 +22,7 @@ import functools
 import numpy as np
 import scipy
 from acq4.util import Qt
+#from acq4.modules.Module import Module
 from acq4.analysis.AnalysisModule import AnalysisModule
 from acq4.util.HelpfulException import HelpfulException
 import pyqtgraph as pg
@@ -53,9 +54,12 @@ class IVCurve(AnalysisModule):
     RMP as a function of time through the protocol
 
     """
-
+    moduleDisplayName = "IVCurve"
+    moduleCategory = "Analysis"
     def __init__(self, host):
         AnalysisModule.__init__(self, host)
+    # def __init__(self, manager, name, config):
+        # Module.__init__(self, manager, name, config)  ## call superclass __init__
 
         self.Clamps = self.dataModel.GetClamps()  # access the "GetClamps" class for reading data
         self.data_template = (
@@ -112,6 +116,8 @@ class IVCurve(AnalysisModule):
         self.main_layout = pg.GraphicsView()  # instead of GraphicsScene?
         # make fixed widget for the module output
         self.widget = Qt.QWidget()
+        self._win = self.widget
+
         self.gridLayout = Qt.QGridLayout()
         self.widget.setLayout(self.gridLayout)
         self.gridLayout.setContentsMargins(4, 4, 4, 4)
@@ -192,6 +198,13 @@ class IVCurve(AnalysisModule):
         self.data_plot.scene().addItem(self.color_scale)
         self.ctrl.pushButton.clicked.connect(functools.partial(self.initialize_regions,
                                                                reset=True))
+
+    def window(self):
+        return self._win
+    
+    def quit(self):
+        """Quit the module"""
+        pass
 
     def clear_results(self):
         """
@@ -799,11 +812,15 @@ class IVCurve(AnalysisModule):
                 self.allisi[i] = np.diff(spikes)*1e3
             # for Adaptation ratio analysis
             if minspk <= len(spikes) <= maxspk:
-                misi = np.mean(np.diff(spikes[-3:]))*1e3
+                late_isi = np.diff(spikes[-3:])
+                misi = np.mean(late_isi)*1e3
                 ar[i] = misi / self.fisi[i]
 
         iAR = np.where(ar > 0)
-        self.adapt_ratio = np.mean(ar[iAR])  # only where we made the measurement
+        if len(ar[iAR]) > 0:
+            self.adapt_ratio = np.mean(ar[iAR])  # only where we made the measurement
+        else:
+            self.adapt_ratio = np.nan
         self.analysis_summary['AdaptRatio'] = self.adapt_ratio
         self.ctrl.IVCurve_AR.setText(u'%7.3f' % self.adapt_ratio)
         self.nospk = np.where(self.spikecount == 0)
@@ -1122,7 +1139,7 @@ class IVCurve(AnalysisModule):
         fitPars = self.taupars
         xFit = np.zeros((len(self.taupars), 500))
         for i in range(len(self.taupars)):
-          xFit[i,:] = np.arange(0, self.tauwin[1]-self.tauwin[0], (self.tauwin[1]-self.tauwin[0])/500.)
+            xFit[i,:] = np.arange(0, self.tauwin[1]-self.tauwin[0], (self.tauwin[1]-self.tauwin[0])/500.)
         yFit = np.zeros((len(fitPars), xFit.shape[1]))
         fitfunc = Fits.fitfuncmap[self.taufunc]
         if len(self.tau_fits.keys()) > 0:
@@ -1492,6 +1509,7 @@ class IVCurve(AnalysisModule):
                                   symbolSize=6, symbolPen=pen,
                                   symbolBrush=emptybrush)
             self.label_up(self.IV_plot, 'I (pA)', 'V (mV)', 'I-V (CC)')
+            self.IV_plot.autoRange()
         if self.Clamps.data_mode in self.dataModel.vc_modes:
             if (len(self.ivss) > 0 and
                     self.ctrl.IVCurve_showHide_lrss.isChecked()):
@@ -1506,6 +1524,7 @@ class IVCurve(AnalysisModule):
                                   symbolSize=6, symbolPen=pen,
                                   symbolBrush=emptybrush)
             self.label_up(self.IV_plot, 'V (mV)', 'I (nA)', 'I-V (VC)')
+
 
     def update_RMPPlot(self):
         """
@@ -1562,7 +1581,7 @@ class IVCurve(AnalysisModule):
         if mode == 0:  # plot with time as x axis
             xfi = self.Clamps.trace_StartTimes
             xfsl = self.Clamps.trace_StartTimes
-            select = range(len(self.Clamps.trace_StartTimes))
+            select = list(range(len(self.Clamps.trace_StartTimes)))
             xlabel = 'T (s)'
         elif mode == 1:  # plot with current as x
             select = self.spk
@@ -1572,7 +1591,7 @@ class IVCurve(AnalysisModule):
         elif mode == 2:  # plot with spike counts as x
             xfi = self.spikecount
             xfsl = self.spikecount
-            select = range(len(self.spikecount))
+            select = list(range(len(self.spikecount)))
             xlabel = 'Spikes (N)'
         else:
             return  # mode not in available list
