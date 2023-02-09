@@ -7,7 +7,7 @@ relationships from current clamp data.
 This is part of Acq4
 
 Paul B. Manis, Ph.D.
-2011-2013.
+2011-2023.
 
 Pep8 compliant (via pep8.py) 10/25/2013
 Refactoring begun 3/21/2015
@@ -56,6 +56,7 @@ class IVCurve(AnalysisModule):
     """
     moduleDisplayName = "IVCurve"
     moduleCategory = "Analysis"
+    
     def __init__(self, host):
         AnalysisModule.__init__(self, host)
     # def __init__(self, manager, name, config):
