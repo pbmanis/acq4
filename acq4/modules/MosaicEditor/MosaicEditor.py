@@ -446,8 +446,8 @@ class MosaicEditor(AnalysisModule):
         """
         if ask and len(self.items) > 0:
             response = Qt.QMessageBox.question(self.clearBtn, "Warning", "Really clear all items?", 
-                Qt.QMessageBox.Ok|Qt.QMessageBox.Cancel)
-            if response != Qt.QMessageBox.Ok:
+                Qt.QMessageBox.StandardButton.Ok|Qt.QMessageBox.StandardButton.Cancel)
+            if response != Qt.QMessageBox.StandardButton.Ok:
                 return False
             
         self.canvas.clear()

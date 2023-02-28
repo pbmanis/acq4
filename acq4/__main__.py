@@ -71,7 +71,7 @@ def messageHandler(*args):
         print("Failed to write crash log:")
         traceback.print_exc()
 
-    if msgType == pg.QtCore.QtFatalMsg:
+    if msgType == pg.QtCore.QtMsgType.QtFatalMsg:
         try:
             print("Fatal error occurred; asking manager to quit.")
             global man, app

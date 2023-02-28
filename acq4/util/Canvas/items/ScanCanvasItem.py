@@ -76,7 +76,7 @@ class ScanCanvasItem(CanvasItem):
         
         self.addScanImageBtn = self.ui.loadSpotImagesBtn
         print(dir(self.addScanImageBtn))
-        self.addScanImageBtn.clicked(self.loadScanImage) # (self.addScanImageBtn, Qt.SIGNAL('clicked()'), self.loadScanImage)
+        self.addScanImageBtn.click(self.loadScanImage) # (self.addScanImageBtn, Qt.SIGNAL('clicked()'), self.loadScanImage)
     
     @classmethod
     def checkFile(cls, fh):
