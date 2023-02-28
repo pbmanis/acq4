@@ -45,12 +45,12 @@ import numpy
 import scipy
 import scipy.optimize
 
-try:
-    import openopt
-    HAVE_OPENOPT = True
-except ImportError:
-    HAVE_OPENOPT = False
-    print("There was an error importing openopt. Continuing....")
+# try:
+#     import openopt
+#     HAVE_OPENOPT = True
+# except ImportError:
+#     HAVE_OPENOPT = False
+#     print("There was an error importing openopt. Continuing....")
 
 import ctypes
 import numpy.random
@@ -503,27 +503,27 @@ p[4]*numpy.exp(-(p[5] + x)/p[6]))**2.0
                 #                 args=(tx.astype('float64'), dy.astype('float64'), fixedPars, True, weights),
                 #                 maxfun = func[2], bounds = bounds,
                 #                 approx_grad = True) # , disp=0, iprint=-1)
-                elif method == 'openopt': # use OpenOpt's routines - usually slower, but sometimes they converge better
-                    if not HAVE_OPENOPT:
-                        raise Exception("Requested openopt fitting method but openopt is not installed.")
+                # elif method == 'openopt': # use OpenOpt's routines - usually slower, but sometimes they converge better
+                #     if not HAVE_OPENOPT:
+                #         raise Exception("Requested openopt fitting method but openopt is not installed.")
                     
-                    if bounds is not None:
-                        # unpack bounds
-                        lb = [y[0] for y in bounds]
-                        ub = [y[1] for y in bounds]
-                        fopt = openopt.DFP(func[0], fpars, tx, dy, df = fitFuncDer, lb=lb, ub=ub)
-                       # fopt.df = func[8]
-                        r = fopt.solve('nlp:ralg', plot=0, iprint = 10)
-                        plsq = r.xf
-                        ier = 0
-                    else:
-                        fopt = openopt.DFP(func[0], fpars, tx, dy, df = fitFuncDer)
-                        print(func[8])
-                      #  fopt.df = func[7]
-                        fopt.checkdf()
-                        r = fopt.solve('nlp:ralg', plot=0, iprint = 10)
-                        plsq = r.xf
-                        ier = 0                        
+                #     if bounds is not None:
+                #         # unpack bounds
+                #         lb = [y[0] for y in bounds]
+                #         ub = [y[1] for y in bounds]
+                #         fopt = openopt.DFP(func[0], fpars, tx, dy, df = fitFuncDer, lb=lb, ub=ub)
+                #        # fopt.df = func[8]
+                #         r = fopt.solve('nlp:ralg', plot=0, iprint = 10)
+                #         plsq = r.xf
+                #         ier = 0
+                #     else:
+                #         fopt = openopt.DFP(func[0], fpars, tx, dy, df = fitFuncDer)
+                #         print(func[8])
+                #       #  fopt.df = func[7]
+                #         fopt.checkdf()
+                #         r = fopt.solve('nlp:ralg', plot=0, iprint = 10)
+                #         plsq = r.xf
+                #         ier = 0                        
                 else:
                     print('method %s not recognized, please check Fitting.py' % (method))
                     return    
