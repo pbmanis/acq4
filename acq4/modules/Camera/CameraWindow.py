@@ -744,10 +744,12 @@ class SequencerThread(Thread):
     def run(self):
         try:
             self.runSequence()
-        except KeyError:
-            return
-        except RuntimeError:
-            return
+        # except KeyError:
+        #     print("Key Error!")
+        #     raise
+        #     return
+        # except RuntimeError:
+        #     return
         except Exception as e:
             raise
 
