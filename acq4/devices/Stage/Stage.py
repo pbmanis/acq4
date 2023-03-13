@@ -76,7 +76,7 @@ class Stage(Device, OptomechDevice):
         self.setFastSpeed(config.get('fastSpeed', 1e-3))
         self.setSlowSpeed(config.get('slowSpeed', 10e-6))
 
-        self._limits = [(None, None)] * nAxes
+        self._limits = [(None, None)] * nAxes # limits are min and max, one pair for each axis.
         if 'limits' in config:
             self.setLimits(**config['limits'])
 
@@ -533,31 +533,31 @@ class Stage(Device, OptomechDevice):
         for axis, limit in enumerate(self._limits):
             ax_name = 'xyz'[axis]
             x = pos[axis]
-            if x is None:
+            if x is None or limit is None:
                 continue
             if limit[0] is not None and x < limit[0]:
                 raise ValueError(f"Position requested for device {self.name()} exceeds limits: {pos} {ax_name} axis < {limit[0]}")
             if limit[1] is not None and x > limit[1]:
                 raise ValueError(f"Position requested for device {self.name()} exceeds limits: {pos} {ax_name} axis > {limit[1]}")
 
-    def homePosition(self):
+    def homePosition(self, position_number:int=1):
         """Return the stored home position of this stage in global coordinates.
         """
-        return self.readConfigFile('stored_locations').get('home', None)
+        return self.readConfigFile('stored_locations').get(f'home_{position_number:d}', None)
 
-    def goHome(self, speed='fast'):
-        homePos = self.homePosition()
+    def goHome(self, position_number:int=1, speed='fast'):
+        homePos = self.homePosition(position_number=position_number)
         if homePos is None:
             raise Exception("No home position set for %s" % self.name())
         return self.moveToGlobal(homePos, speed=speed)
 
-    def setHomePosition(self, pos=None):
+    def setHomePosition(self, pos=None, position_number:int=1):
         """Set the home position in global coordinates.
         """
         if pos is None:
             pos = self.globalPosition()
         locations = self.readConfigFile('stored_locations')
-        locations['home'] = list(pos)
+        locations[f'home_{position_number:d}'] = list(pos)
         self.writeConfigFile(locations, 'stored_locations')
 
     def joystickChanged(self, js, event):
@@ -771,16 +771,24 @@ class StageInterface(Qt.QWidget):
         self.layout.addWidget(self.btnContainer, self.layout.rowCount(), 0)
         self.btnLayout.setContentsMargins(0, 0, 0, 0)
 
-        self.goHomeBtn = Qt.QPushButton('Home')
-        self.btnLayout.addWidget(self.goHomeBtn, 0, 0)
-        self.goHomeBtn.clicked.connect(self.goHomeClicked)
+        self.goHomeBtn1 = Qt.QPushButton('Home 1')
+        self.btnLayout.addWidget(self.goHomeBtn1, 0, 0)
+        self.goHomeBtn1.clicked.connect(lambda: self.goHomeClicked(1))
 
-        self.setHomeBtn = Qt.QPushButton('Set Home')
-        self.btnLayout.addWidget(self.setHomeBtn, 0, 1)
-        self.setHomeBtn.clicked.connect(self.setHomeClicked)
+        self.setHomeBtn1 = Qt.QPushButton('Set Home 1')
+        self.btnLayout.addWidget(self.setHomeBtn1, 0, 1)
+        self.setHomeBtn1.clicked.connect(lambda: self.setHomeClicked(1))
+
+        self.goHomeBtn2 = Qt.QPushButton('Home 2')
+        self.btnLayout.addWidget(self.goHomeBtn2, 1, 0)
+        self.goHomeBtn2.clicked.connect(lambda: self.goHomeClicked(2))
+
+        self.setHomeBtn2 = Qt.QPushButton('Set Home 2')
+        self.btnLayout.addWidget(self.setHomeBtn2, 1, 1)
+        self.setHomeBtn2.clicked.connect(lambda: self.setHomeClicked(2))
 
         self.calibrateBtn = Qt.QPushButton('Calibrate Axes')
-        self.btnLayout.addWidget(self.calibrateBtn, 0, 2)
+        self.btnLayout.addWidget(self.calibrateBtn, 3, 0)
         self.calibrateBtn.clicked.connect(self.calibrateClicked)
 
         self.calibrateWindow = None
@@ -824,11 +832,11 @@ class StageInterface(Qt.QWidget):
             limit[minmax] = None
         self.dev.setLimits(**{self.dev.axes()[axis]: tuple(limit)})
 
-    def goHomeClicked(self):
-        self.dev.goHome()
+    def goHomeClicked(self, pos_no:int=1):
+        self.dev.goHome(position_number=pos_no)
 
-    def setHomeClicked(self):
-        self.dev.setHomePosition()
+    def setHomeClicked(self, pos_no:int=1):
+        self.dev.setHomePosition(position_number=pos_no)
 
     def calibrateClicked(self):
         if self.calibrateWindow is None:
