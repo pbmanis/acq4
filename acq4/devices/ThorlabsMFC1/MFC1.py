@@ -19,13 +19,12 @@ class ThorlabsMFC1(Stage):
 
     def __init__(self, man, config, name):
         self.port = config.pop('port')
-        self.scale = config.pop('scale', 1)
+        self.scale = config.pop('scale', (1,1,1))
         params = config.pop('motorParams', {})
         # Optionally read limits from config
         lims = config.pop('limits', (None, None, None))
         self.setLimits(z=lims["z"]) 
         self.dev = MFC1_Driver(self.port, **params)
-    #    self.parent = config.pop('parentDevice')  # needed to get xy position
         man.sigAbortAll.connect(self.dev.stop)
 
         # Optionally use ROE-200 z axis to control focus
@@ -42,15 +41,19 @@ class ThorlabsMFC1(Stage):
         self._lastPos = None
 
         Stage.__init__(self, man, config, name)
-
+     
         self.getPosition(refresh=True)
+
+        # Optionally read limits from config
+        limits = list(config.pop('limits', (None, None)))
+        self.setLimits(z=limits)
 
         self._monitor = MonitorThread(self)
         self._monitor.start()
 
     def axes(self):
         # device only has axes 'z', but must have all 3 re capabilities
-        return 'z'
+        return ('x', 'y', 'z')
     
     def capabilities(self):
         # device only reads/writes z-axis
@@ -69,32 +72,34 @@ class ThorlabsMFC1(Stage):
         self.posChanged(pos)
 
     def _getPosition(self):
-        poss = self.dev.position() * self.scale
-        self._parent = self.parentDevice()
-        if self._parent is not None:
-            ppos = self._parent.getPosition()
+        pos = self.dev.position() * self.scale[2]
+      
+        if isinstance(self._lastPos[2], list):
+            lp = self._lastPos[2][0]
         else:
-            ppos = [0]*3
-        pos = [ppos[0], ppos[1], poss]
-        if self._lastPos is None: ###
-            self.posChanged(pos)
-        elif len(self._lastPos) == 1 and poss != self._lastPos: ###NEEDS TO BE FIXED: sometimes pos is tuple, sometimes 3 tuples!
-            self.posChanged(pos)
-        elif len(self._lastPos) == 3 and poss != self._lastPos[2]:
-            self.posChanged(pos)
-        return pos
+            lp = self._lastPos[2]
+        # if pos != lp:
+        #     print("\nPosition changing: MFC1._getPosition: pos, lastpos, devpos: ", pos, self._lastPos, self.dev.position())
+        if pos != lp:
+        #    oldpos = self._lastPos
+            self._lastPos[2] = pos
+            self.posChanged([0, 0, pos])
+        return [0, 0, pos]
 
     def _move(self, pos, speed, linear=None):
         pos = self._toAbsolutePosition(pos)
-        limits = self.getLimits()  ### NEEDS TO BE FIXED: sometimes pos is tuple, sometimes 3 tuples!
-        if limits[0][0] is not None:
-            pos = max(pos[2], limits[0])
-        if limits[0][1] is not None:
-            pos = min(pos, limits[1])
-        return MFC1MoveFuture(self, pos, speed)
+        pos = [0, 0, pos]
+        limits = self.getLimits()[2]
+    
+        if limits[0] is not None:
+            pos[2] = max(pos[2], limits[0])
+        if limits[1] is not None:
+            pos[2] = min(pos[2], limits[1])
+        return MFC1MoveFuture(self, pos[2], speed)
+
 
     def targetPosition(self):
-        return [self.dev.target_position() * self.scale]
+        return [0, 0, self.dev.target_position() * self.scale[2]]
 
     def quit(self):
         self._monitor.stop()
@@ -107,17 +112,12 @@ class ThorlabsMFC1(Stage):
             if self._roeEnabled == 'waiting':
                 self._roeEnabled = True
             return
-        dpos = np.linalg.norm(np.array(pos, dtype=float) - np.array(oldpos, dtype=float))
-        if np.abs(dpos) < 1e-7: ### # min 0.1 micron
+        # original code
+        dz = pos[2] - oldpos[2]
+        if np.abs(dz) <= 1e-7: # == 0:
             return
-        # print("target: ", self.targetPosition(), dpos)
-        # print("dev target: ", self.dev.target_position())
-        # print("lastpos: ", self._lastPos)
-        target = oldpos + dpos # self.dev.target_position() + dpos
-        # print("new target: ", target)
-        self.dev.set_holding(False)  ###
-        self._move([None, None, target[2]], 'fast')
-        self._lastPos = pos
+        target = (self.dev.target_position() * self.scale[2]) + dz
+        self._move([0, 0, target], 'fast')
 
     def deviceInterface(self, win):
         return MFC1StageInterface(self, win)
@@ -168,7 +168,7 @@ class MonitorThread(Thread):
                     if self.stopped:
                         break
                     maxInterval = self.interval
-                pos = self.dev._getPosition()
+                pos = self.dev._getPosition()[2]
                 if pos != lastPos:
                     # stage is moving; request more frequent updates
                     interval = minInterval
@@ -213,7 +213,7 @@ class MFC1MoveFuture(MoveFuture):
         self.startPos = dev.getPosition()
         self.stopPos = pos
         self._moveStatus = {'status': None}
-        self.id = dev.dev.move(pos[2] / dev.scale)
+        self.id = dev.dev.move(pos[2] / dev.scale[2])
 
     def wasInterrupted(self):
         """Return True if the move was interrupted before completing.
@@ -227,8 +227,8 @@ class MFC1MoveFuture(MoveFuture):
         if self.isDone():
             return 100
 
-        pos = self.dev.getPosition() - self.startPos
-        target = self.stopPos - self.startPos
+        pos = self.dev.getPosition()[2] - self.startPos[2]
+        target = self.stopPos[2] - self.startPos[2]
         if target == 0:
             return 99
         return 100 * pos / target

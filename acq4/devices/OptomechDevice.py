@@ -403,7 +403,7 @@ class OptomechDevice(InterfaceMixin):
     
     def setDeviceTransform(self, tr):
         if isinstance(tr, dict):
-            allowed = {"position", "scale", "angle", "axis"}  # was {"pos"... }
+            allowed = {"pos", "scale", "angle", "axis"}  # was {"pos"... }
             if len(set(tr.keys()) - allowed) > 0:
                 print(allowed)
                 print(tr.keys())
