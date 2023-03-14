@@ -78,8 +78,6 @@ class ThorlabsMFC1(Stage):
             lp = self._lastPos[2][0]
         else:
             lp = self._lastPos[2]
-        # if pos != lp:
-        #     print("\nPosition changing: MFC1._getPosition: pos, lastpos, devpos: ", pos, self._lastPos, self.dev.position())
         if pos != lp:
         #    oldpos = self._lastPos
             self._lastPos[2] = pos
