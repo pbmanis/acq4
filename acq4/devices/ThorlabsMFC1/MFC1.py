@@ -112,11 +112,11 @@ class ThorlabsMFC1(Stage):
             if self._roeEnabled == 'waiting':
                 self._roeEnabled = True
             return
-        # original code
         dz = pos[2] - oldpos[2]
         if np.abs(dz) <= 1e-7: # == 0:
             return
         target = (self.dev.target_position() * self.scale[2]) + dz
+        # self.moveTo([0, 0, target], 'fast')  # moveTo does not exist
         self._move([0, 0, target], 'fast')
 
     def deviceInterface(self, win):
