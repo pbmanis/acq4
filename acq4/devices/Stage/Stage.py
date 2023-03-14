@@ -787,6 +787,14 @@ class StageInterface(Qt.QWidget):
         self.btnLayout.addWidget(self.setHomeBtn2, 1, 1)
         self.setHomeBtn2.clicked.connect(lambda: self.setHomeClicked(2))
 
+        self.goHomeBtn3 = Qt.QPushButton('Home 3')
+        self.btnLayout.addWidget(self.goHomeBtn3, 2, 0)
+        self.goHomeBtn3.clicked.connect(lambda: self.goHomeClicked(3))
+
+        self.setHomeBtn3 = Qt.QPushButton('Set Home 3')
+        self.btnLayout.addWidget(self.setHomeBtn3, 2, 1)
+        self.setHomeBtn3.clicked.connect(lambda: self.setHomeClicked(3))
+
         self.calibrateBtn = Qt.QPushButton('Calibrate Axes')
         self.btnLayout.addWidget(self.calibrateBtn, 3, 0)
         self.calibrateBtn.clicked.connect(self.calibrateClicked)
