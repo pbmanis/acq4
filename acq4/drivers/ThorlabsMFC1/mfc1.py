@@ -21,6 +21,7 @@ Hardware notes:
 * Encoder has 4096 values per rotation; gear ratio is 1:5.
 
 * Setting encoder prescaler to 8192 yields +1 per encoder step 
+
 """
 try:
     # this is nicer because it provides deadlock debugging information
@@ -55,7 +56,7 @@ class MFC1(object):
         Parameter dictionaries for two different firmware versions
         """
         params_1140 = OrderedDict([
-            ('maximum_current', 100),  # range is 0-255; in 32 steps. Do not make too hlarge
+            ('maximum_current', 100),  # range is 0-255; in 32 steps. Do not make too large
             ('maximum_acceleration',100),
             ('maximum_speed', 800),
             ('ramp_divisor',2),
@@ -68,7 +69,7 @@ class MFC1(object):
             ('freewheeling',1),
         ])
         params_110_42 = OrderedDict([
-            ('maximum_current', 100),  # range is 0-255; in 32 steps. Do not make too hlarge
+            ('maximum_current', 100),  # range is 0-255; in 32 steps. Do not make too large
             ('maximum_acceleration',200),  # lukes default 1000; I like 200
             ('maximum_speed', 800),  # luke's max 2000, I like 800
             ('ramp_divisor',2),  # lc default 7, I like 2
