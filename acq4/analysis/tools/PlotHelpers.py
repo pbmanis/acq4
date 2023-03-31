@@ -73,8 +73,8 @@ def update_font(ax):
           tick.label1.set_fontname(stdFont)
         #      tick.label1.set_family('sans-serif')
           tick.label1.set_size(11)
-    ax.xaxis.set_smart_bounds(True)
-    ax.yaxis.set_smart_bounds(True) 
+    # ax.xaxis.set_smart_bounds(True)
+    # ax.yaxis.set_smart_bounds(True) 
     ax.tick_params(axis = 'both', labelsize = 9)
 
 def adjust_spines(ax, spines, direction = 'outward', distance=5, smart=False):
