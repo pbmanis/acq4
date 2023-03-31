@@ -25,14 +25,13 @@ This module provides:
 from __future__ import print_function
 
 import matplotlib.pyplot as PL
-from six.moves import map
-from six.moves import zip
 
 from acq4.util import Qt
 from acq4.analysis.AnalysisModule import AnalysisModule
 from collections import OrderedDict
 import os
 import shutil
+from pathlib import Path
 import csv
 import os.path
 import pickle
@@ -49,7 +48,6 @@ from acq4.analysis.tools import PlotHelpers as PH  # matlab plotting helpers
 from acq4.util import functions as FN
 from acq4.util.HelpfulException import HelpfulException
 from acq4.devices.Scanner.scan_program import rect
-from six.moves import range
 
 try:
     import cv2
@@ -245,6 +243,10 @@ class pbm_ImageAnalysis(AnalysisModule):
         self.ROIDistanceMap = []
         self.tc_bleach = []
 
+    def check_MPL(self):
+        self.use_MPL = False
+        # self.ctrlImageFunc.IAFuncs_MatplotlibCheckBox.checkState()
+
     def setAnalogMode(self):
         """
 
@@ -285,6 +287,7 @@ class pbm_ImageAnalysis(AnalysisModule):
         if view == 'Std Image':
             self.imageView.setImage(self.stdImage)
         if view == 'Spectrum Image':
+            self.spectrumCalc()
             self.imageView.setImage(self.specImageDisplay)
         if view == 'Movie':
             self.imageView.setImage(self.imageData)
@@ -352,6 +355,7 @@ class pbm_ImageAnalysis(AnalysisModule):
         # if dirtype == 'ProtocolSequence':
         #     dsp = self.dataModel.listSequenceParams(dh[0])
         dlh = self.fileLoaderInstance.selectedFiles()
+        print(f"Loading {len(dlh):d} File(s)")
         if self.ctrl.ImagePhys_PhysROIPlot.isChecked():
             print('multiple file load, for # of files: ', len(dlh))
             self.makePhysROIPlot(dh, dlh)
@@ -359,6 +363,7 @@ class pbm_ImageAnalysis(AnalysisModule):
             if len(dlh) > 1:
                 raise HelpfulException("pbm_ImageAnalysis: loadFileRequested Error\nCan only load from single file", msgType='status')
             else:
+                print(f"pbmImageAnalysis: Loading {str(dh[0]):s}")
                 self.loadSingleFile(dh[0])
     
     def setupPhysROIPlot(self):
@@ -462,15 +467,16 @@ class pbm_ImageAnalysis(AnalysisModule):
         self.rs = None
         img = None
         self.clearImageTypes()
+        print(f"data structure: {self.dataStruct:s}")
+        print(dh.name(), "is file: ", os.path.isfile(dh.name()), "Video: ", str(Path(dh.name()).name).startswith("video_"))
+        requestType = self.readDataTypes()  # selection of image types for analysis - can exclude imaging for example.
+
         if self.dataStruct == 'flat':
-            #print 'getting Flat data structure!'
+            print(f"getting Flat data structure! RequestType = {str(self.readDataTypes()):s}")
             if dh.isFile():
                 fhandle = dh
-            else:
-                # test data type for the imaging
-                requestType = self.readDataTypes()  # selection of image types for analysis - can exclude imaging for example.
-                if os.path.isfile(os.path.join(dh.name(), 'Camera/frames.ma')) and 'camera' in requestType:
-                    fhandle = dh['Camera/frames.ma']  # get data from ccd camera
+                if os.path.isfile(dh.name()) and str(Path(dh.name()).name).startswith("video_") and 'camera' in requestType:
+                    print("Found video")
                     self.imageType = 'camera'
                     self.ctrl.ImagePhys_Camera_check.setText(u'Camera \u2713')
                     if self.downSample == 1:
@@ -487,7 +493,30 @@ class pbm_ImageAnalysis(AnalysisModule):
                     self.scanTimes = np.zeros(sh[1]*sh[2]).reshape((sh[1], sh[2]))
                     self.prepareImages()
 
+            else:
+                # test data type for the imaging
+                if os.path.isfile(os.path.join(dh.name(), 'Camera/frames.ma')) and 'camera' in requestType:
+                    print("Found camera frames")
+                    fhandle = dh['Camera/frames.ma']  # get data from ccd camera
+                    self.imageType = 'camera'
+                    self.ctrl.ImagePhys_Camera_check.setText(u'Camera \u2713')
+                    if self.downSample == 1:
+                        imt = MetaArray(file=fhandle.name())
+                        self.imageInfo = imt.infoCopy()
+                        img = imt.asarray()
+                        #img = fhandle.read() # read the image stack directly
+                    else:
+                        (img, info) = self.tryDownSample(fhandle)
+                        self.imageInfo = info
+                    self.imageTimes = self.imageInfo[0]['values']
+                    self.imageData = img.view(np.ndarray)
+                    sh = self.imageData.shape
+                    self.scanTimes = np.zeros(sh[1]*sh[2]).reshape((sh[1], sh[2]))
+                    self.prepareImages()
+ 
+               
                 elif os.path.isfile(os.path.join(dh.name(), 'PMT.ma')) and 'PMT' in requestType:
+                    print("found PMT images")
                     fhandle = dh['PMT.ma']  # get data from PMT, as raw trace information
                     self.pmtData = MetaArray(file=fhandle.name())
                     self.imageType = 'PMT'
@@ -503,6 +532,7 @@ class pbm_ImageAnalysis(AnalysisModule):
                     self.restoreDecomb()  # restore the original decomb settings and process the image.
 
                 elif os.path.isfile(os.path.join(dh.name(), 'imaging.ma')) and 'imaging' in requestType:
+                    print("found imaging files")
                     fhandle = dh['imaging.ma']  # get data from a pre-processed imaging file of PMT data
                     self.imageType = 'imaging'
                     self.ctrl.ImagePhys_Image_check.setText(u'Imaging \u2713')
@@ -598,7 +628,7 @@ class pbm_ImageAnalysis(AnalysisModule):
         self.currentDataDirectory = dh
         self.ctrl.ImagePhys_View.setCurrentIndex(0)  # always set to show the movie
         self.specImageCalcFlag = False  # we need to recalculate the spectrum
-        npts = self.imageData.shape[0]/2
+        npts = int(self.imageData.shape[0]/2)
         freq = np.fft.fftfreq(npts, d=self.imagedT)
         freq = freq[0:int(npts/2 + 1)]
         self.ctrlROIFunc.ImagePhys_SpecHPF.setMinimum(0.0)
@@ -748,7 +778,7 @@ class pbm_ImageAnalysis(AnalysisModule):
             self.freim = np.abs(np.fft.fft(self.imageData, axis=0)/self.imageData.shape[0])
             self.specImageCalcFlag = True
             
-        npts = self.imageData.shape[0]/2
+        npts = int(self.imageData.shape[0]/2)
         freq = np.fft.fftfreq(npts, d=self.imagedT)  # get frequency list
         freq = freq[0:int(npts/2 + 1)]
         hpf = self.ctrlROIFunc.ImagePhys_SpecHPF.value()
@@ -778,7 +808,7 @@ class pbm_ImageAnalysis(AnalysisModule):
             sf = 1.0e6
         else:
             print('Old File without full scaling information on image, setting to defaults of pixels.')
-            sh = self.imageData.shape
+            sh = np.array(self.imageData.shape)
             region = [0, 0, sh[1], sh[2]] # make region from image data directly [x0,y0,y1,y1]
             px = [1.0, 1.0] # scaling is now in pixels directly
             self.imageScaleUnit = 'pixels'
@@ -1085,10 +1115,21 @@ class pbm_ImageAnalysis(AnalysisModule):
             return
         dt = np.mean(np.diff(self.imageTimes))
         samplefreq = 1.0/dt
-        if (LPF > 0.5*samplefreq):
-            LPF = 0.5*samplefreq
+        # if (LPF > 0.5*samplefreq):
+        #     LPF = 0.5*samplefreq
         d = self.BFData[roi.ID].copy().T
         return(Utility.SignalFilter(d, LPF, HPF, samplefreq))
+
+    def showdialog(self, message):
+        msg = pg.QtWidgets.QMessageBox()
+        msg.setIcon(pg.QtWidgets.QMessageBox.Icon.Warning)
+        msg.setWindowTitle("acq4:ImageAnalysis Warning")
+        msg.setText(f"Invalid ImageAnalysis parameter")
+        msg.setInformativeText(f"{message:s}")
+        # msg.setDetailedText(message)
+        msg.setStandardButtons(pg.QtWidgets.QMessageBox.StandardButton.Ok)
+        # msg.buttonClicked.connect(msgbtn)    
+        retval = msg.exec()
 
     def SignalHPF(self, roi): 
         """ data correction
@@ -1096,7 +1137,12 @@ class pbm_ImageAnalysis(AnalysisModule):
         """
         HPF = self.ctrlROIFunc.ImagePhys_ImgHPF.value()
         dt = np.mean(np.diff(self.imageTimes))
+        # print(self.imageTimes.shape[0], dt, self.imageTimes.shape[0]*dt)
         samplefreq = 1.0/dt
+        if 1./(self.imageTimes.shape[0]*dt/2.0) > HPF:
+            self.showdialog(f"HPF {HPF:.3f} Hz is below the Nyquist limit of {1./(self.imageTimes.shape[0]*dt/2.0):.3f} Hz\nStopping.")
+            return None
+
         d = self.BFData[roi.ID].copy().T
         return(Utility.SignalFilter_HPFButter(d, HPF, samplefreq))
 
@@ -1107,9 +1153,13 @@ class pbm_ImageAnalysis(AnalysisModule):
         LPF = self.ctrlROIFunc.ImagePhys_ImgLPF.value() # 100.0
         dt = np.mean(np.diff(self.imageTimes))
         samplefreq = 1.0/dt
-        if (LPF > 0.5*samplefreq):
-            LPF = 0.5*samplefreq
+        # if (LPF > 0.5*samplefreq):
+        #     LPF = 0.5*samplefreq
         d = self.BFData[roi.ID].copy().T
+        # print("Samplefreq: ", samplefreq, LPF)
+        if samplefreq/2.0 < LPF:
+            self.showdialog(f"LPF {LPF:.1f} Hz is above Nyquist limit of {samplefreq/2.0:.1f} Hz\nStopping.")
+            return None
         return(Utility.SignalFilter_LPFButter(d, LPF, samplefreq))
         
 #
@@ -1330,12 +1380,13 @@ class pbm_ImageAnalysis(AnalysisModule):
         thrliney = [threshold, threshold]
         nthrliney = [-threshold, -threshold]
         thrlinex = [x0, x1]
-        self.use_MPL = self.ctrlImageFunc.IAFuncs_MatplotlibCheckBox.checkState()
-        mean = scipy.stats.nanmean(self.IXC_Strength.flatten())
-        std = scipy.stats.nanstd(self.IXC_Strength.flatten())
+        self.check_MPL() #self.ctrlImageFunc.IAFuncs_MatplotlibCheckBox.checkState()
+        mean = np.nanmean(self.IXC_Strength.flatten())
+        std = np.nanstd(self.IXC_Strength.flatten())
         print('Mean XC: %f   std: %f' % (mean, std))
+        self.checkMPL()
         if self.use_MPL:
-            self.checkMPL()
+
             (self.MPLFig, self.MPL_plots) = PL.subplots(num="Image Analysis", nrows=1, ncols=1,
                     sharex = True, sharey = True)
             self.MPLFig.suptitle('Analog XCorr: %s' % self.currentFileName, fontsize=11)
@@ -1436,11 +1487,10 @@ class pbm_ImageAnalysis(AnalysisModule):
             self.ROIDistances()  # make sure we ahve valid distance information
         if self.IXC_Strength == []:
             self.Analog_Xcorr_Individual(plottype=None)
-
-        self.use_MPL = self.ctrlImageFunc.IAFuncs_MatplotlibCheckBox.checkState()
+        self.check_MPL()
+        # self.use_MPL = False # self.ctrlImageFunc.IAFuncs_MatplotlibCheckBox.checkState()
 
         if self.use_MPL:
-            self.checkMPL()
             (self.MPLFig, self.MPL_plots) = PL.subplots(num="Network Graph", nrows=1, ncols=1,
                         sharex=True, sharey=True)
             self.MPLFig.suptitle('Network Graph: %s' % self.currentFileName, fontsize=11)
@@ -1635,16 +1685,15 @@ class pbm_ImageAnalysis(AnalysisModule):
         :param livePlot: flag for live plotting, passed to showThisROI
         """
         if roi in self.AllRois:
-            tr = roi.getArrayRegion(self.imageData, self.imageView.imageItem, axes=(1, 2))
-            tr = tr.mean(axis=2).mean(axis=1)  # compute average over the ROI against time
-#            trx = tr.copy()
+            tr = roi.getArrayRegion(data=np.dstack(self.imageData), img=self.imageView.imageItem, axes=[0, 1])
+            tr = tr.mean(axis=1).mean(axis=0)  # compute average over the ROI against time
             if self.dataState['Normalized'] is False:
-#                trm = tr.mean()  # mean value across all time
                 tr = tr/tr.mean()  # (self.background[0:tr.shape[0]]*trm/self.backgroundmean)
-
             self.FData = self.insertFData(self.FData, tr.copy(), roi)
-            self.applyROIFilters(roi)
-            self.showThisROI(roi, livePlot)
+            if self.applyROIFilters(roi):
+                self.showThisROI(roi, livePlot)
+            else:
+                return(None)
             return(tr)
 
     def scannerTimes(self, roi):
@@ -1653,8 +1702,8 @@ class pbm_ImageAnalysis(AnalysisModule):
         :params: roi - the roi information
         :returns: time array with mean roi collection time offset + base image time
         """
-        tr = roi.getArrayRegion(self.scanTimes, self.imageView.imageItem, axes=(0, 1))
-        tr = tr.mean(axis=1).mean(axis=0)  # compute average over the ROI against time
+        tr = roi.getArrayRegion(data=self.scanTimes, img=self.imageView.imageItem, axes=[2])
+        tr = tr.mean() # axis=1).mean(axis=0)  # compute average over the ROI against time
         times = self.imageTimes[0:len(self.BFData[roi.ID])] + tr
 #        print tr
         return times
@@ -1716,9 +1765,11 @@ class pbm_ImageAnalysis(AnalysisModule):
         currentROI = self.lastROITouched
         for ourWidget in self.AllRois:
             tr = self.updateThisROI(ourWidget, livePlot=False)
+            if tr is None:
+                return
             self.FData = self.insertFData(self.FData, tr, ourWidget)
-        self.applyROIFilters(self.AllRois)
-        self.updateThisROI(currentROI) # just update the latest plot with the new format.
+        # self.applyROIFilters(self.AllRois)
+        # self.updateThisROI(currentROI) # just update the latest plot with the new format.
 
     def refilterCurrentROI(self):
         """
@@ -1726,8 +1777,8 @@ class pbm_ImageAnalysis(AnalysisModule):
         """
         roi = self.lastROITouched
         if roi in self.AllRois:
-            self.applyROIFilters(roi)
-            self.ROI_Plot.plot(self.imageTimes, self.BFData[roi.ID], pen=pg.mkPen('r'), clear=True)
+            if self.applyROIFilters(roi):
+                self.ROI_Plot.plot(self.imageTimes, self.BFData[roi.ID], pen=pg.mkPen('r'), clear=True)
 
     def insertFData(self, FData, tr, roi):
         sh = np.shape(FData)
@@ -1761,11 +1812,16 @@ class pbm_ImageAnalysis(AnalysisModule):
             else:
                 if self.ctrlROIFunc.ImagePhys_CorrTool_LPF.isChecked():
                     lpf = self.SignalLPF(roi)
+                    if lpf is None:
+                        return False
                     self.BFData = self.insertFData(self.BFData, lpf, roi)
                 if self.ctrlROIFunc.ImagePhys_CorrTool_HPF.isChecked():
                     hpf = self.SignalHPF(roi)
+                    if hpf is None:
+                        return False
                     self.BFData = self.insertFData(self.BFData, hpf, roi)
-
+        return True
+    
     def optimizeAll(self):
         for roi in self.AllRois:
             self.optimizeThisROI(roi)
@@ -2440,7 +2496,7 @@ class pbm_ImageAnalysis(AnalysisModule):
         else:
             lpf = 20.0
         imm = Utility.SignalFilter_LPFButter(imm, lpf, samplefreq, NPole = 8)
-        print(np.amin(imm), np.amax(imm))
+        # print(np.amin(imm), np.amax(imm))
         for i in range(len(self.imageData)):
             self.imageData[i,:,:] = 1.0+(self.imageData[i,:,:] - imm[i])/imm[i]
 
@@ -2584,7 +2640,7 @@ class pbm_ImageAnalysis(AnalysisModule):
             else:
                 dt = np.mean(np.diff(self.imageTimes))
         self.calculate_all_xcorr(FData, dt)
-        self.use_MPL = self.ctrlImageFunc.IAFuncs_MatplotlibCheckBox.checkState()
+        self.check_MPL() # self.use_MPL = self.ctrlImageFunc.IAFuncs_MatplotlibCheckBox.checkState()
 
 
         if not self.use_MPL:
@@ -2596,6 +2652,11 @@ class pbm_ImageAnalysis(AnalysisModule):
             self.floatingWindow.layout.setWindowTitle("New Title?")
             p = self.floatingWindow.layout.addPlot(0,0)
             p.plot(self.lags,self.xcorr)
+            p.plot([0,0], [-0.5, 1.5], pen=pg.mkPen("gray", width=0.5))
+            p.plot([np.min(self.lags), np.max(self.lags)], [0,0], 
+                                                        pen=pg.mkPen({'color': "#ff0", 'width': 0.5, 
+                                                                      'style': pg.QtCore.Qt.PenStyle.DashLine})
+                            )
             p.setXRange(np.min(self.lags), np.max(self.lags))
         else:
             self.checkMPL()
@@ -2603,8 +2664,8 @@ class pbm_ImageAnalysis(AnalysisModule):
                         sharex = True, sharey = True)
             self.MPLFig.suptitle('Average XCorr: %s' % self.currentFileName, fontsize=11)
             self.MPL_plots.plot(self.lags, self.xcorr)
-            self.MPL_plots.plot(self.lags,np.zeros(self.lags.shape), color = '0.5')
-            self.MPL_plots.plot([0,0], [-0.5, 1.0], color = '0.5')
+            self.MPL_plots.plot(self.lags,np.zeros(self.lags.shape), color = 'k')
+            self.MPL_plots.plot([0,0], [-0.5, 1.0], color = 'k', linewidth=0.33, alpha=0.7)
             self.MPL_plots.set_title('Average XCorr', fontsize=10)
             self.MPL_plots.set_xlabel('T (sec)', fontsize=10)
             self.MPL_plots.set_ylabel('Corr (R)', fontsize=10)
@@ -2670,7 +2731,7 @@ class pbm_ImageAnalysis(AnalysisModule):
         """ compute and display the individual cross correlations between pairs of traces
             in the data set"""
         print('Calculating cross-correlations between all ROIs')
-        self.use_MPL = self.ctrlImageFunc.IAFuncs_MatplotlibCheckBox.checkState()
+        self.check_MPL() # self.use_MPL = self.ctrlImageFunc.IAFuncs_MatplotlibCheckBox.checkState()
         self.calculateAllROIs()
         if self.ROIDistanceMap == []:
             self.ROIDistances()
@@ -2722,10 +2783,7 @@ class pbm_ImageAnalysis(AnalysisModule):
             xtrace = 0
             for xtrace1 in range(0, nROI-1):
                 for xtrace2 in range(xtrace1+1, nROI):
-#                    print 'xtrace: ', xtrace
                     self.IXC_plots[xtrace] = self.floatingWindow.layout.addPlot(xtrace1, xtrace2)
-                    # if xtrace == 0:
-                    #     print dir(self.IXC_plots[xtrace])
                     if xtrace > 0:
                         self.IXC_plots[xtrace].hideButtons()
                     xtrace = xtrace + 1
@@ -2758,16 +2816,23 @@ class pbm_ImageAnalysis(AnalysisModule):
                     if plottype == 'traces':
                         if not self.use_MPL: # pyqtgraph
                             self.IXC_plots[xtrace].plot(self.lags, self.IXC_corr[xtrace])
+                            self.IXC_plots[xtrace].plot([0,0], [-0.5, 1.5], pen=pg.mkPen("gray", width=0.5))
+                            self.IXC_plots[xtrace].plot([np.min(self.lags), np.max(self.lags)], [0,0], 
+                                                        pen=pg.mkPen({'color': "#ff0", 'width': 0.5, 
+                                                                      'style': pg.QtCore.Qt.PenStyle.DashLine})
+                            )
+
                             if xtrace == 0:
                                 self.IXC_plots[0].registerPlot(name='xcorr_%03d' % xtrace)
                             if xtrace > 0:
                                 self.IXC_plots[xtrace].vb.setXLink('xcorr_000') # not sure - this seems to be at the wrong level in the window manager
+                                self.IXC_plots[xtrace].vb.setYLink('xcorr_000') # not sure - this seems to be at the wrong level in the window manager
                         else: # pylab
                             plx = self.IXC_plots[xtrace1, xtrace2-1]
                             plx.plot(self.lags,self.IXC_corr[xtrace])
                             plx.hold = True
                             plx.plot(self.lags,np.zeros(self.lags.shape), color = '0.5')
-                            plx.plot([0,0], [-0.5, 1.0], color = '0.5')
+                            plx.plot([0,0], [-0.5, 1.0], color = 'k', linewidth=0.33, alpha=0.7)
                             if xtrace1 == 0:
                                 plx.set_title('ROI: %d' % (xtrace2), fontsize=8)
                             PH.cleanAxes(plx)
