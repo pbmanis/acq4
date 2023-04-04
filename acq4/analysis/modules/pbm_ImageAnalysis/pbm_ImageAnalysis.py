@@ -125,7 +125,7 @@ class pbm_ImageAnalysis(AnalysisModule):
         self.stdImage = []
         self.avgImage = []
         self.imageType = "camera"  # frames for camera (all pixels simultaneous); scanner for scanner (need scan timing)
-
+        self.frameInterval = 1.0  # the frame rate (time between frames)
         self.analogMode = True  # if false, we are using digital mode.
         self.csvFileName = None
         self.csvData = None
@@ -414,7 +414,7 @@ class pbm_ImageAnalysis(AnalysisModule):
             self.imageView.setImage(self.stdImage)
         if view == "Spectrum Image":
             self.spectrumCalc()
-            self.imageView.setImage(self.specImageDisplay)
+            self.imageView.setImage(self.specImageFreqDisplay)
         if view == "Movie":
             self.imageView.setImage(self.imageData)
             self.viewFlag = False
@@ -570,6 +570,23 @@ class pbm_ImageAnalysis(AnalysisModule):
         self.ctrl.ImagePhys_PMT_check.setText("PMT")
         self.ctrl.ImagePhys_Image_check.setText("Imaging")
 
+
+    def getVideoStack(self, fhandle):
+        if self.downSample == 1:
+            imt = MetaArray(file=fhandle.name())
+            self.imageInfo = imt.infoCopy()
+            img = imt.asarray()
+            # img = fhandle.read() # read the image stack directly
+        else:
+            (img, info) = self.tryDownSample(fhandle)
+            self.imageInfo = info
+        self.imageTimes = self.imageInfo[0]["values"]
+        self.frameInterval = np.mean(np.diff(self.imageTimes))
+        self.imageData = img.view(np.ndarray)
+        sh = self.imageData.shape
+        self.scanTimes = np.zeros(sh[1] * sh[2]).reshape((sh[1], sh[2]))
+        self.prepareImages()
+
     def loadSingleFile(self, dh):
         """Read a file from disk
 
@@ -611,7 +628,7 @@ class pbm_ImageAnalysis(AnalysisModule):
             print(
                 f"getting Flat data structure! RequestType = {str(self.readDataTypes()):s}"
             )
-            if dh.isFile():
+            if dh.isFile(): # from a single file
                 fhandle = dh
                 if (
                     os.path.isfile(dh.name())
@@ -621,21 +638,9 @@ class pbm_ImageAnalysis(AnalysisModule):
                     print("Found video")
                     self.imageType = "camera"
                     self.ctrl.ImagePhys_Camera_check.setText("Camera \u2713")
-                    if self.downSample == 1:
-                        imt = MetaArray(file=fhandle.name())
-                        self.imageInfo = imt.infoCopy()
-                        img = imt.asarray()
-                        # img = fhandle.read() # read the image stack directly
-                    else:
-                        (img, info) = self.tryDownSample(fhandle)
-                        self.imageInfo = info
-                    self.imageTimes = self.imageInfo[0]["values"]
-                    self.imageData = img.view(np.ndarray)
-                    sh = self.imageData.shape
-                    self.scanTimes = np.zeros(sh[1] * sh[2]).reshape((sh[1], sh[2]))
-                    self.prepareImages()
+                    self.getVideoStack(dh)
 
-            else:
+            else: # from a directory with Camera subdirectory and frames that hold a video stack
                 # test data type for the imaging
                 if (
                     os.path.isfile(os.path.join(dh.name(), "Camera/frames.ma"))
@@ -645,24 +650,12 @@ class pbm_ImageAnalysis(AnalysisModule):
                     fhandle = dh["Camera/frames.ma"]  # get data from ccd camera
                     self.imageType = "camera"
                     self.ctrl.ImagePhys_Camera_check.setText("Camera \u2713")
-                    if self.downSample == 1:
-                        imt = MetaArray(file=fhandle.name())
-                        self.imageInfo = imt.infoCopy()
-                        img = imt.asarray()
-                        # img = fhandle.read() # read the image stack directly
-                    else:
-                        (img, info) = self.tryDownSample(fhandle)
-                        self.imageInfo = info
-                    self.imageTimes = self.imageInfo[0]["values"]
-                    self.imageData = img.view(np.ndarray)
-                    sh = self.imageData.shape
-                    self.scanTimes = np.zeros(sh[1] * sh[2]).reshape((sh[1], sh[2]))
-                    self.prepareImages()
+                    self.getVideoStack(fhandle)
 
                 elif (
                     os.path.isfile(os.path.join(dh.name(), "PMT.ma"))
                     and "PMT" in requestType
-                ):
+                ):  # from photomultiplier data
                     print("found PMT images")
                     fhandle = dh[
                         "PMT.ma"
@@ -685,6 +678,8 @@ class pbm_ImageAnalysis(AnalysisModule):
                         "subpixel": subpixel,
                     }
                     self.imageInfo = self.pmtData.infoCopy()
+                    self.imageTimes = self.imageInfo[0]["values"]
+                    self.frameInterval = np.mean(np.diff(self.imageTimes))
                     self.restoreDecomb()  # restore the original decomb settings and process the image.
 
                 elif (
@@ -697,23 +692,7 @@ class pbm_ImageAnalysis(AnalysisModule):
                     ]  # get data from a pre-processed imaging file of PMT data
                     self.imageType = "imaging"
                     self.ctrl.ImagePhys_Image_check.setText("Imaging \u2713")
-                    if self.downSample == 1:
-                        imt = MetaArray(file=fhandle.name())
-                        self.imageInfo = imt.infoCopy()
-                        img = imt.asarray()
-                    else:
-                        (img, info) = self.tryDownSample(fhandle)
-                        self.imageInfo = info
-                    self.imageData = img.view(np.ndarray)
-                    self.imageTimes = self.imageInfo[0]["values"]
-                    itdt = np.max(self.imageTimes) / len(
-                        self.imageTimes
-                    )  # time between scans (duration)
-                    sh = self.imageData.shape
-                    self.scanTimes = np.linspace(0.0, itdt, sh[1] * sh[2]).reshape(
-                        (sh[1], sh[2])
-                    )  # estimated times for each point in the image.
-                    self.prepareImages()
+                    self.getVideoStack(fhandle)
 
                 else:
                     raise Exception("No valid imaging data found")
@@ -722,7 +701,6 @@ class pbm_ImageAnalysis(AnalysisModule):
                 self.readPhysiology(dh)
             if img is None:
                 return False
-            # self.processData()
 
         else:  # interleaved data structure (Deepti Rao's calcium imaging data)
             dirs = dh.subDirs()  # find out what kind of data we
@@ -763,32 +741,8 @@ class pbm_ImageAnalysis(AnalysisModule):
                 img /= trialCurve
                 img /= timeCurve
 
-            # for img in self.rawData:
-            # m = img.mean(axis=0)
-            # s = img.std(axis=0)
-            # if self.background is not None:
-            # m = m.astype(np.float32)
-            # m /= self.background
-            # s = s.astype(np.float32)
-            # s /= self.background
-            # imgSet = {'mean': m, 'std': s}
-            # self.data.append(imgSet)
-            # self.imgMeans.append(m)
-            # self.imgStds.append(s)
-
             self.imageItem.setImage(self.rawData[1].mean(axis=0))
             self.processData()
-
-            ## set up the selection region correctly and prepare IV curves
-            # if len(dirs) > 0:
-            # end = cmd.xvals('Time')[-1]
-            # self.lr.setRegion([end *0.5, end * 0.6])
-            # self.updateAnalysis()
-            # info = [
-            # {'name': 'Command', 'units': cmd.axisUnits(-1), 'values': np.array(values)},
-            # data.infoCopy('Time'),
-            # data.infoCopy(-1)]
-            # self.traces = MetaArray(np.vstack(traces), info=info)
             self.imageData = self.rawData
         
         self.ROI_Plot.clearPlots()
@@ -994,6 +948,7 @@ class pbm_ImageAnalysis(AnalysisModule):
 
         """
         #        sh = self.imageData.shape
+        print("spectrum calc")
         if self.specImageCalcFlag is False:  # calculate spectrum info
             self.freq_image = np.abs(
                 np.fft.fft(self.imageData, axis=0) / self.imageData.shape[0]
@@ -1014,17 +969,23 @@ class pbm_ImageAnalysis(AnalysisModule):
         v = np.where(freq < lpf)
         frl = list(set(u[0]).intersection(set(v[0])))
         if len(frl) == 0:  # catch bad selection
+            print("no freq list for spectrumCALC")
             return
         self.specImage = np.mean(  # get selection from frequencies
             self.freq_image.take(frl, axis=0), axis=0
         )  # and get the average across the frequenies selected
+        self.specFreq = np.max(self.freq_image.take(frl, axis=0), axis=0)  # highest amplitude frequency
+        print(self.specFreq.shape)
         if sigma is False:
             sigma = self.ctrlROIFunc.ImagePhys_FFTSmooth.value()
         self.specImageDisplay = scipy.ndimage.filters.gaussian_filter(
             self.specImage, sigma
         )  # smooth a bit
-        self.ctrl.ImagePhys_View.setCurrentIndex(3)
-        self.changeView()
+        self.specImageFreqDisplay = scipy.ndimage.filters.gaussian_filter(
+            self.specFreq, sigma
+        )  # smooth a bit
+        self.ctrl.ImagePhys_View.setCurrentIndex(4)
+        # self.changeView()
 
     def getImageScaling(self):
         """
@@ -1076,11 +1037,11 @@ class pbm_ImageAnalysis(AnalysisModule):
             self.downSample = 1  # same as "none"
         totframes = int(np.ceil(sh[0] / self.downSample))
         imageTimes = list(info[0].values())[2]
-        dt = np.mean(np.diff(imageTimes))
+        self.frameInterval = np.mean(np.diff(imageTimes))
         message = f"File: {Path(dh.name()).name:s}: {sh[0]:d} frames at {sh[1]:d} X {sh[2]:d}"
         if self.downSample > 1:
             message += f"\nDownsampling to {totframes:d} frames"
-        message += f"\nFrame rate: {1.0/dt:8.2f} Hz {1e3*dt:12.2f} ms per frame"
+        message += f"\nFrame rate: {1.0/self.frameInterval:8.2f} Hz {1e3*self.frameInterval:12.2f} ms per frame"
 
         self.ctrl.ImagePhys_FileInfo.setText(message)
 
@@ -1269,12 +1230,7 @@ class pbm_ImageAnalysis(AnalysisModule):
             self.normalizeImage()  # another normalization
         if method == 4:
             self.slowFilterImage()  # slow filtering normalization: (F-Fslow)/Fslow on pixel basis over time
-        print("normalize method: ", method)
-        print(self.dataState["ratioLoaded"])
-        print(self.useRatio)
-        if (
-            method == 4
-        ):  # g/r ratio  - future: requires image to be loaded (hooks in place, no code yet)
+        if method == 5:  # g/r ratio 
             if self.dataState["ratioLoaded"] and self.useRatio:
                 self.GRFFImage()  # convert using the ratio
 
@@ -1319,9 +1275,8 @@ class pbm_ImageAnalysis(AnalysisModule):
             lrois = [roi]
         t0 = self.ctrlROIFunc.ImagePhys_BaseStart.value()
         t1 = self.ctrlROIFunc.ImagePhys_BaseEnd.value()
-        dt = np.mean(np.diff(self.imageTimes))
-        it0 = int(t0 / dt)
-        it1 = int(t1 / dt)
+        it0 = int(t0 / self.frameInterval)
+        it1 = int(t1 / self.frameInterval)
         for roi in lrois:
             bl = np.mean(self.FData[roi.ID][it0:it1])
             self.BFData[roi.ID] /= bl
@@ -1381,8 +1336,7 @@ class pbm_ImageAnalysis(AnalysisModule):
         if LPF < 4.0 * HPF:
             print("please make lpf/hpf further apart in frequency")
             return
-        dt = np.mean(np.diff(self.imageTimes))
-        samplefreq = 1.0 / dt
+        samplefreq = 1.0 / self.frameInterval
         # if (LPF > 0.5*samplefreq):
         #     LPF = 0.5*samplefreq
         d = self.BFData[roi.ID].copy().T
@@ -1404,12 +1358,10 @@ class pbm_ImageAnalysis(AnalysisModule):
         try to decrease baseline drift by high-pass filtering the data.
         """
         HPF = self.ctrlROIFunc.ImagePhys_ImgHPF.value()
-        dt = np.mean(np.diff(self.imageTimes))
-        # print(self.imageTimes.shape[0], dt, self.imageTimes.shape[0]*dt)
-        samplefreq = 1.0 / dt
-        if 1.0 / (self.imageTimes.shape[0] * dt / 2.0) > HPF:
+        samplefreq = 1.0 / self.frameInterval
+        if 1.0 / (self.imageTimes.shape[0] * self.frameInterval / 2.0) > HPF:
             self.showdialog(
-                f"HPF {HPF:.3f} Hz is below the Nyquist limit of {1./(self.imageTimes.shape[0]*dt/2.0):.3f} Hz\nStopping."
+                f"HPF {HPF:.3f} Hz is below the Nyquist limit of {1./(self.imageTimes.shape[0]*self.frameInterval/2.0):.3f} Hz\nStopping."
             )
             return None
 
@@ -1421,8 +1373,7 @@ class pbm_ImageAnalysis(AnalysisModule):
         Low-pass filter the data.
         """
         LPF = self.ctrlROIFunc.ImagePhys_ImgLPF.value()  # 100.0
-        dt = np.mean(np.diff(self.imageTimes))
-        samplefreq = 1.0 / dt
+        samplefreq = 1.0 / self.frameInterval
         # if (LPF > 0.5*samplefreq):
         #     LPF = 0.5*samplefreq
         d = self.BFData[roi.ID].copy().T
@@ -1618,7 +1569,7 @@ class pbm_ImageAnalysis(AnalysisModule):
         self.MPLFig.suptitle(
             "%s:\n %s" % (plotTitle, self.currentFileName), fontsize=11
         )
-        dt = np.mean(np.diff(self.imageTimes)) / 2.0
+        dt = self.frameInterval / 2.0
         tbase = np.arange(-0.1, 0.5, dt)
         axmin = 1e6
         axmax = -1e6
@@ -2513,7 +2464,6 @@ class pbm_ImageAnalysis(AnalysisModule):
         Fits = Fitting.Fitting()
         for k in range(0, imshape[0]):
             tc_bleach[k] = np.mean(self.imageData[k, :, :])
-        dt = np.mean(np.diff(self.imageTimes))  # sampling rate, seconds
         endT = np.amax(self.imageTimes)
         mFluor = tc_bleach[0]
         # replace tc_bleach with a smoothed version - 4th order polynomial
@@ -2545,7 +2495,7 @@ class pbm_ImageAnalysis(AnalysisModule):
             )  # convert start value to 1.0, take it from there
         if bleachmode == "SG":
             windur = endT / 5.0
-            k = int(windur / dt)  # make k the number of points in 2 second window
+            k = int(windur / self.frameInterval)  # make k the number of points in 2 second window
             if k % 2 == 0:
                 k += 1
             self.tc_bleach = Utility.savitzky_golay(tc_bleach, kernel=k, order=5)
@@ -2962,11 +2912,9 @@ class pbm_ImageAnalysis(AnalysisModule):
         t_delay = 0.2  # secs
         t_targetSmooth = 0.25  # secs
         t_subSmooth = 0.5  # secs
-        dt = np.mean(np.diff(self.imageTimes))
-        print(dt)
-        n_delay = t_delay / dt
-        n_targetSmooth = int(t_targetSmooth / dt)
-        n_subSmooth = int(t_subSmooth / dt)
+        n_delay = t_delay / self.frameInterval
+        n_targetSmooth = int(t_targetSmooth / self.frameInterval)
+        n_subSmooth = int(t_subSmooth / self.frameInterval)
         #        j_delay = 0
         #        k_delay = 0
         smi = scipy.ndimage.filters.uniform_filter1d(
@@ -2990,9 +2938,8 @@ class pbm_ImageAnalysis(AnalysisModule):
         self.dataState["Normalized"] = True
         self.dataState["NType"] = "Slow Filter"
 
-    #        self.ctrl.ImagePhys_NormInfo.setText('Slow Filter')
     # this completes the "normalization for the "slow filtering mode"
-    # remainder of code here is for ROI detection.
+
 
     def normalizeImage(self):
         """
@@ -3082,9 +3029,8 @@ class pbm_ImageAnalysis(AnalysisModule):
         if baseline is True:
             t0 = self.ctrlROIFunc.ImagePhys_BaseStart.value()
             t1 = self.ctrlROIFunc.ImagePhys_BaseEnd.value()
-            dt = np.mean(np.diff(self.imageTimes))
-            it0 = int(t0 / dt)
-            it1 = int(t1 / dt)
+            it0 = int(t0 / self.frameInterval)
+            it1 = int(t1 / self.frameInterval)
             if it1 - it0 > 1:
                 F0 = np.mean(
                     self.imageData[it0:it1, :, :], axis=0
@@ -3210,17 +3156,12 @@ class pbm_ImageAnalysis(AnalysisModule):
     #
     # ------------- cross correlation calculations -----------------
     #
-    def Analog_Xcorr(self, FData=None, dt=None):
+    def Analog_Xcorr(self, FData=None):
         """Average cross correlation of all traces"""
         self.calculateAllROIs()
         if not FData:
             FData = self.FData
-        if dt is None:
-            if self.imageTimes is []:
-                dt = 1
-            else:
-                dt = np.mean(np.diff(self.imageTimes))
-        self.calculate_all_xcorr(FData, dt)
+        self.calculate_all_xcorr(FData, self.frameInterval)
         self.check_MPL()  # self.use_MPL = self.ctrlImageFunc.IAFuncs_MatplotlibCheckBox.checkState()
 
         if not self.use_MPL:
@@ -3266,17 +3207,12 @@ class pbm_ImageAnalysis(AnalysisModule):
             PH.cleanAxes(self.MPL_plots)
             PL.show()
 
-    def calculate_all_xcorr(self, FData=None, dt=None):
+    def calculate_all_xcorr(self, FData=None):
         if FData is None:
             FData = self.FData
             nROI = self.nROI
         else:
             nROI = len(FData)
-        if dt is None:
-            if self.imageTimes is []:
-                dt = 1
-            else:
-                dt = np.mean(np.diff(self.imageTimes))
         ndl = len(FData[0, :])
         itime = self.imageTimes[0:ndl]
         self.IXC_corr = [[]] * (sum(range(1, nROI)))
@@ -3297,7 +3233,7 @@ class pbm_ImageAnalysis(AnalysisModule):
                 xtrace += 1
         self.xcorr = self.xcorr / xtrace
         s = np.shape(self.xcorr)
-        self.lags = dt * (np.arange(0, s[0]) - s[0] / 2.0)
+        self.lags = self.frameInterval * (np.arange(0, s[0]) - s[0] / 2.0)
 
     def Analog_Xcorr_unbiased(self, FData=None, dt=None):
         """hijacked -"""
@@ -3320,7 +3256,7 @@ class pbm_ImageAnalysis(AnalysisModule):
     #             self.addOneROI(pos=[i*dx, j*dy], hw=[dx, dy])
     #     self.Analog_Xcorr_Individual(plottype = 'image')
 
-    def Analog_Xcorr_Individual(self, FData=None, dt=None, plottype="traces"):
+    def Analog_Xcorr_Individual(self, FData=None, plottype="traces"):
         """compute and display the individual cross correlations between pairs of traces
         in the data set"""
         print("Calculating cross-correlations between all ROIs")
@@ -3333,11 +3269,7 @@ class pbm_ImageAnalysis(AnalysisModule):
             nROI = self.nROI
         else:
             nROI = len(FData)
-        if dt is None:
-            if self.imageTimes is []:
-                dt = 1
-            else:
-                dt = np.mean(np.diff(self.imageTimes))
+
         self.calculate_all_xcorr(self.FData, dt)
         #        nxc = 0
         #        rows = nROI-1
@@ -3524,18 +3456,17 @@ class pbm_ImageAnalysis(AnalysisModule):
         self.imagePeriod = 6.0  # image period in seconds.
         w = 2.0 * np.pi * self.imagePeriod
         # identify an interpolation for the image for one cycle of time
-        dt = np.mean(np.diff(self.imageTimes))  # get the mean dt
         maxt = np.amax(self.imageTimes)  # find last image time
         n_period = int(
             np.floor(maxt / self.imagePeriod)
         )  # how many full periods in the image set?
         n_cycle = int(
-            np.floor(self.imagePeriod / dt)
+            np.floor(self.imagePeriod / self.frameInterval)
         )  # estimate image points in a stimulus cycle
         ndt = self.imagePeriod / n_cycle
         i_times = np.arange(0, n_period * n_cycle * ndt, ndt)  # interpolation times
         n_times = np.arange(0, n_cycle * ndt, ndt)  # just one cycle
-        print("dt: %f maxt: %f # images %d" % (dt, maxt, len(self.imageTimes)))
+        print("dt: %f maxt: %f # images %d" % (self.frameInterval, maxt, len(self.imageTimes)))
         print(
             "# full per: %d  pts/cycle: %d  ndt: %f #i_times: %d"
             % (n_period, n_cycle, ndt, len(i_times))
@@ -3590,7 +3521,7 @@ class pbm_ImageAnalysis(AnalysisModule):
         if self.imageTimes is []:
             dt = 1.0 / 30.0  # fake it... 30 frames per second
         else:
-            dt = np.mean(np.diff(self.imageTimes))
+            dt = self.frameInterval
         print("Mean time between frames: %9.4f" % (dt))
         if self.BFData is []:
             print("No baseline corrected data to use!!!")
