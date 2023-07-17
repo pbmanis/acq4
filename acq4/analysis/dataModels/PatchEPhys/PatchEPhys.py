@@ -701,6 +701,7 @@ class GetClamps():
                 # Usually this indicates that the protocol was stopped early.
                 if data_file_handle is None:
                     print('PatchEPhys/GetClamps: Missing data in %s, element: %d' % (directory_name, i))
+                    print("Be sure there is a clampfile (like 'MultiClamp1.ma') in the directory")
                     continue
             except:
                 print("Likely HDF5 Error loading data for protocol %s, element: %d" % (directory_name, i))
