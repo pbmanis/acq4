@@ -1,4 +1,7 @@
 *.pyc
+*_pyqt5.py
+*_pyqt6.py
+
 *~
 .DS_Store
 *.renamed*
