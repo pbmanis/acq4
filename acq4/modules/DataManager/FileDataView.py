@@ -29,7 +29,7 @@ class FileDataView(Qt.QSplitter):
         if file is None:
             self.current = None
             return
-        print("File: ", file)
+            
         if file.isDir():
             ## Sequence or not?
             return
@@ -39,12 +39,10 @@ class FileDataView(Qt.QSplitter):
                 return
             else:
                 image = False
-                print(dir(file))
                 with pg.BusyCursor():
                     data = file.read()
                 if data is None:
                     return
-                # print("Data: ", data)
                 if typ == 'ImageFile': 
                     image = True
                 elif typ == 'MetaArray':
