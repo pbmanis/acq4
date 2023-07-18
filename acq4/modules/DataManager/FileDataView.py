@@ -29,7 +29,7 @@ class FileDataView(Qt.QSplitter):
         if file is None:
             self.current = None
             return
-            
+
         if file.isDir():
             ## Sequence or not?
             return
