@@ -19,14 +19,15 @@ from acq4.util.Mutex import Mutex
 from collections import OrderedDict
 import six
 modDir = os.path.dirname(__file__)
-sdkDir = r"C:\Program Files\QImaging\SDK\Headers"
+#sdkDir = r"C:\Program Files\QImaging\SDK\Headers"
+sdkDir = r"C:\\Program Files\\QImaging\\SDK\\Headers"
 
 ## check for installed SDK, fall back to local header copies
 if os.path.isdir(sdkDir):
     headerDir = sdkDir
 else:
     headerDir = modDir
-print(headerDir)
+
 p = CParser(os.path.join(headerDir, "QCamApi.h"), cache=os.path.join(modDir, 'QCamApi.h.cache'), macros={'_WIN32': '', '__int64': ('long long')})
 
 if sys.platform == 'darwin':
