@@ -15,10 +15,14 @@ Refactoring begun 3/21/2015
 """
 
 from collections import OrderedDict
+from dataclasses import dataclass
+from typing import Union
+
 import os
 import os.path
 import itertools
 import functools
+import acq4.util.functions as functions
 import numpy as np
 import scipy
 from acq4.util import Qt
@@ -34,6 +38,36 @@ import pprint
 import time
 
 Ui_Form = Qt.importTemplate('.ctrlTemplate')
+
+@dataclass
+class ThisSpike:
+    trace: Union[int, None] = None
+    AP_number: Union[int, None] = None
+    tstart: Union[float, None] = None
+    AP_beginIndex: Union[int, None] = None
+    AP_endIndex: Union[int, None] = None
+    peakIndex: Union[int, None] = None
+    peak_T: Union[int, None] = None
+    peak_V: Union[int, None] = None
+    AP_Latency: Union[float, None] = None
+    AP_beginV: Union[float, None] = None
+    halfwidth: Union[float, None] = None
+    hw_up: Union[float, None] = None
+    hw_down: Union[float, None] = None
+    hw_v: Union[float, None] = None
+    trough_T: Union[float, None] = None
+    trough_V: Union[float, None] = None
+    peaktotroughT: Union[float, None] = None
+    current: Union[float, None] = None
+    iHold: Union[float, None] = None
+    pulseDuration: Union[float, None] = None
+
+
+    def __init__(self, trace, AP_number, tstart):
+        self.trace = trace
+        self.AP_number = AP_number
+        self.tstart = tstart
+
 
 
 # noinspection PyPep8
@@ -83,6 +117,7 @@ class IVCurve(AnalysisModule):
         self.loaded = None
         self.filename = None
         self.dirsSet = None
+        self.decimate:int = 1 # how to decimate the data
         self.lrss_flag = True  # show is default
         self.lrpk_flag = True
         self.rmp_flag = True
@@ -110,7 +145,7 @@ class IVCurve(AnalysisModule):
         self.clear_results()
 
         # --------------graphical elements-----------------
-        self._sizeHint = (1280, 900)  # try to establish size of window
+        self._sizeHint = (1280, 1024)  # try to establish size of window
         self.ctrlWidget = Qt.QWidget()
         self.ctrl = Ui_Form()
         self.ctrl.setupUi(self.ctrlWidget)
@@ -153,6 +188,8 @@ class IVCurve(AnalysisModule):
         self.ctrl.IVCurve_getFileInfo.clicked.connect(self.get_file_information)
         [self.ctrl.IVCurve_RMPMode.currentIndexChanged.connect(x)
          for x in [self.update_rmpAnalysis, self.analyzeSpikes]]
+        self.ctrl.IVCurve_decimate.addItems(["1", "2", "5", "10"])
+        self.ctrl.IVCurve_decimate.setCurrentText("1")
         self.ctrl.IVCurve_FISI_ISI_button.clicked.connect(self.displayFISI_ISI)
         self.ctrl.dbStoreBtn.clicked.connect(self.dbStoreClicked)
         self.ctrl.IVCurve_OpenScript_Btn.clicked.connect(self.read_script)
@@ -252,7 +289,7 @@ class IVCurve(AnalysisModule):
         
         """
         if lrregion == '':
-            print('PSPReversal:show_or_hide:: lrregion is {:<s}'.format(lrregion))
+            print('IVCurve:show_or_hide:: lrregion is {:<s}'.format(lrregion))
             return
         region = self.regions[lrregion]
         if forcestate is not None:
@@ -467,6 +504,7 @@ class IVCurve(AnalysisModule):
         self.cmd_plot.clearPlots()
         self.clear_results()
         self.updaterStatus('Off')
+        self.decimate = int(self.ctrl.IVCurve_decimate.currentText())
         
         if len(dh) == 0:
             raise Exception("IVCurve::loadFileRequested: " +
@@ -502,6 +540,13 @@ class IVCurve(AnalysisModule):
         self.ctrl.IVCurve_dataMode.setText(self.Clamps.data_mode)
         # self.bridgeCorrection = 200e6
 
+        # decimate if requested:
+        if self.decimate > 1:
+            # for i in range(len(self.Clamps.traces)):
+            self.Clamps.traces = functions.downsample(self.Clamps.traces, n=self.decimate, axis=1)
+            self.Clamps.cmd_wave = functions.downsample(self.Clamps.cmd_wave, n=self.decimate, axis=1)
+            self.Clamps.time_base = functions.downsample(self.Clamps.time_base, n=self.decimate, axis=0)
+
         # print 'bridge: ', bridge
         if bridge is not None:
             self.bridgeCorrection = bridge
@@ -521,7 +566,7 @@ class IVCurve(AnalysisModule):
         self.ctrl.IVCurve_tauh_Commands.clear()
         self.ctrl.IVCurve_tauh_Commands.addItems(ci['cmdList'])
         self.color_scale.setIntColorScale(0, len(ci['dirs']), maxValue=200)
-        self.make_map_symbols()
+        # self.make_map_symbols()  # self.plot_traces already will do this
         self.plot_traces()
         self.setup_regions()
         self.get_window_analysisPars()  # prepare the analysis parameters
@@ -564,12 +609,13 @@ class IVCurve(AnalysisModule):
             # cmdlines = MultiLine(self.Clamps.time_base, self.Clamps.cmd_wave, downsample=10)
             # self.cmd_plot.addItem(cmdlines)
         else:
+            t = np.array(self.Clamps.time_base).T
             for i in range(ntr):
-                atrace = self.Clamps.traces[i]
-                acmdwave = self.Clamps.cmd_wave[i]
-                self.data_plot.plot(x=self.Clamps.time_base, y=atrace, downSample=10, downSampleMethod='mean',
+                atrace = np.array(self.Clamps.traces[i]).T
+                acmdwave = np.array(self.Clamps.cmd_wave[i]).T
+                self.data_plot.plot(x=self.Clamps.time_base.T, y=atrace, # downSample=10, downSampleMethod='mean',
                                     pen=pg.intColor(colindxs[i], len(cmdindxs), maxValue=255))
-                self.cmd_plot.plot(x=self.Clamps.time_base, y=acmdwave, downSample=10, downSampleMethod='mean',
+                self.cmd_plot.plot(x=self.Clamps.time_base.T, y=acmdwave, # downSample=10, downSampleMethod='mean',
                                    pen=pg.intColor(colindxs[i], len(cmdindxs), maxValue=255))
 
         if self.Clamps.data_mode in self.dataModel.ic_modes:
@@ -792,12 +838,13 @@ class IVCurve(AnalysisModule):
         self.spikes = [[] for i in range(ntr)]
         self.spikeIndices = [[] for i in range(ntr)]
         #print 'clamp start/end: ', self.Clamps.tstart, self.Clamps.tend
+        # this only captures spikes that occur during the current pulse
         for i in range(ntr):
             (spikes, spkx) = Utility.findspikes(self.Clamps.time_base, self.Clamps.traces[i],
                                               threshold, t0=self.Clamps.tstart,
                                               t1=self.Clamps.tend,
                                               dt=self.Clamps.sample_interval,
-                                              mode='peak',  # best to use peak for detection
+                                              mode='peak',  # schmitt trigger or peak finder
                                               interpolate=False,
                                               debug=False)
             if len(spikes) == 0:
@@ -837,38 +884,32 @@ class IVCurve(AnalysisModule):
     def analyzeSpikeShape(self, printSpikeInfo=False):
         # analyze the spike shape.
         #  based on Druckman et al. Cerebral Cortex, 2013
-        begin_dV = 12.0  # V/s or mV/ms
+        begin_dV = self.ctrl.IVCurve_dvdtthreshold.value()  # V/s or mV/ms
         ntr = len(self.Clamps.traces)
-#        print 'analyzespikeshape, self.spk: ', self.spk
-        self.spikeShape = OrderedDict()
+        print("# traces with spikes: ", len(self.spk))
+        self.spikeShape = {}
         rmp = np.zeros(ntr)
         iHold = np.zeros(ntr)
         for i in range(ntr):
             if len(self.spikes[i]) == 0:
                 continue
-            trspikes = OrderedDict()
+            trspikes = {}
             if printSpikeInfo:
-                print("IVCurve 832: Commands: ", np.array(self.Clamps.values))
-                print("IVCurve 833: # traces: ", len(self.Clamps.traces))
+                print("IVCurve 898: Commands: ", np.array(self.Clamps.values))
+                print("IVCurve 899: # traces: ", len(self.Clamps.traces))
             (rmp[i], r2) = Utility.measure('mean', self.Clamps.time_base, self.Clamps.traces[i],
                                            0.0, self.Clamps.tstart)            
             (iHold[i], r2) = Utility.measure('mean', self.Clamps.time_base, self.Clamps.cmd_wave[i],
                                               0.0, self.Clamps.tstart)
             for j in range(len(self.spikes[i])):
-                thisspike = {'trace': i, 'AP_number': j, 'AP_beginIndex': None, 'AP_endIndex': None, 
-                             'peakIndex': None, 'peak_T': None, 'peak_V': None, 'AP_Latency': None,
-                             'AP_beginV': None, 'halfwidth': None, 'trough_T': None,
-                             'trough_V': None, 'peaktotroughT': None,
-                             'current': None, 'iHold': None,
-                             'pulseDuration': None, 'tstart': self.Clamps.tstart}  # initialize the structure
-                thisspike['current'] = self.Clamps.values[i] - iHold[i]
-                thisspike['iHold'] = iHold[i]
-                thisspike['pulseDuration'] = self.Clamps.tend - self.Clamps.tstart  # in seconds
-                thisspike['peakIndex'] = self.spikeIndices[i][j]
-                thisspike['peak_T'] = self.Clamps.time_base[thisspike['peakIndex']]
-                thisspike['peak_V'] = self.Clamps.traces[i][thisspike['peakIndex']]  # max voltage of spike
-                thisspike['tstart'] = self.Clamps.tstart
-                
+                thisspike = ThisSpike(trace=i, AP_number=j, tstart=self.Clamps.tstart)
+                thisspike.current = self.Clamps.values[i] - iHold[i]
+                thisspike.iHold = iHold[i]
+                thisspike.pulseDuration = self.Clamps.tend - self.Clamps.tstart  # in seconds
+                thisspike.peakIndex = self.spikeIndices[i][j]
+                thisspike.peak_T = self.Clamps.time_base[thisspike.peakIndex]
+                thisspike.peak_V = self.Clamps.traces[i][thisspike.peakIndex]  # max voltage of spike
+                thisspike.tstart = self.Clamps.tstart
                 # find the minimum going forward - that is AHP min
                 dt = (self.Clamps.time_base[1]-self.Clamps.time_base[0])
                 dv = np.diff(self.Clamps.traces[i])/dt
@@ -877,49 +918,48 @@ class IVCurve(AnalysisModule):
                     kend = self.spikeIndices[i][j+1]
                 else:
                     kend = len(self.Clamps.traces[i])
-                try:
-                    km = np.argmin(dv[k:kend])+k # find fastst falling point, use that for start of detection
-                except:
-                    continue
-#                v = self.Clamps.traces[i][km]
-#                vlast = self.Clamps.traces[i][km]
-                #kmin = np.argmin(np.argmin(dv2[k:kend])) + k  # np.argmin(np.fabs(self.Clamps.traces[i][k:kend]))+k
-                kmin =  np.argmin(self.Clamps.traces[i][km:kend])+km
-                thisspike['AP_endIndex'] = kmin
-                thisspike['trough_T'] = self.Clamps.time_base[thisspike['AP_endIndex']]
-                thisspike['trough_V'] = self.Clamps.traces[i][kmin]
+                # try:
+                km = np.argmin(dv[k:kend])+k # find fastest falling point, use that for start of detection
+                # except:
+                #     continue
 
-                if thisspike['AP_endIndex'] is not None:
-                    thisspike['peaktotrough'] = thisspike['trough_T'] - thisspike['peak_T']
+                kmin =  np.argmin(self.Clamps.traces[i][km:kend])+km
+                thisspike.AP_endIndex = kmin
+                thisspike.trough_T = self.Clamps.time_base[thisspike.AP_endIndex]
+                thisspike.trough_V = self.Clamps.traces[i][kmin]
+
+                if thisspike.AP_endIndex is not None:
+                    thisspike.peaktotrough = thisspike.trough_T - thisspike.peak_T
                 k = self.spikeIndices[i][j]-1
                 if j > 0:
-                    kbegin = self.spikeIndices[i][j-1] # trspikes[j-1]['AP_endIndex']  # self.spikeIndices[i][j-1]  # index to previ spike start
+                    kbegin = self.spikeIndices[i][j-1] # index to previous spike start
                 else:
                     kbegin = k - int(0.002/dt)  # for first spike - 4 msec prior only
                     if kbegin*dt <= self.Clamps.tstart:
-                        kbegin = kbegin + int(0.0002/dt)  # 1 msec 
+                        kbegin = kbegin + int(0.0002/dt) 
                 # revise k to start at max of rising phase
-                try:
-                    km = np.argmax(dv[kbegin:k]) + kbegin
-                except:
-                    continue
+                # try:
+                rise_phase = scipy.signal.savgol_filter(dv[kbegin:k], 11, 3)
+                km = np.argmax(rise_phase) + kbegin
+                # except:
+                #     continue
                 if (km - kbegin < 1):
                     km = kbegin + int((k - kbegin)/2.) + 1
-                kthresh = np.argmin(np.fabs(dv[kbegin:km] - begin_dV)) + kbegin  # point where slope is closest to begin
-                thisspike['AP_beginIndex'] = kthresh
-                thisspike['AP_Latency'] = self.Clamps.time_base[kthresh]
-                thisspike['AP_beginV'] = self.Clamps.traces[i][thisspike['AP_beginIndex']]
-                if thisspike['AP_beginIndex'] is not None and thisspike['AP_endIndex'] is not None:
-                    halfv = 0.5*(thisspike['peak_V'] + thisspike['AP_beginV'])
-                    kup = np.argmin(np.fabs(self.Clamps.traces[i][thisspike['AP_beginIndex']:thisspike['peakIndex']] - halfv))
-                    kup += thisspike['AP_beginIndex']
-                    kdown = np.argmin(np.fabs(self.Clamps.traces[i][thisspike['peakIndex']:thisspike['AP_endIndex']] - halfv))
-                    kdown += thisspike['peakIndex'] 
+                kthresh = np.argmin(np.fabs(scipy.signal.savgol_filter(dv[kbegin:km], 11, 3) - begin_dV)) + kbegin  # point where slope is closest to begin
+                thisspike.AP_beginIndex = kthresh
+                thisspike.AP_Latency = self.Clamps.time_base[kthresh]
+                thisspike.AP_beginV = self.Clamps.traces[i][thisspike.AP_beginIndex]
+                if thisspike.AP_beginIndex is not None and thisspike.AP_endIndex is not None:
+                    halfv = 0.5*(thisspike.peak_V + thisspike.AP_beginV)
+                    kup = np.argmin(np.fabs(self.Clamps.traces[i][thisspike.AP_beginIndex:thisspike.peakIndex] - halfv))
+                    kup += thisspike.AP_beginIndex
+                    kdown = np.argmin(np.fabs(self.Clamps.traces[i][thisspike.peakIndex:thisspike.AP_endIndex] - halfv))
+                    kdown += thisspike.peakIndex
                     if kup is not None and kdown is not None:
-                        thisspike['halfwidth'] = self.Clamps.time_base[kdown] - self.Clamps.time_base[kup]
-                        thisspike['hw_up'] = self.Clamps.time_base[kup]
-                        thisspike['hw_down'] = self.Clamps.time_base[kdown]
-                        thisspike['hw_v'] = halfv
+                        thisspike.halfwidth = self.Clamps.time_base[kdown] - self.Clamps.time_base[kup]
+                        thisspike.hw_up = self.Clamps.time_base[kup]
+                        thisspike.hw_down = self.Clamps.time_base[kdown]
+                        thisspike.hw_v = halfv
                 trspikes[j] = thisspike
             self.spikeShape[i] = trspikes
         if printSpikeInfo:
@@ -939,53 +979,49 @@ class IVCurve(AnalysisModule):
         """
         Put markers on the spikes to visually confirm the analysis of thresholds, etc.
         """
-        # get colors
-        cmdindxs = np.unique(self.Clamps.commandLevels)  # find the unique voltages
-        colindxs = [int(np.where(cmdindxs == self.Clamps.commandLevels[i])[0]) for i in range(len(self.Clamps.commandLevels))]  # make a list to use
-        alllats = []
-        allpeakt = []
-        allpeakv = []
-        for i, trace in enumerate(self.spikeShape):
-            aps = []
-            tps = []
-            paps = []
-            ptps = []
-            taps = []
-            ttps = []
-            hwv = []
-            tups = []
-            tdps = []
 
-            for j, spk in enumerate(self.spikeShape[trace]):
-                aps.append(self.spikeShape[trace][spk]['AP_beginV'])
-                alllats.append(self.spikeShape[trace][spk]['AP_Latency'])
-                tps.append(self.spikeShape[trace][spk]['AP_Latency'])
-            u =self.data_plot.plot(tps, aps, pen=None, symbol='o', brush=pg.mkBrush('g'), symbolSize=4)
-            self.dataMarkers.append(u)
-            for j, spk in enumerate(self.spikeShape[trace]):
-                paps.append(self.spikeShape[trace][spk]['peak_V'])
-                ptps.append(self.spikeShape[trace][spk]['peak_T'])
-                allpeakt.append(self.spikeShape[trace][spk]['peak_T']+0.01)
-                allpeakv.append(self.spikeShape[trace][spk]['peak_V'])
-            # u = self.data_plot.plot(allpeakt, allpeakv, pen=None, symbol='o', brush=pg.mkBrush('r'), size=2)
-            # self.dataMarkers.append(u)
+        for i, sp in enumerate(self.spikeShape):
 
-            u = self.data_plot.plot(ptps, paps, pen=None, symbol='t', brush=pg.mkBrush('w'), symbolSize=4)
-            self.dataMarkers.append(u)
+            s = self.spikeShape[sp]
+            aps = [s[spk].AP_beginV for spk in s]
+            tps = [s[spk].AP_Latency for spk in s]
+            paps = [s[spk].peak_V for spk in s]
+            ptps = [s[spk].peak_T for spk in s]
+            taps = [s[spk].trough_V for spk in s]
+            ttps = [s[spk].trough_T for spk in s]
+            hwv = [s[spk].hw_v for spk in s]
+            tups = [s[spk].hw_up for spk in s]
+            tdps = [s[spk].hw_down for spk in s]
+            # start latency
+            sp1 = pg.ScatterPlotItem(size=4, pen=None, brush=pg.mkBrush('g'))
+            sp1.addPoints(tps, aps)
+            self.data_plot.addItem(sp1)
+            self.dataMarkers.append(sp1)
 
-            for j, spk in enumerate(self.spikeShape[trace]):
-                taps.append(self.spikeShape[trace][spk]['trough_V'])
-                ttps.append(self.spikeShape[trace][spk]['trough_T'])
-            u = self.data_plot.plot(ttps, taps, pen=None, symbol='+', brush=pg.mkBrush('r'), symbolSize=4)
-            self.dataMarkers.append(u)
-            for j, spk in enumerate(self.spikeShape[trace]):
-                tups.append(self.spikeShape[trace][spk]['hw_up'])
-                tdps.append(self.spikeShape[trace][spk]['hw_down'])
-                hwv.append(self.spikeShape[trace][spk]['hw_v'])
-            u =self.data_plot.plot(tups, hwv, pen=None, symbol='d', brush=pg.mkBrush('c'), symbolSize=4)
-            self.dataMarkers.append(u)
-            d =self.data_plot.plot(tdps, hwv, pen=None, symbol='s', brush=pg.mkBrush('c'), symbolSize=4)
-            self.dataMarkers.append(d)
+            # peak times
+            sp2 = pg.ScatterPlotItem(size=4, symbol='t', pen=None, brush=pg.mkBrush('w'))
+            sp1.addPoints(ptps, paps)
+            self.data_plot.addItem(sp2)
+            self.dataMarkers.append(sp2)
+
+            # AHP trough marker
+            sp3 = pg.ScatterPlotItem(size=6, symbol='+', pen=None, brush=pg.mkBrush('r'))
+            sp3.addPoints(ttps, taps)
+            self.data_plot.addItem(sp3)
+            self.dataMarkers.append(sp3)
+
+            # rising half-amplitude point
+            sp4 = pg.ScatterPlotItem(size=4, pen=None, symbol='d', brush=pg.mkBrush('c'))
+            sp4.addPoints(tups, hwv)
+            self.data_plot.addItem(sp4)
+            self.dataMarkers.append(sp4)
+
+            # falling half-amplitude point
+            sp5 = pg.ScatterPlotItem(size=4, pen=None, symbol='s', brush=pg.mkBrush('c'))
+            sp5.addPoints(tdps, hwv)
+            self.data_plot.addItem(sp5)
+            self.dataMarkers.append(sp5)
+
 
     def clearDecorators(self):
         if len(self.dataMarkers) > 0:
@@ -1000,11 +1036,11 @@ class IVCurve(AnalysisModule):
             n = len(self.spikeShape[m].keys()) # number of spikes in the trace
             if n > 0:
                 nsp.append(len(self.spikeShape[m].keys()))
-                icmd.append(self.spikeShape[m][0]['current'])
-        try:
+                icmd.append(self.spikeShape[m][0].current)
+        if len(icmd) > 0:
             iamin = np.argmin(icmd)
-        except:
-            raise ValueError('IVCurve:getIVCurrentThresholds - icmd seems to be ? : ', icmd)
+        else:
+            return (np.nan, np.nan)
         imin = np.min(icmd)
         ia150 = np.argmin(np.abs(1.5*imin-np.array(icmd)))
         iacmdthr = np.argmin(np.abs(imin-self.Clamps.values))
@@ -1020,35 +1056,35 @@ class IVCurve(AnalysisModule):
         rate = np.nan
         AHPDepth = np.nan
         (jthr, j150) = self.getIVCurrentThresholds()  # get the indices for the traces we need to pull data from
-        if jthr == j150:
+        if jthr == j150 and jthr != np.nan:
             if jthr in list(self.spikeShape.keys()):
                 print('\n%s:' % self.filename)
                 print('Threshold current T and 1.5T the same: using next up value for j150')
-                print('jthr, j150, len(spikeShape): ', jthr, j150, len(self.spikeShape))
-                print('1 ', self.spikeShape[jthr][0]['current']*1e12)
-                print('2 ', self.spikeShape[j150+1][0]['current']*1e12)
-                print(' >> Threshold current: %8.3f   1.5T current: %8.3f, next up: %8.3f' % (self.spikeShape[jthr][0]['current']*1e12,
-                    self.spikeShape[j150][0]['current']*1e12, self.spikeShape[j150+1][0]['current']*1e12))
+                if j150+1 in self.spikeShape.keys():
+                    print('2 ', self.spikeShape[j150+1][0].current*1e12)
+                if j150+1 in self.spikeShape.keys():
+                    print(' >> Threshold current: %8.3f   1.5T current: %8.3f, next up: %8.3f' % (self.spikeShape[jthr][0].current*1e12,
+                        self.spikeShape[j150][0].current*1e12, self.spikeShape[j150+1][0].current*1e12))
                 j150 = jthr + 1
         if j150 in self.spikeShape.keys():
         
-            if len(self.spikeShape[j150]) >= 1 and self.spikeShape[j150][0]['halfwidth'] is not None:
-                self.analysis_summary['AP1_Latency'] = (self.spikeShape[j150][0]['AP_Latency'] - self.spikeShape[j150][0]['tstart'])*1e3
-                self.analysis_summary['AP1_HalfWidth'] = self.spikeShape[j150][0]['halfwidth']*1e3
+            if len(self.spikeShape[j150]) >= 1 and self.spikeShape[j150][0].halfwidth is not None:
+                self.analysis_summary["AP1_Latency"] = (self.spikeShape[j150][0].AP_Latency - self.spikeShape[j150][0].tstart)*1e3
+                self.analysis_summary["AP1_Halfwidth"] = self.spikeShape[j150][0].halfwidth*1e3
             else:
-                self.analysis_summary['AP1_Latency'] = np.inf
-                self.analysis_summary['AP1_HalfWidth'] = np.inf
+                self.analysis_summary["AP1_Latency"] = np.inf
+                self.analysis_summary["AP1_Halfwidth"] = np.inf
             
-            if len(self.spikeShape[j150]) >= 2 and self.spikeShape[j150][1]['halfwidth'] is not None:
-                self.analysis_summary['AP2_Latency'] = (self.spikeShape[j150][1]['AP_Latency'] - self.spikeShape[j150][1]['tstart'])*1e3
-                self.analysis_summary['AP2_HalfWidth'] = self.spikeShape[j150][1]['halfwidth']*1e3
+            if len(self.spikeShape[j150]) >= 2 and self.spikeShape[j150][1].halfwidth is not None:
+                self.analysis_summary["AP2_Latency"] = (self.spikeShape[j150][1].AP_Latency - self.spikeShape[j150][1].tstart)*1e3
+                self.analysis_summary["AP2_Halfwidth"] = self.spikeShape[j150][1].halfwidth*1e3
             else:
-                self.analysis_summary['AP2_Latency'] = np.inf
-                self.analysis_summary['AP2_HalfWidth'] = np.inf
+                self.analysis_summary["AP2_Latency"] = np.inf
+                self.analysis_summary["AP2_Halfwidth"] = np.inf
         
-            rate = len(self.spikeShape[j150])/self.spikeShape[j150][0]['pulseDuration']  # spikes per second, normalized for pulse duration
+            rate = len(self.spikeShape[j150])/self.spikeShape[j150][0].pulseDuration  # spikes per second, normalized for pulse duration
 
-            AHPDepth = self.spikeShape[j150][0]['AP_beginV'] - self.spikeShape[j150][0]['trough_V']
+            AHPDepth = self.spikeShape[j150][0].AP_beginV - self.spikeShape[j150][0].trough_V
         self.analysis_summary['FiringRate'] = rate
         self.analysis_summary['AHP_Depth'] = AHPDepth*1e3  # convert to mV
 
@@ -1797,10 +1833,10 @@ class IVCurve(AnalysisModule):
             'h_g': self.analysis_summary['Gh'],
             'SpikeThreshold': self.analysis_summary['SpikeThreshold'],
             'FiringRate': self.analysis_summary['FiringRate'],
-            'AP1_HalfWidth': self.analysis_summary['AP1_HalfWidth'],
-            'AP1_Latency': self.analysis_summary['AP1_Latency'],
-            'AP2_HalfWidth': self.analysis_summary['AP2_HalfWidth'],
-            'AP2_Latency': self.analysis_summary['AP2_Latency'],
+            'AP1_HalfWidth': self.analysis_summary["AP1_Halfwidth"],
+            'AP1_Latency': self.analysis_summary["AP1_Latency"],
+            'AP2_HalfWidth': self.analysis_summary["AP2_Halfwidth"],
+            'AP2_Latency': self.analysis_summary["AP2_Latency"],
             'AHP_Depth': self.analysis_summary['AHP_Depth'],
             'FI_Curve': repr(self.analysis_summary['FI_Curve'].tolist()), # convert array to string for storage
             'IV_Curve_pk': repr(np.array(self.analysis_summary['IV_Curve_pk']).tolist()),
