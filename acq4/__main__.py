@@ -8,7 +8,8 @@ Copyright 2010  Luke Campagnola
 Distributed under MIT/X11 license. See license.txt for more infomation.
 """
 
-print("Loading ACQ4...")
+print("Loading ACQ4...  ManisLab Rig2 Python3 test")
+
 import os, sys
 
 if __package__ is None:
@@ -103,7 +104,7 @@ installExceptionHandler()
 ## (see pyqtgraph.util.garbage_collector for more information)
 from pyqtgraph.util.garbage_collector import GarbageCollector
 
-gc = GarbageCollector(interval=1.0, debug=False)
+gc = GarbageCollector(interval=1, debug=False)
 
 ## Create Manager. This configures devices and creates the main manager window.
 man = Manager(argv=sys.argv[1:])
