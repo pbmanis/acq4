@@ -8,7 +8,8 @@ Copyright 2010  Luke Campagnola
 Distributed under MIT/X11 license. See license.txt for more infomation.
 """
 
-print("Loading ACQ4...")
+print("Loading ACQ4...  ManisLab Rig2 Python3 test")
+
 import os, sys
 
 if __package__ is None:
@@ -45,6 +46,36 @@ from .util import Qt
 # Import pyqtgraph, get QApplication instance
 import pyqtgraph as pg
 
+def list_environment_paths():
+    from pathlib import Path
+    import numpy as np
+    import scipy as sp
+    import lmfit
+    import h5py
+    import pyparsing
+    import kiwisolver, matplotlib, PIL, psutil, PyQt6
+
+
+    important_imports = [np, sp, lmfit, h5py, pyparsing,
+                         kiwisolver, matplotlib, PIL, psutil, PyQt6]
+    print(PyQt6.QtCore.PYQT_VERSION_STR)
+    print("\n    Environment Paths: ")
+    executable = Path(sys.executable).resolve()
+    print(f"    {'Python: ':>24s}", sys.version_info)
+    print(f"        {'env: ':>24s}", str(executable))
+    for imp in important_imports:
+        if imp == PyQt6:
+            print(f"    {imp.__name__:>24s}", imp.QtCore.PYQT_VERSION_STR)
+        else:
+            print(f"    {imp.__name__:>24s}", imp.__version__)
+        print(f"        {'env: ':>24s}", imp.__file__)
+    # print(f"    {'numpy : ':>24s}", np.__version__)
+    # print(f"        {'env: ':>24s}", np.__file__)
+    # print(f"    {'Qt : ':>24s}", pg.Qt.VERSION_INFO)
+    # print(f"        {'env: ':>24s}", pg.Qt.__file__)
+
+list_environment_paths()
+
 app = pg.mkQApp()
 
 ## Install a simple message handler for Qt errors:
@@ -71,7 +102,7 @@ def messageHandler(*args):
         print("Failed to write crash log:")
         traceback.print_exc()
 
-    if msgType == pg.QtCore.QtMsgType.QtFatalMsg:
+    if msgType == pg.QtCore.QtMsgTypeQtFatalMsg:
         try:
             print("Fatal error occurred; asking manager to quit.")
             global man, app

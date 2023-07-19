@@ -20,13 +20,13 @@ import weakref
 from collections import OrderedDict
 
 import six
-# from six.moves import map
+from six.moves import map
 
 import pyqtgraph as pg
 import pyqtgraph.reload as reload
 from pyqtgraph import configfile
 from pyqtgraph.debug import printExc, Profiler
-from pyqtgraph.util.mutex import RecursiveMutex
+from pyqtgraph.util.mutex import Mutex, RecursiveMutex
 from . import __version__
 from . import devices, modules
 from .Interfaces import InterfaceDirectory
@@ -80,7 +80,7 @@ class Manager(Qt.QObject):
         self.disableDevs = []
         self.disableAllDevs = False
         self.alreadyQuit = False
-        self.taskLock = RecursiveMutex()
+        self.taskLock = RecursiveMutex(recursive=True)
         self._folderTypes = None
 
         try:
@@ -97,9 +97,9 @@ class Manager(Qt.QObject):
             if argv is not None:
                 try:
                     opts, args = getopt.getopt(
-                        argv, 'c:a:x:m:b:s:d:nD',
+                        argv, 'c:a:x:m:b:s:d:n:e:D',
                         ['config=', 'config-name=', 'module=', 'base-dir=', 'storage-dir=',
-                         'disable=', 'no-manager', 'disable-all', 'exit-on-error'])
+                         'disable=', 'no-manager', 'env', 'disable-all', 'exit-on-error'])
                 except getopt.GetoptError as err:
                     print(str(err))
                     print("""
@@ -111,6 +111,7 @@ class Manager(Qt.QObject):
         -b --base-dir=     Base directory to use
         -s --storage-dir=  Storage directory to use
         -n --no-manager    Do not load manager module
+        -e --env           Print environment information and quit
         -d --disable=      Disable the device specified
         -D --disable-all   Disable all devices
     """)
@@ -148,6 +149,8 @@ class Manager(Qt.QObject):
                     self.disableDevs.append(a)
                 elif o in ['-D', '--disable-all']:
                     self.disableAllDevs = True
+                # elif o in ['-e', '--env']:
+                #     self.list_environment_paths()
                 elif o == "--exit-on-error":
                     self.exitOnError = True
                 else:
@@ -161,6 +164,7 @@ class Manager(Qt.QObject):
             self.readConfig(configFile)
 
             logMsg('ACQ4 version %s started.' % __version__, importance=9)
+            # self.list_environment_paths()
 
             ## Act on options if they were specified..
             try:
@@ -203,8 +207,7 @@ class Manager(Qt.QObject):
                 raise Exception("No modules loaded during startup, exiting now.")
 
         win = self.modules[list(self.modules.keys())[0]].window()
-
-        self.quitShortcut = Qt.QtGui.QShortcut(Qt.QKeySequence('Ctrl+q'), win)
+        self.quitShortcut = Qt.QShortcut(Qt.QKeySequence('Ctrl+q'), win)
         self.quitShortcut.setContext(Qt.QtCore.Qt.ShortcutContext.ApplicationShortcut)
         self.abortShortcut = Qt.QShortcut(Qt.QKeySequence('Esc'), win)
         self.abortShortcut.setContext(Qt.QtCore.Qt.ShortcutContext.ApplicationShortcut)
@@ -391,6 +394,16 @@ class Manager(Qt.QObject):
                 if self.exitOnError:
                     raise
 
+    # def list_environment_paths(self):
+    #     from pathlib import Path
+    #     executable = Path(sys.executable).resolve()
+    #     print("python: ", sys.version_info)
+    #     print("   env: ", str(executable))
+    #     import pyqtgraph
+    #     print("pyqtgraph: ", pyqtgraph.__version__)
+    #     print("   env: ", pyqtgraph.__file__)
+
+
     def listConfigurations(self):
         """Return a list of the named configurations available"""
         return list(self.config.get('configurations', {}).keys())
@@ -527,9 +540,7 @@ class Manager(Qt.QObject):
 
     def listModules(self):
         """List names of currently loaded modules. """
-        print("List Modules #########")
         with self.lock:
-            print(f"# of modules loaded: {len(list(self.modules.keys())):d}")
             return list(self.modules.keys())
 
     def getDirOfSelectedFile(self):
@@ -550,8 +561,7 @@ class Manager(Qt.QObject):
         """Return an already loaded module"""
         with self.lock:
             name = str(name)
-            if name not in self.modules:  # this is where the exception is raised.
-                print("Module not found in : ", self.listModules())
+            if name not in self.modules:
                 raise Exception("No module named %s" % name)
             return self.modules[name]
 
@@ -631,6 +641,7 @@ class Manager(Qt.QObject):
         try:
             sh = Qt.QtGui.QShortcut(Qt.QKeySequence(keys), win)
             sh.setContext(Qt.QtCore.Qt.ShortcutContext.ApplicationShortcut)
+            # sh.setContext(Qt.Qt.ApplicationShortcut)
             sh.activated.connect(lambda *args: win.raise_())
         except:
             printExc("Error creating shortcut '%s':" % keys)
@@ -917,7 +928,7 @@ class Task:
         self.command = command
         self.result = None
 
-        self.taskLock = RecursiveMutex()
+        self.taskLock = RecursiveMutex(recursive=True)
         self.deviceLock = None
 
         self.startedDevs = []
