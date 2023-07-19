@@ -53,26 +53,22 @@ def list_environment_paths():
     import lmfit
     import h5py
     import pyparsing
-    import kiwisolver, matplotlib, PIL, psutil, PyQt6
+    import kiwisolver, matplotlib, PIL, psutil, PyQt6, pyqtgraph
 
-
-    important_imports = [np, sp, lmfit, h5py, pyparsing,
-                         kiwisolver, matplotlib, PIL, psutil, PyQt6]
-    print(PyQt6.QtCore.PYQT_VERSION_STR)
-    print("\n    Environment Paths: ")
+    important_imports = [pyqtgraph, PyQt6, np, sp, lmfit, h5py, pyparsing,
+                         kiwisolver, matplotlib, PIL, psutil]
+    print("\n============= Environment Paths ============= ")
     executable = Path(sys.executable).resolve()
-    print(f"    {'Python: ':>24s}", sys.version_info)
-    print(f"        {'env: ':>24s}", str(executable))
+    ver = sys.version_info
+    print(f"      {'Python :':>12s} {sys.version_info[0]:d}.{sys.version_info[1]:d}.{sys.version_info[2]:d} ({sys.version_info[3]:s})", end='')
+    print(f"{'  path: ':>6s}", str(executable))
     for imp in important_imports:
         if imp == PyQt6:
-            print(f"    {imp.__name__:>24s}", imp.QtCore.PYQT_VERSION_STR)
+            print(f"    {imp.__name__:>12s} : {str(imp.QtCore.PYQT_VERSION_STR):<12s}", end='')
         else:
-            print(f"    {imp.__name__:>24s}", imp.__version__)
-        print(f"        {'env: ':>24s}", imp.__file__)
-    # print(f"    {'numpy : ':>24s}", np.__version__)
-    # print(f"        {'env: ':>24s}", np.__file__)
-    # print(f"    {'Qt : ':>24s}", pg.Qt.VERSION_INFO)
-    # print(f"        {'env: ':>24s}", pg.Qt.__file__)
+            print(f"    {imp.__name__:>12s} : {str(imp.__version__):<12s}", end='')
+        print(f" {'path: ':>6s}{str(imp.__file__):s}")
+    print()
 
 list_environment_paths()
 
