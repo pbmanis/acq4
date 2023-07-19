@@ -188,7 +188,7 @@ class IVCurve(AnalysisModule):
         self.ctrl.IVCurve_getFileInfo.clicked.connect(self.get_file_information)
         [self.ctrl.IVCurve_RMPMode.currentIndexChanged.connect(x)
          for x in [self.update_rmpAnalysis, self.analyzeSpikes]]
-        self.ctrl.IVCurve_decimate.addItems(["1", "2", "5", "10"])
+        self.ctrl.IVCurve_decimate.addItems(["1", "2", "5", "10", "20"])
         self.ctrl.IVCurve_decimate.setCurrentText("1")
         self.ctrl.IVCurve_FISI_ISI_button.clicked.connect(self.displayFISI_ISI)
         self.ctrl.dbStoreBtn.clicked.connect(self.dbStoreClicked)
@@ -267,6 +267,7 @@ class IVCurve(AnalysisModule):
         self.analysis_summary = {}
         self.script_header = True
 
+
     def resetKeepAnalysis(self):
         self.keep_analysis_count = 0  # reset counter.
 
@@ -335,6 +336,7 @@ class IVCurve(AnalysisModule):
         """
         # hold all the linear regions in a dictionary
         if not self.regions_exist:
+            print("updater leak region: ")
             self.regions['lrleak'] = {'name': 'leak',  # use a "leak" window
                                       'region': pg.LinearRegionItem([0, 1], orientation=pg.LinearRegionItem.Horizontal,
                                                                     brush=pg.mkBrush(255, 255, 0, 50.)),
@@ -346,7 +348,9 @@ class IVCurve(AnalysisModule):
                                       'stop': self.ctrl.IVCurve_LeakMax,
                                       'updater': self.updateAnalysis,
                                       'units': 'pA'}
+
             self.ctrl.IVCurve_subLeak.region = self.regions['lrleak']['region']  # save region with checkbox
+            print("updater win0")
             self.regions['lrwin0'] = {'name': 'win0',  # peak window
                                       'region': pg.LinearRegionItem([0, 1],
                                                                     brush=pg.mkBrush(128, 128, 128, 50.)),
@@ -358,7 +362,9 @@ class IVCurve(AnalysisModule):
                                       'stop': self.ctrl.IVCurve_pkTStop,
                                       'updater': self.updateAnalysis,
                                       'units': 'ms'}
+            
             self.ctrl.IVCurve_showHide_lrpk.region = self.regions['lrwin0']['region']  # save region with checkbox
+            print("updater win2")
             self.regions['lrwin1'] = {'name': 'win2',  # ss window
                                       'region': pg.LinearRegionItem([0, 1],
                                                                     brush=pg.mkBrush(0, 0, 255, 50.)),
@@ -373,6 +379,7 @@ class IVCurve(AnalysisModule):
             self.ctrl.IVCurve_showHide_lrss.region = self.regions['lrwin1']['region']  # save region with checkbox
             # self.lrtau = pg.LinearRegionItem([0, 1],
             # brush=pg.mkBrush(255, 0, 0, 50.))
+            print("updater rmp update_rmpAnalysis")
             self.regions['lrrmp'] = {'name': 'rmp',
                                      'region': pg.LinearRegionItem([0, 1],
                                                                    brush=pg.mkBrush
@@ -387,6 +394,7 @@ class IVCurve(AnalysisModule):
                                      'units': 'ms'}
             self.ctrl.IVCurve_showHide_lrrmp.region = self.regions['lrrmp']['region']  # save region with checkbox
             # establish that measurement is on top, exclusion is next, and reference is on bottom
+            print("updater tauh")
             self.regions['lrtau'] = {'name': 'tau',
                                      'region': pg.LinearRegionItem([0, 1],
                                                                    brush=pg.mkBrush
@@ -505,7 +513,7 @@ class IVCurve(AnalysisModule):
         self.clear_results()
         self.updaterStatus('Off')
         self.decimate = int(self.ctrl.IVCurve_decimate.currentText())
-        
+        # print("loadFileRequested")
         if len(dh) == 0:
             raise Exception("IVCurve::loadFileRequested: " +
                             "Select an IV protocol directory.")
@@ -543,6 +551,7 @@ class IVCurve(AnalysisModule):
         # decimate if requested:
         if self.decimate > 1:
             # for i in range(len(self.Clamps.traces)):
+            print("Decimating with: ", self.decimate)
             self.Clamps.traces = functions.downsample(self.Clamps.traces, n=self.decimate, axis=1)
             self.Clamps.cmd_wave = functions.downsample(self.Clamps.cmd_wave, n=self.decimate, axis=1)
             self.Clamps.time_base = functions.downsample(self.Clamps.time_base, n=self.decimate, axis=0)
@@ -566,11 +575,11 @@ class IVCurve(AnalysisModule):
         self.ctrl.IVCurve_tauh_Commands.clear()
         self.ctrl.IVCurve_tauh_Commands.addItems(ci['cmdList'])
         self.color_scale.setIntColorScale(0, len(ci['dirs']), maxValue=200)
-        # self.make_map_symbols()  # self.plot_traces already will do this
+
         self.plot_traces()
         self.setup_regions()
         self.get_window_analysisPars()  # prepare the analysis parameters
-        self.updaterStatus('on')  # re-enable update status
+        # self.updaterStatus('on')  # re-enable update status
         if analyze:  # only do this if requested (default). Don't do in script processing ....yet
             self.updateAnalysis()
         return True
@@ -683,6 +692,7 @@ class IVCurve(AnalysisModule):
     def updateAnalysis(self, presets=None, region=None):
         """updateAnalysis re-reads the time parameters and re-analyzes the spikes"""
 #        print 'self.Script.script: ', self.Script.script['Cells'].keys()
+        # print("updateAnalysis")
         if presets in [True, False]:
             presets = None
 #        print '\n\n*******\n', traceback.format_stack(limit=7)
@@ -698,10 +708,11 @@ class IVCurve(AnalysisModule):
             else:
                 self.bridgeCorrection = 0.
         self.get_window_analysisPars()
-#        print 'updateanalysis: readparsupdate'
-        self.readParsUpdate(clearFlag=True, pw=False)
+        # print( 'updateanalysis: readparsupdate')
+        self.readParsUpdate(clearFlag=True, doUpdates=True)
+        # print("readpars update done in updateAnalysis")
         
-    def readParsUpdate(self, clearFlag=False, pw=False):
+    def readParsUpdate(self, clearFlag=False, doUpdates=False, pw=False):
         """
         Read the parameter window entries, set the lr regions to the values
         in the window, and do an update on the analysis
@@ -710,14 +721,18 @@ class IVCurve(AnalysisModule):
         ----------
         clearFlag : Boolean, False
             appears to be unused
-        pw : Boolean, False
-            appears to be unused
+        doUpdates : Boolean, False
+            whether or not to force spike analysis updates
+        pw: Boolean, False
+            passed to print window for scripting
         
         """
-        if not self.doUpdates:
+        # print("self.doUpdates: ", self.doUpdates)
+        if not doUpdates:
             return
         # analyze spikes first (gets information on which traces to exclude/include for other calculations) 
 #        print 'readparsupdate, calling analyze spikes'
+        # print("readparsUpdate")
         self.analyzeSpikes()
 
         self.analysis_summary['tauh'] = np.nan  # define these because they may not get filled...
@@ -729,7 +744,7 @@ class IVCurve(AnalysisModule):
             rgnx1 = self.ctrl.IVCurve_rmpTStart.value() / 1.0e3
             rgnx2 = self.ctrl.IVCurve_rmpTStop.value() / 1.0e3
             self.regions['lrrmp']['region'].setRegion([rgnx1, rgnx2])
-            self.update_rmpAnalysis(clear=clearFlag, pw=pw)
+            self.update_rmpAnalysis(clear=clearFlag, printWindow=pw, doUpdates=doUpdates)
 
         if self.ctrl.IVCurve_showHide_lrss.isChecked():
             rgnx1 = self.ctrl.IVCurve_ssTStart.value() / 1.0e3
@@ -741,7 +756,7 @@ class IVCurve(AnalysisModule):
             rgnx1 = self.ctrl.IVCurve_pkTStart.value() / 1.0e3
             rgnx2 = self.ctrl.IVCurve_pkTStop.value() / 1.0e3
             self.regions['lrwin0']['region'].setRegion([rgnx1, rgnx2])
-            self.update_pkAnalysis(clear=clearFlag, pw=pw)
+            self.update_pkAnalysis(clear=clearFlag, printWindow=pw)
 
         if self.ctrl.IVCurve_subLeak.isChecked():
             rgnx1 = self.ctrl.IVCurve_LeakMin.value() / 1e3
@@ -843,7 +858,7 @@ class IVCurve(AnalysisModule):
             (spikes, spkx) = Utility.findspikes(self.Clamps.time_base, self.Clamps.traces[i],
                                               threshold, t0=self.Clamps.tstart,
                                               t1=self.Clamps.tend,
-                                              dt=self.Clamps.sample_interval,
+                                              dt=self.Clamps.sample_interval*self.decimate,
                                               mode='peak',  # schmitt trigger or peak finder
                                               interpolate=False,
                                               debug=False)
@@ -886,7 +901,7 @@ class IVCurve(AnalysisModule):
         #  based on Druckman et al. Cerebral Cortex, 2013
         begin_dV = self.ctrl.IVCurve_dvdtthreshold.value()  # V/s or mV/ms
         ntr = len(self.Clamps.traces)
-        print("# traces with spikes: ", len(self.spk))
+        # print("# traces with spikes: ", len(self.spk))
         self.spikeShape = {}
         rmp = np.zeros(ntr)
         iHold = np.zeros(ntr)
@@ -939,13 +954,13 @@ class IVCurve(AnalysisModule):
                         kbegin = kbegin + int(0.0002/dt) 
                 # revise k to start at max of rising phase
                 # try:
-                rise_phase = scipy.signal.savgol_filter(dv[kbegin:k], 11, 3)
+                rise_phase = scipy.signal.savgol_filter(dv[kbegin:k], 5, 3)
                 km = np.argmax(rise_phase) + kbegin
                 # except:
                 #     continue
                 if (km - kbegin < 1):
                     km = kbegin + int((k - kbegin)/2.) + 1
-                kthresh = np.argmin(np.fabs(scipy.signal.savgol_filter(dv[kbegin:km], 11, 3) - begin_dV)) + kbegin  # point where slope is closest to begin
+                kthresh = np.argmin(np.fabs(scipy.signal.savgol_filter(dv[kbegin:km], 5, 3) - begin_dV)) + kbegin  # point where slope is closest to begin
                 thisspike.AP_beginIndex = kthresh
                 thisspike.AP_Latency = self.Clamps.time_base[kthresh]
                 thisspike.AP_beginV = self.Clamps.traces[i][thisspike.AP_beginIndex]
@@ -1390,7 +1405,7 @@ class IVCurve(AnalysisModule):
         self.analysis_summary['IV_Curve_ss'] = [self.ivss_cmd, self.ivss]
         self.update_IVPlot()
 
-    def update_pkAnalysis(self, clear=False, pw=False):
+    def update_pkAnalysis(self, clear=False, printWindow=False):
         """
         Compute the peak IV (minimum) from the selected window
         mode can be 'min', 'max', or 'abs'
@@ -1398,7 +1413,7 @@ class IVCurve(AnalysisModule):
         Parameters
         ----------
         clear : Boolean, False
-        pw : Boolean, False
+        printWindow : Boolean, False
             pw is passed to update_taumembrane to control printing.
         """
         if self.Clamps.traces is None:
@@ -1472,7 +1487,7 @@ class IVCurve(AnalysisModule):
         self.analysis_summary['IV_Curve_pk'] = [self.ivpk_cmd, self.ivpk]
         self.update_IVPlot()
         peak_time = self.Clamps.time_base[peak_pos]
-        self.update_Tau_membrane(peak_time=peak_time, printWindow=pw)
+        self.update_Tau_membrane(peak_time=peak_time, printWindow=printWindow)
 
     def update_rmpAnalysis(self, **kwargs):
         """
