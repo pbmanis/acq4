@@ -110,8 +110,8 @@ class MosaicEditor(AnalysisModule):
         self.ui.atlasCombo.currentIndexChanged.connect(self.atlasComboChanged)
         self.ui.normalizeBtn.clicked.connect(self.normalizeImages)
         self.ui.tileShadingBtn.clicked.connect(self.rescaleImages)
-       # self.ui.autoRangeBtn.clicked.connect(self.autoRangeImages)
-        # self.ui.blendBtn.clicked.connect(self.blendImages)
+        self.ui.autoRangeBtn.clicked.connect(self.autoRangeImages)
+        self.ui.blendBtn.clicked.connect(self.blendImages)
 
         self.ui.mosaicApplyScaleBtn.clicked.connect(self.updateScaling)
         self.ui.mosaicFlipLRBtn.clicked.connect(self.flipLR)
@@ -255,31 +255,60 @@ class MosaicEditor(AnalysisModule):
         else:
             return self.canvas.addItem(item, type, **kwds)
 
+    def autoRangeImages(self):
+        raise NotImplementedError()
+    
+    def blendImages(self):
+        raise NotImplementedError()
+    
+    def _rescale_newimage(self, d, blimage, m, hm):
+        if d.shape != blimage.shape:
+            print("rescale newimage: data shape and blimage shape do not match: ", d.shape, blimage.shape)
+            return None
+        # flatten the field using the blimage average illumination pattern
+        newImage = d / blimage # (d - imin)/(blimg - imin) # rescale image.
+        hn = np.histogram(newImage, bins = hm[1]) # use bins from global image
+        n = np.argmax(hn[0])
+        newImage = (hm[1][m]/hn[1][n])*newImage # rescale to the global max.
+        return newImage
+
     def rescaleImages(self):
         """
         Apply corrections to the images and rescale the data.
         This does the following:
         1. compute mean image over entire selected group
+            If the group includes videos, then the max projection of each video is taken
+            to compute the value for that image
         2. smooth the mean image heavily.
         3. rescale the images and correct for field flatness from the average image
         4. apply the scale.
         Use the min/max mosaic button to readjust the display scale after this
         automatic operation if the scaling is not to your liking.
         """
-        print("rescaleImages")
+        print("rescaling images")
         nsel =  len(self.canvas.selectedItems())
         if nsel == 0:
+            print("no selected items")
             return
-        nxm = self.canvas.selectedItems()[0].data.shape
-        meanImage = np.zeros((nxm[0], nxm[1]))
         nhistbins = 100
         # generate a histogram of the global levels in the image (all images selected)
         hm = np.histogram(np.dstack([x.data for x in self.canvas.selectedItems()]), nhistbins)
         n = 0
         self.imageMax = 0.0
         for i in range(nsel):
+            currentItem = self.canvas.selectedItems()[i]
+            item_size = currentItem.data.shape
+            item_dim = currentItem.data.ndim
+            if item_dim == 3:
+                currentImage = np.max(currentItem.data, axis=0)
+            else:
+                currentImage = currentItem.data
+            if i == 0:
+                nxm = currentImage.shape
+                meanImage = np.zeros((nxm[0], nxm[1]))
+
             try:
-                meanImage = meanImage + np.array(self.canvas.selectedItems()[i].data)
+                meanImage = meanImage + np.array(currentImage)
                 imagemax = np.amax(meanImage)
                 if imagemax > self.imageMax:
                     self.imageMax = imagemax
@@ -289,28 +318,29 @@ class MosaicEditor(AnalysisModule):
                 print('file name: ', self.canvas.selectedItems()[i].name)
                 print('expected shape of nxm: ', nxm)
                 print(' but got data shape: ', self.canvas.selectedItems()[i].data.shape)
-
         meanImage = meanImage/n # np.mean(meanImage[0:n], axis=0)
         filtwidth = np.floor(nxm[0]/10+1)
         blimg = scipy.ndimage.filters.gaussian_filter(meanImage, filtwidth, order = 0, mode='reflect')
-        #pg.image(blimg)
-        
         m = np.argmax(hm[0]) # returns the index of the max count
 
-        # now rescale each individually
-        # rescaling is done against the global histogram, to keep the gain constant.
+        # now rescale each image/stack individually
+        # rescaling is done against the global histogram, in an attemptto keep the gain constant.
         self.imageMax = 0
         for i in range(nsel):
             d = np.array(self.canvas.selectedItems()[i].data)
 #            hmd = np.histogram(d, 512) # return (count, bins)
             xh = d.shape # capture shape just in case it is not right (have data that is NOT !!)
-            if d.shape != blimg.shape:
-                return
-                # flatten the illumination using the blimg average illumination pattern
-            newImage = d / blimg # (d - imin)/(blimg - imin) # rescale image.
-            hn = np.histogram(newImage, bins = hm[1]) # use bins from global image
-            n = np.argmax(hn[0])
-            newImage = (hm[1][m]/hn[1][n])*newImage # rescale to the global max.
+            if d.ndim == 3:
+                for j in range(xh[0]):
+                    newImage = self._rescale_newimage(d[j], blimg, m, hm)
+                    if newImage is None:
+                        continue
+                    self.canvas.selectedItems()[i].data[j] = newImage
+            else:
+                newImage = self._rescale_newimage(d, blimg, m, hm)
+                if newImage is None:
+                    continue
+                self.canvas.selectedItems()[i].data = newImage
             imagemax = np.max(newImage)
             if imagemax > self.imageMax:
                 self.imageMax = imagemax
@@ -323,10 +353,10 @@ class MosaicEditor(AnalysisModule):
         #     imagemax = np.amax(d)
         #     if imagemax > self.imageMax:
         #         self.imageMax = imagemax
-        print(self.imageMax)
         for i in range(nsel):
             thisimage = self.canvas.selectedItems()[i].graphicsItem()
             thisimage.setLevels([0,self.imageMax])
+        print("rescale done")
     
     def normalizeImages(self):
         """Normalize the images to the min/max of the selected
@@ -499,8 +529,8 @@ class MosaicEditor(AnalysisModule):
             path = base.name()
         else:
             path = self.lastSaveFile
-                
-        filename = Qt.QFileDialog.getSaveFileName(None, "Save mosaic file", path, "Mosaic files (*.mosaic)")
+        
+        filename = Qt.QFileDialog.getSaveFileName(None, "Save mosaic file", path, "Mosaic files (*.mosaic)")[0]
         if filename == '':
             return
         if not filename.endswith('.mosaic'):
