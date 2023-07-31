@@ -291,8 +291,16 @@ class MosaicEditor(AnalysisModule):
             print("no selected items")
             return
         nhistbins = 100
-        # generate a histogram of the global levels in the image (all images selected)
-        hm = np.histogram(np.dstack([x.data for x in self.canvas.selectedItems()]), nhistbins)
+        # generate a histogram of the global levels in the image (all images and all frames in videos selected)
+        all_images:list = []
+        for i in range(nsel):
+            currentItem = self.canvas.selectedItems()[i]
+            if currentItem.data.ndim == 2:
+                all_images.append(currentItem.data)
+            elif currentItem.data.ndim == 3:
+                for x in currentItem.data:
+                    all_images.append(x)
+        hm = np.histogram(np.dstack(all_images), nhistbins)
         n = 0
         self.imageMax = 0.0
         for i in range(nsel):
@@ -475,6 +483,13 @@ class MosaicEditor(AnalysisModule):
     def saveStateFile(self, filename):
         dh = DataManager.getDirHandle(os.path.dirname(filename))
         state = self.saveState(relativeTo=dh)
+        # print("savestate: ")
+        # for s in state:
+        #     if s != "items":
+        #         print(" **", s, '\n', '    ', state[s])
+        #     else:
+        #         for item in state[s]:
+        #             print("  >> ", item['type'], item['name'])
         json.dump(state, open(filename, 'w'), indent=4, cls=Encoder)
         
     def restoreState(self, state, rootPath=None):
@@ -531,6 +546,7 @@ class MosaicEditor(AnalysisModule):
             path = self.lastSaveFile
         
         filename = Qt.QFileDialog.getSaveFileName(None, "Save mosaic file", path, "Mosaic files (*.mosaic)")[0]
+        print("filename: ", filename)
         if filename == '':
             return
         if not filename.endswith('.mosaic'):
@@ -547,9 +563,12 @@ class MosaicEditor(AnalysisModule):
 
 class Encoder(json.JSONEncoder):
     """Used to clean up state for JSON export.
+    turn numpy types into python types
     """
     def default(self, o):
         if isinstance(o, np.integer):
             return int(o)
+        if isinstance(o, (np.float32, np.float64)):
+            return float(o)
         
         return json.JSONEncoder.default(o)
