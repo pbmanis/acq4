@@ -242,7 +242,7 @@ class IVCurve(AnalysisModule):
     
     def quit(self):
         """Quit the module"""
-        pass
+        AnalysisModule.removeInterface(self)
 
     def clear_results(self):
         """

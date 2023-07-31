@@ -483,13 +483,6 @@ class MosaicEditor(AnalysisModule):
     def saveStateFile(self, filename):
         dh = DataManager.getDirHandle(os.path.dirname(filename))
         state = self.saveState(relativeTo=dh)
-        # print("savestate: ")
-        # for s in state:
-        #     if s != "items":
-        #         print(" **", s, '\n', '    ', state[s])
-        #     else:
-        #         for item in state[s]:
-        #             print("  >> ", item['type'], item['name'])
         json.dump(state, open(filename, 'w'), indent=4, cls=Encoder)
         
     def restoreState(self, state, rootPath=None):
@@ -546,7 +539,6 @@ class MosaicEditor(AnalysisModule):
             path = self.lastSaveFile
         
         filename = Qt.QFileDialog.getSaveFileName(None, "Save mosaic file", path, "Mosaic files (*.mosaic)")[0]
-        print("filename: ", filename)
         if filename == '':
             return
         if not filename.endswith('.mosaic'):
