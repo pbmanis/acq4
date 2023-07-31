@@ -24,6 +24,7 @@ class AnalysisHost(Qt.QMainWindow):
         self.dm = dataManager
         self.dataModel = dataModel
         self.mod = None
+        self.modName = None
         self.dockArea = dockarea.DockArea()
         self.setCentralWidget(self.dockArea)
         
@@ -62,12 +63,15 @@ class AnalysisHost(Qt.QMainWindow):
         self.setWindowTitle(modName)
         
         acq4.Manager.getManager().declareInterface(modName, 'analysisMod', self.mod)
-
+        self.modName = modName
         # ask module for prefered size
         self.resize(*self.mod.sizeHint())
 
         
     def closeEvent(self, ev):
+        acq4.Manager.getManager().removeInterface(self.modName, 'analysisMod')
+        self.modName = None
+        self.mod = None
         if self.quit():
             ev.accept()
         

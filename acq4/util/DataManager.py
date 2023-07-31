@@ -26,7 +26,7 @@ if __name__ == '__main__':
 import re, shutil
 import time
 from acq4.util.Mutex import Mutex, RecursiveMutex
-from pyqtgraph import SignalProxy, BusyCursor, OrderedDict
+from pyqtgraph import SignalProxy, BusyCursor # , OrderedDict
 from acq4.util import Qt
 if not hasattr(Qt.QtCore, 'Signal'):
     Qt.Signal = Qt.pyqtSignal
