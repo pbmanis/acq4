@@ -75,8 +75,7 @@ class ScanCanvasItem(CanvasItem):
         self.ui.outlineColorBtn.sigColorChanging.connect(self.updateOutline)
         
         self.addScanImageBtn = self.ui.loadSpotImagesBtn
-        print(dir(self.addScanImageBtn))
-        self.addScanImageBtn.click(self.loadScanImage) # (self.addScanImageBtn, Qt.SIGNAL('clicked()'), self.loadScanImage)
+        self.addScanImageBtn.clicked.connect(self.loadScanImage) # (self.addScanImageBtn, Qt.SIGNAL('clicked()'), self.loadScanImage)
     
     @classmethod
     def checkFile(cls, fh):
