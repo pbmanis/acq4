@@ -39,12 +39,9 @@ from .util.debug import enableFaulthandler
 
 enableFaulthandler()
 
-
-# Initialize Qt
-from .util import Qt
-
-# Import pyqtgraph, get QApplication instance
-import pyqtgraph as pg
+## Print information about the environment. useful for debugging
+## and confirming that the correct versions (and locations) of
+## key imports are being used.
 
 def list_environment_paths():
     from pathlib import Path
@@ -53,10 +50,10 @@ def list_environment_paths():
     import lmfit
     import h5py
     import pyparsing
-    import kiwisolver, matplotlib, PIL, psutil, PyQt6, pyqtgraph
+    import PIL, PyQt6, pyqtgraph, matplotlib
 
     important_imports = [pyqtgraph, PyQt6, np, sp, lmfit, h5py, pyparsing,
-                         kiwisolver, matplotlib, PIL, psutil]
+                         PIL, matplotlib]
     print("\n============= Environment Paths ============= ")
     executable = Path(sys.executable).resolve()
     ver = sys.version_info
@@ -71,6 +68,12 @@ def list_environment_paths():
     print()
 
 list_environment_paths()
+
+# Initialize Qt
+from .util import Qt
+
+# Import pyqtgraph, get QApplication instance
+import pyqtgraph as pg
 
 app = pg.mkQApp()
 
