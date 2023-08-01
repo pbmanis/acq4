@@ -1,16 +1,16 @@
 # acq4 requirements: v0.9.3, 0.9.4
-asteval==0.9.27
+asteval==0.9.28
 certifi==2022.6.15 # 2019.11.28
 chardet==3.0.4
 cycler==0.10.0
-h5py==3.7.0
+h5py==3.9.0
 idna==2.9 
 kiwisolver==1.1.0
 lmfit==1.2.2 # 1.0.3
 matplotlib>=3.7.2
 #NEURON>=7.7
 numpy==1.25.1
-Pillow==9.1.1
+Pillow==10.0.0
 psutil
 #pyparsing==2.0.3
 pyparsing==2.4.7 # =3.0.9

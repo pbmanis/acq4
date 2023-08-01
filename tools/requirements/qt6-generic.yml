@@ -4,16 +4,15 @@ channels:
 dependencies:
   - h5py
   - numpy
-  - lmfit
   - pillow
   - pip
   - pyparsing=2.4.7
-  - pyqt>=5.12
   - python=3.10
   - scipy
   - six
   - sqlite
   - pyserial
   - numba
-  - pyqtgraph>=0.13
-
+  - pip:
+    - pyqtgraph>=0.13
+    - pyqt6>=6.0

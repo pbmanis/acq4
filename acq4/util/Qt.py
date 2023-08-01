@@ -91,7 +91,7 @@ def loadUiType(uiFile, package=None):
 
     #Fetch the base_class and form class based on their type in the xml from designer
     form_class = globalns['Ui_%s'%form_class]
-    base_class = getattr(QtGui, widget_class)
+    base_class = getattr(QtWidgets, widget_class)
 
     return form_class, base_class
 
