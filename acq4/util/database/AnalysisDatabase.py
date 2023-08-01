@@ -9,7 +9,7 @@ from six.moves import range
 
 import acq4.util.debug as debug
 from acq4 import Manager
-from pyqtgraph.pgcollections import CaselessDict
+# from pyqtgraph.pgcollections import CaselessDict
 from pyqtgraph.widgets.ProgressDialog import ProgressDialog
 from acq4.util import DataManager, functions
 from acq4.util.database.database import SqliteDatabase, parseColumnDefs, TableData
@@ -41,7 +41,7 @@ class AnalysisDatabase(SqliteDatabase):
     def __init__(self, dbFile, dataModel, baseDir=None):
         create = False
         self.tableConfigCache = None
-        self.columnConfigCache = CaselessDict()
+        self.columnConfigCache = dict() # CaselessDict()
         
         self.setDataModel(dataModel)
         self._baseDir = None
@@ -578,7 +578,7 @@ class AnalysisDatabase(SqliteDatabase):
     def getTableConfig(self, table):
         if self.tableConfigCache is None:
             recs = SqliteDatabase.select(self, 'TableConfig')
-            self.tableConfigCache = CaselessDict()
+            self.tableConfigCache = dict() # CaselessDict()
             for rec in recs:
                 self.tableConfigCache[rec['Table']] = rec
         #recs = self.select('TableConfig', sql="where \"Table\"='%s'" % table)

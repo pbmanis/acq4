@@ -43,8 +43,8 @@ def mwpermm2(pwr:float, acq4diam:float, height:float=1/np.e):
 
 def main():
     diam = 45*UR.um
-    pwr = 2*UR.mW
-    ht = 0.01*UR.dimensionless
+    pwr = 0.06*UR.mW
+    ht = (1/np.e)*UR.dimensionless
     print(f" Inten: {mwpermm2(pwr, diam, height=ht).to(UR.mW/(UR.mm*UR.mm)):.3f} mW/mm2 for ht: {ht:.3f}")
 
 if __name__ == '__main__':

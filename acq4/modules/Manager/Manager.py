@@ -16,7 +16,9 @@ class Manager(Module):
     moduleCategory = None
 
     def __init__(self, manager, name, config):
+        print("Manager 1")
         Module.__init__(self, manager, name, config)
+        print("manager 2")
         self.win = Qt.QMainWindow()
         mp = os.path.dirname(__file__)
         self.win.setWindowIcon(Qt.QIcon(os.path.join(mp, "icon.png")))

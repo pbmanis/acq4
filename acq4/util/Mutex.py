@@ -24,9 +24,9 @@ class Mutex(PGMutex):
 
 
 class RecursiveMutex(PGRecursiveMutex):
-    def __init__(self, **kargs):
-        kargs['debug'] = False
-        PGRecursiveMutex.__init__(self, **kargs)
+    def __init__(self, *args, **kargs):
+        # kargs['debug'] = False
+        PGRecursiveMutex.__init__(self, *args, **kargs)
 
 
 class PriorityMutex(object):

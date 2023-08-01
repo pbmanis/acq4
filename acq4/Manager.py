@@ -66,7 +66,7 @@ class Manager(Qt.QObject):
     single = None
 
     def __init__(self, configFile=None, argv=None):
-        self.lock = RecursiveMutex(recursive=True)  ## used for keeping some basic methods thread-safe
+        self.lock = RecursiveMutex()  ## used for keeping some basic methods thread-safe
         # self.devices = OrderedDict()  # all currently loaded devices
         self.modules = OrderedDict()  # all currently running modules
         self.devices = OrderedDict()  # all devices loaded via Manager
@@ -80,7 +80,7 @@ class Manager(Qt.QObject):
         self.disableDevs = []
         self.disableAllDevs = False
         self.alreadyQuit = False
-        self.taskLock = RecursiveMutex(recursive=True)
+        self.taskLock = RecursiveMutex()
         self._folderTypes = None
 
         try:
@@ -97,9 +97,9 @@ class Manager(Qt.QObject):
             if argv is not None:
                 try:
                     opts, args = getopt.getopt(
-                        argv, 'c:a:x:m:b:s:d:n:e:D',
+                        argv, 'c:a:m:b:s:d:n:D:x',
                         ['config=', 'config-name=', 'module=', 'base-dir=', 'storage-dir=',
-                         'disable=', 'no-manager', 'env', 'disable-all', 'exit-on-error'])
+                         'disable=', 'no-manager', 'disable-all', 'exit-on-error'])
                 except getopt.GetoptError as err:
                     print(str(err))
                     print("""
@@ -111,7 +111,6 @@ class Manager(Qt.QObject):
         -b --base-dir=     Base directory to use
         -s --storage-dir=  Storage directory to use
         -n --no-manager    Do not load manager module
-        -e --env           Print environment information and quit
         -d --disable=      Disable the device specified
         -D --disable-all   Disable all devices
     """)

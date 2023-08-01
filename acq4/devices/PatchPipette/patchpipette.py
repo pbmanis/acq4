@@ -6,7 +6,8 @@ from ..Camera import Camera
 from ..Device import Device
 from acq4.util import Qt
 from acq4.util.Mutex import Mutex
-from pyqtgraph import ptime
+#from pyqtgraph import ptime
+import time as ptime
 from .devgui import PatchPipetteDeviceGui
 from .testpulse import TestPulseThread
 from .statemanager import PatchPipetteStateManager
