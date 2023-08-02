@@ -85,7 +85,8 @@ class InterfaceDirectory(Qt.QObject):
         with self.lock:
             if types is None:
                 types = self.nameList[name]
-                
+            if isinstance(types, six.string_types):  # required to allow modules to be reloaded
+                types = [types]  # otherwise just iterating over the string yields individual characters
             for t in types:
                 del self.typeList[t][name]
                 del self.nameList[name][t]
@@ -94,7 +95,7 @@ class InterfaceDirectory(Qt.QObject):
                 del self.nameList[name]
                 
             self.sigInterfaceListChanged.emit(types)
-        
+            
     def removeObject(self, obj):
         """Remove all occurrences of object from the interface directory"""
         changedTypes = set()
