@@ -4,6 +4,7 @@ from time import sleep
 import acq4.util.Qt as Qt
 from acq4.devices.Device import Device
 from acq4.drivers.sensapex import UMP
+from acq4.util import ptime
 from acq4.util.Thread import Thread
 from acq4.util.future import Future
 
@@ -20,12 +21,15 @@ class SensapexObjectiveChanger(Device):
         self.dev = ump.get_device(config.get('deviceId'))
 
         self._lastPos = None
+        self._lensChangeFuture = None
         self.getLensPosition()
         self._pos_poller = _PositionPollThread(self, config.get("pollInterval", 2))
         self._pos_poller.start()
 
     def setLensPosition(self, pos):
-        return ObjectiveChangeFuture(self, pos)
+        if self._lensChangeFuture is None or self._lensChangeFuture.isDone():
+            self._lensChangeFuture = ObjectiveChangeFuture(self, pos)
+        return self._lensChangeFuture
 
     def getLensPosition(self):
         pos = self.dev.get_lens_position()
@@ -58,14 +62,20 @@ class _PositionPollThread(Thread):
 
 
 class ObjectiveChangeFuture(Future):
-    def __init__(self, dev, pos):
+    def __init__(self, dev: SensapexObjectiveChanger, pos):
         Future.__init__(self)
         self.dev = dev
         self.target = pos
-        self.dev.dev.set_lens_position(pos)
+        self._start = ptime.time()
+        self._retried = False
         self.pollThread = threading.Thread(target=self.poll)
         self.pollThread.daemon = True
-        self.pollThread.start()
+
+        if dev.getLensPosition() == pos:
+            self._taskDone()
+        else:
+            dev.dev.set_lens_position(pos)
+            self.pollThread.start()
 
     def poll(self):
         target = self.target
@@ -75,6 +85,14 @@ class ObjectiveChangeFuture(Future):
             if pos == target:
                 self._taskDone()
                 break
+            elif ptime.time() > self._start + 15:
+                if self._retried:
+                    self._taskDone(interrupted=True, error="Timed out waiting for objective changer to move (retried once)")
+                    break
+                else:
+                    self._retried = True
+                    self._start = ptime.time()
+                    dev.dev.set_lens_position(target)
             try:
                 self._checkStop(delay=0.2)
             except self.StopRequested:

@@ -16,4 +16,5 @@ dependencies:
   - pyserial
   - numba
   - pyqtgraph>=0.13
-
+  - pip:
+    - MetaArray

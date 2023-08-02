@@ -11,6 +11,7 @@ from six.moves import range
 from acq4.Manager import getManager
 from acq4.devices.Device import TaskGui
 from acq4.util import Qt
+from acq4.util.polygon_roi import PolygonROI
 from acq4.util.HelpfulException import HelpfulException
 from . import optimize  ## for determining random scan patterns
 from .scan_program import ScanProgram

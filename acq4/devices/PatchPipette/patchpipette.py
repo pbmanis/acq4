@@ -1,16 +1,16 @@
-from __future__ import print_function
-import numpy as np
 from collections import OrderedDict
 
-from ..Camera import Camera
-from ..Device import Device
+import numpy as np
+import time
+
 from acq4.util import Qt
 from acq4.util.Mutex import Mutex
-#from pyqtgraph import ptime
-import time as ptime
+from acq4.util import ptime
 from .devgui import PatchPipetteDeviceGui
-from .testpulse import TestPulseThread
 from .statemanager import PatchPipetteStateManager
+from .testpulse import TestPulseThread
+from ..Camera import Camera
+from ..Device import Device
 
 
 class PatchPipette(Device):
@@ -79,6 +79,7 @@ class PatchPipette(Device):
         self.userPressure = False
         
         self._lastTestPulse = None
+        self._testPulseThread = None
         self._initTestPulse(config.get('testPulse', {}))
 
         self._initStateManager()
@@ -342,7 +343,7 @@ class PatchPipette(Device):
     def enableTestPulse(self, enable=True, block=False):
         if enable:
             self._testPulseThread.start()
-        else:
+        elif self._testPulseThread is not None:
             self._testPulseThread.stop(block=block)
 
     def testPulseEnabled(self):

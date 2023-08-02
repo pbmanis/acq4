@@ -1,14 +1,10 @@
-# -*- coding: utf-8 -*-
-from __future__ import print_function
-from __future__ import with_statement
-
 import time
+from six.moves import range
 
-import acq4.util.ptime as ptime
+from acq4.util import ptime
 from acq4.devices.Camera import Camera, CameraTask
 from acq4.drivers.pvcam import PVCam as PVCDriver
-from acq4.util.Mutex import RecursiveMutex
-from six.moves import range
+from acq4.util.Mutex import Mutex
 
 
 class PVCam(Camera):
