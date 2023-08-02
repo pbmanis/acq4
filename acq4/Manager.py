@@ -26,7 +26,7 @@ import pyqtgraph as pg
 import pyqtgraph.reload as reload
 from pyqtgraph import configfile
 from pyqtgraph.debug import printExc, Profiler
-from pyqtgraph.util.mutex import Mutex, RecursiveMutex
+from acq4.util.Mutex import Mutex, RecursiveMutex
 from . import __version__
 from . import devices, modules
 from .Interfaces import InterfaceDirectory

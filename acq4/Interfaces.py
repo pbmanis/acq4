@@ -6,7 +6,7 @@ import weakref
 import six
 
 
-from pyqtgraph.util.mutex import Mutex, RecursiveMutex
+from acq4.util.Mutex import Mutex, RecursiveMutex
 from acq4.util import Qt
 
 

@@ -16,3 +16,6 @@ dependencies:
   - pip:
     - pyqtgraph>=0.13
     - pyqt6>=6.0
+    - MetaArray
+    - lmfit
+    
