@@ -4,7 +4,7 @@ from six.moves import range
 from acq4.util import ptime
 from acq4.devices.Camera import Camera, CameraTask
 from acq4.drivers.pvcam import PVCam as PVCDriver
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 
 
 class PVCam(Camera):
