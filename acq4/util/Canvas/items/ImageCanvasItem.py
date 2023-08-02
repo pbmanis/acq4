@@ -7,6 +7,7 @@ import numpy as np
 import scipy.ndimage as ndimage
 import pyqtgraph as pg
 import pyqtgraph.flowchart
+#import acq4.util.flowchart as flowchart
 import acq4.util.DataManager as DataManager
 import acq4.util.debug as debug
 from .itemtypes import registerItemType
@@ -226,7 +227,7 @@ class ImageFilterWidget(Qt.QWidget):
         self.fcGroup.setLayout(fgl)
         fgl.setContentsMargins(0, 0, 0, 0)
         self.layout.addWidget(self.fcGroup, row+1, 0, 1, 2)
-        self.fc = pg.flowchart.Flowchart(terminals={'dataIn': {'io':'in'}, 'dataOut': {'io':'out'}})
+        self.fc = flowchart.Flowchart(terminals={'dataIn': {'io':'in'}, 'dataOut': {'io':'out'}})
         fgl.addWidget(self.fc.widget())
         self.fcGroup.setCollapsed(True)
         self.fc.sigStateChanged.connect(self.sigStateChanged)
