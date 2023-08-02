@@ -35,9 +35,7 @@ class DataManager(Module):
     sigAnalysisDbChanged = Qt.Signal()
 
     def __init__(self, manager, name, config):
-        print("1")
         Module.__init__(self, manager, name, config)
-        print("2")
         self.dm = getDataManager()
         self.win = Window()
         mp = os.path.dirname(__file__)
