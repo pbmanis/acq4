@@ -10,7 +10,7 @@ import pyqtgraph as pg
 import pyqtgraph.dockarea as dockarea
 from MetaArray import MetaArray
 from acq4.util import Qt, ptime
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
 from acq4.util.StatusBar import StatusBar
 from acq4.util.Thread import Thread
 from acq4.util.debug import Profiler
@@ -715,7 +715,7 @@ class SequencerThread(Thread):
         self._stop = False
         self._frame = None
         self._paused = False
-        self.lock = Mutex()
+        self.lock = RecursiveMutex()
 
     def start(self, protocol):
         if self.isRunning():
