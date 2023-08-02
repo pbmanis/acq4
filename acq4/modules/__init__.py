@@ -56,8 +56,6 @@ def importBuiltinClasses():
         if f[-3:] == '.py':
             f = f[:-3]
         try:
-            print("Trying to import: acq4.modules." + f)
             mod = import_module('acq4.modules.' + f)
         except Exception:
             printExc('Error importing builtin module from %s' % ff)
-        print("   ... success")
