@@ -240,9 +240,7 @@ class IVCurve(AnalysisModule):
     def window(self):
         return self._win
     
-    def quit(self):
-        """Quit the module"""
-        AnalysisModule.removeInterface(self)
+
 
     def clear_results(self):
         """
@@ -336,7 +334,6 @@ class IVCurve(AnalysisModule):
         """
         # hold all the linear regions in a dictionary
         if not self.regions_exist:
-            print("updater leak region: ")
             self.regions['lrleak'] = {'name': 'leak',  # use a "leak" window
                                       'region': pg.LinearRegionItem([0, 1], orientation=pg.LinearRegionItem.Horizontal,
                                                                     brush=pg.mkBrush(255, 255, 0, 50.)),
@@ -350,7 +347,6 @@ class IVCurve(AnalysisModule):
                                       'units': 'pA'}
 
             self.ctrl.IVCurve_subLeak.region = self.regions['lrleak']['region']  # save region with checkbox
-            print("updater win0")
             self.regions['lrwin0'] = {'name': 'win0',  # peak window
                                       'region': pg.LinearRegionItem([0, 1],
                                                                     brush=pg.mkBrush(128, 128, 128, 50.)),
@@ -364,7 +360,6 @@ class IVCurve(AnalysisModule):
                                       'units': 'ms'}
             
             self.ctrl.IVCurve_showHide_lrpk.region = self.regions['lrwin0']['region']  # save region with checkbox
-            print("updater win2")
             self.regions['lrwin1'] = {'name': 'win2',  # ss window
                                       'region': pg.LinearRegionItem([0, 1],
                                                                     brush=pg.mkBrush(0, 0, 255, 50.)),
@@ -379,7 +374,6 @@ class IVCurve(AnalysisModule):
             self.ctrl.IVCurve_showHide_lrss.region = self.regions['lrwin1']['region']  # save region with checkbox
             # self.lrtau = pg.LinearRegionItem([0, 1],
             # brush=pg.mkBrush(255, 0, 0, 50.))
-            print("updater rmp update_rmpAnalysis")
             self.regions['lrrmp'] = {'name': 'rmp',
                                      'region': pg.LinearRegionItem([0, 1],
                                                                    brush=pg.mkBrush
@@ -394,7 +388,6 @@ class IVCurve(AnalysisModule):
                                      'units': 'ms'}
             self.ctrl.IVCurve_showHide_lrrmp.region = self.regions['lrrmp']['region']  # save region with checkbox
             # establish that measurement is on top, exclusion is next, and reference is on bottom
-            print("updater tauh")
             self.regions['lrtau'] = {'name': 'tau',
                                      'region': pg.LinearRegionItem([0, 1],
                                                                    brush=pg.mkBrush
@@ -906,9 +899,10 @@ class IVCurve(AnalysisModule):
         rmp = np.zeros(ntr)
         iHold = np.zeros(ntr)
         for i in range(ntr):
+            trspikes = {}
             if len(self.spikes[i]) == 0:
                 continue
-            trspikes = {}
+
             if printSpikeInfo:
                 print("IVCurve 898: Commands: ", np.array(self.Clamps.values))
                 print("IVCurve 899: # traces: ", len(self.Clamps.traces))
@@ -916,6 +910,7 @@ class IVCurve(AnalysisModule):
                                            0.0, self.Clamps.tstart)            
             (iHold[i], r2) = Utility.measure('mean', self.Clamps.time_base, self.Clamps.cmd_wave[i],
                                               0.0, self.Clamps.tstart)
+
             for j in range(len(self.spikes[i])):
                 thisspike = ThisSpike(trace=i, AP_number=j, tstart=self.Clamps.tstart)
                 thisspike.current = self.Clamps.values[i] - iHold[i]
@@ -976,6 +971,7 @@ class IVCurve(AnalysisModule):
                         thisspike.hw_down = self.Clamps.time_base[kdown]
                         thisspike.hw_v = halfv
                 trspikes[j] = thisspike
+                del thisspike
             self.spikeShape[i] = trspikes
         if printSpikeInfo:
             pp = pprint.PrettyPrinter(indent=4)
