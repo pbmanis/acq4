@@ -71,7 +71,6 @@ class AnalysisHost(Qt.QMainWindow):
     def closeEvent(self, ev):
         acq4.Manager.getManager().removeInterface(self.modName, 'analysisMod')
         self.modName = None
-        self.mod = None
         if self.quit():
             ev.accept()
         
