@@ -10,7 +10,7 @@ from acq4.devices.NiDAQ.nidaq import NiDAQ
 from acq4.devices.OptomechDevice import OptomechDevice
 from acq4.util import Qt
 from acq4.util.HelpfulException import HelpfulException
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import Mutex, RecursiveMutex
 from pyqtgraph.functions import siFormat
 import acq4.util.ptime as ptime
 

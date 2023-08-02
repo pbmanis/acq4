@@ -790,7 +790,7 @@ class AcquireThread(Thread):
         self.dev = dev
         self.camLock = self.dev.camLock
         self.stopThread = False
-        self.lock = Mutex()
+        self.lock = RecursiveMutex()
         self.acqBuffer = None
         self.bufferTime = 5.0
         self.tasks = []
@@ -799,7 +799,7 @@ class AcquireThread(Thread):
         # This thread does not run an event loop,
         # so we may need to deliver frames manually to some places
         self._newFrameCallbacks = set()
-        self._newFrameCallbacksMutex = Mutex()
+        self._newFrameCallbacksMutex = RecursiveMutex()
 
     def __del__(self):
         if hasattr(self, "cam"):

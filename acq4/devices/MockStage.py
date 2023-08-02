@@ -7,7 +7,8 @@ import numpy as np
 
 from acq4.devices.Stage import Stage, MoveFuture
 from acq4.util import Qt, ptime
-from acq4.util.Mutex import Mutex
+from acq4.util.Mutex import RecursiveMutex
+
 from acq4.util.Thread import Thread
 
 
@@ -190,7 +191,7 @@ class MockStageThread(Thread):
         self.speed = None
         self.velocity = None
         self._quit = False
-        self.lock = Mutex()
+        self.lock = RecursiveMutex()
         self.interval = 30e-3
         self.lastUpdate = None
         self.currentMove = None

@@ -149,8 +149,8 @@ for more information.</center>
 if man.configFile.endswith(os.path.join('example', 'default.cfg')):
     mbox = Qt.QMessageBox()
     mbox.setText(message)
-    mbox.setStandardButtons(mbox.Ok)
-    mbox.exec_()
+    mbox.setStandardButtons(mbox.StandardButton.Ok)
+    mbox.exec()
 
 ## Run python code periodically to allow interactive debuggers to interrupt the qt event loop
 timer = Qt.QTimer()

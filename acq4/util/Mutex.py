@@ -16,11 +16,11 @@ import acq4.util.Qt as Qt
 class Mutex(PGMutex):
     def __init__(self, *args, **kargs):
         kargs['debug'] = False
-        if args[0].__name__ == 'QRecursiveMutex':
-            raise ValueError("Call RecursiveMutex instead")
+        # if args[0].__name__ == 'QRecursiveMutex':
+        #     raise ValueError("Call RecursiveMutex instead")
             # PGRecursiveMutex.__init__(self, **kargs)
-        else:
-            PGMutex.__init__(self, *args, **kargs)
+        # else:
+        PGMutex.__init__(self, *args, **kargs)
 
 
 class RecursiveMutex(PGRecursiveMutex):

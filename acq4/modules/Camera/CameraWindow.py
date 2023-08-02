@@ -715,7 +715,7 @@ class SequencerThread(Thread):
         self._stop = False
         self._frame = None
         self._paused = False
-        self.lock = RecursiveMutex()
+        self.lock = Mutex()
 
     def start(self, protocol):
         if self.isRunning():
