@@ -1,3 +1,4 @@
+# Note: This class may not actually be used anymore
 
 class CaselessDict(dict):
     """Case-insensitive dict. Values can be set and retrieved using keys of any case.
