@@ -14,7 +14,7 @@ numpy==1.25.1
 Pillow==10.0.0
 psutil
 #pyparsing==2.0.3
-pyparsing==2.4.7 # =3.0.9
+pyparsing==2.4.7
 
 PyQt6==6.3.1
 PyQt6-sip==13.4
