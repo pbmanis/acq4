@@ -11,7 +11,7 @@ from acq4.devices.Device import Device, DeviceTask
 from pyqtgraph import siFormat
 from pyqtgraph.debug import Profiler
 from acq4.util import Qt
-from acq4.util.Mutex import Mutex, RecursiveMutex
+from acq4.util.Mutex import RecursiveMutex
 from acq4.util.debug import printExc
 from pyqtgraph.metaarray import MetaArray, axis
 

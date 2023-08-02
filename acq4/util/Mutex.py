@@ -7,10 +7,10 @@ Distributed under MIT/X11 license. See license.txt for more infomation.
 from __future__ import print_function
 
 import six
-from pyqtgraph.util.mutex import Mutex as PGMutex
-from pyqtgraph.util.mutex import RecursiveMutex as PGRecursiveMutex
+from acq4.util.pg_mutex import Mutex as PGMutex
+from acq4.util.pg_mutex import RecursiveMutex as PGRecursiveMutex
 
-from acq4.util import Qt
+import acq4.util.Qt as Qt
 
 
 class Mutex(PGMutex):
