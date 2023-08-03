@@ -6,7 +6,7 @@ from .CanvasItem import CanvasItem
 import numpy as np
 import scipy.ndimage as ndimage
 import pyqtgraph as pg
-import pyqtgraph.flowchart
+import pyqtgraph.flowchart as flowchart
 #import acq4.util.flowchart as flowchart
 import acq4.util.DataManager as DataManager
 import acq4.util.debug as debug
@@ -239,7 +239,6 @@ class ImageFilterWidget(Qt.QWidget):
             snstate = snode.saveState()
         else:
             snstate = None
-        print(snstate)
         
         self.fc.clear()
         
