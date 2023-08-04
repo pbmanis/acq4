@@ -298,8 +298,9 @@ class MosaicEditor(AnalysisModule):
             if currentItem.data.ndim == 2:
                 all_images.append(currentItem.data)
             elif currentItem.data.ndim == 3:
-                for x in currentItem.data:
-                    all_images.append(x)
+                all_images.append(currentItem.data.max(axis=0))
+                # for x in currentItem.data:
+                #     all_images.append(x)
         hm = np.histogram(np.dstack(all_images), nhistbins)
         n = 0
         self.imageMax = 0.0
@@ -376,15 +377,18 @@ class MosaicEditor(AnalysisModule):
         nsel =  len(self.canvas.selectedItems())
         if nsel == 0:
             return
-        for i in range(nsel):
-            thisimage = self.canvas.selectedItems()[i].graphicsItem()
-            d = thisimage.getHistogram()
-            if np.min(d) < min_image:
-                min_image = np.min(d)
-            if np.max(d) > max_image:
-                max_image = np.max(d)
-        for i in range(len(self.canvas.items)):
-            thisimage = self.canvas.items[i].graphicsItem()
+        for item in self.canvas.selectedItems():
+            # print(dir(item))
+            thisimage = item.graphicsItem()
+            # d = item.data.min()
+            # d = thisimage.getHistogram()
+            if np.min(item.data) < min_image:
+                min_image = np.min(item.data)
+            if np.max(item.data) > max_image:
+                max_image = np.max(item.data)
+            print("min/max = ", min_image, max_image)
+        for item in self.canvas.selectedItems():
+            thisimage = item.graphicsItem()
             thisimage.setLevels([min_image, max_image])
 
         self.canvas.autoRange()
