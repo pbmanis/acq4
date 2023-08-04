@@ -264,7 +264,7 @@ class ImageFilterWidget(Qt.QWidget):
             self.fc.connectTerminals(self.fc['dataIn'], s['In'])
             self.fc.connectTerminals(s['Out'], m['In'])
             self.fc.connectTerminals(m['Out'], self.fc['dataOut'])
-        elif name == 'Max w/Gaussian':
+        elif name == 'Max w/Gaussian' or name == 'Blend':
             s = self.fc.createNode('Slice', name="Slice", pos=[-40, 0])
             f = self.fc.createNode('GaussianFilter', name="GaussianFilter", pos=[70, 0])
             m = self.fc.createNode('Max', name="Max", pos=[180, 0])

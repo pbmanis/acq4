@@ -259,7 +259,12 @@ class MosaicEditor(AnalysisModule):
         raise NotImplementedError()
     
     def blendImages(self):
-        raise NotImplementedError()
+       # print("button works")
+        for currentItem in self.canvas.selectedItems():
+            if currentItem.data.ndim == 3:
+                currentItem.filter.filterBtnClicked(True)
+            # print(currentItem)
+            # print(type(currentItem))
     
     def _rescale_newimage(self, d, blimage, m, hm):
         if d.shape != blimage.shape:
