@@ -12,14 +12,18 @@ import scipy.stats
 
 import acq4.util.debug as debug
 import pyqtgraph as pg
+import pyqtgraph.multiprocess as MP
+import platform
+
+import multiprocessing as MPROC
 from acq4.analysis.AnalysisModule import AnalysisModule
 from acq4.util import Qt
 import acq4.util.DataManager as DataManager
 import acq4.analysis.atlas as atlas
 from acq4.util.Canvas.Canvas import Canvas
 from acq4.util.Canvas import items
-import acq4
 from six.moves import range
+
 
 Ui_Form = Qt.importTemplate('.MosaicEditorTemplate')
 
@@ -60,6 +64,7 @@ class MosaicEditor(AnalysisModule):
         self.ui = Ui_Form()
         self.ui.setupUi(self.ctrl)
         self.atlas = None
+        self.parallel = False
         self.canvas = Canvas(name='MosaicEditor')
 
         self._elements_ = OrderedDict([
@@ -108,14 +113,18 @@ class MosaicEditor(AnalysisModule):
 
         self.canvas.sigItemTransformChangeFinished.connect(self.itemMoved)
         self.ui.atlasCombo.currentIndexChanged.connect(self.atlasComboChanged)
+    
         self.ui.normalizeBtn.clicked.connect(self.normalizeImages)
-        self.ui.tileShadingBtn.clicked.connect(self.rescaleImages)
-        self.ui.autoRangeBtn.clicked.connect(self.autoRangeImages)
         self.ui.blendBtn.clicked.connect(self.blendImages)
-
+        self.ui.MaxImageProjectionBtn.clicked.connect(self.MIP_Images)
+        self.ui.MaxImageProjectionGaussianBtn.clicked.connect(self.MIP_Images)
+        self.ui.MaxImageProjectionMedianBtn.clicked.connect(self.MIP_Images)
+     
+        self.ui.tileShadingBtn.clicked.connect(self.tileShadeImages)
         self.ui.mosaicApplyScaleBtn.clicked.connect(self.updateScaling)
         self.ui.mosaicFlipLRBtn.clicked.connect(self.flipLR)
         self.ui.mosaicFlipUDBtn.clicked.connect(self.flipUD)
+        self.ui.globalParallel_checkBox.clicked.connect(self.setParallel)
 
         self.imageMax = 0.0
         
@@ -255,17 +264,49 @@ class MosaicEditor(AnalysisModule):
         else:
             return self.canvas.addItem(item, type, **kwds)
 
-    def autoRangeImages(self):
-        raise NotImplementedError()
+    def setParallel(self):
+        if self.ui.globalParallel_checkBox.isChecked():
+            print("set parallel")
+            self.parallel = True
+        else:
+            print("unset parallel")
+            self.parallel = False
+
+    def MIP_Images(self):
+        if self.parallel:
+            if platform.system() == "Darwin":
+                raise NotImplementedError("Parallel processing is not implemented for this function on Mac OS")
+            print("running parallel")
+            nWorkers = MPROC.cpu_count()
+            TASKS = [item for j, item in enumerate(self.canvas.selectedItems()) if item.data.ndim == 3]
+            print("tasks)")
+            tresults = [None] * len(TASKS)
+            msg = f"Processing {len(TASKS):d} videos"
+            with MP.Parallelize(
+                enumerate(TASKS), results=tresults, workers=nWorkers, progressDialog=msg
+            ) as tasker:
+                for j, item in tasker:
+                    item.filter.filterBtnClicked(True)
+
+        else:
+            # Non parallelized version:
+            print("Not running parallel")
+            with pg.ProgressDialog("Processing..", 0, len(self.canvas.selectedItems())) as dlg:
+                for i, currentItem in enumerate(self.canvas.selectedItems()):
+                    if currentItem.data.ndim == 3:
+                        print("   operating on : ", currentItem.name)
+                        currentItem.filter.filterBtnClicked(True)
+                    else:
+                        print("   skipping: ", currentItem.name)
+                    dlg.setValue(i)   ## could also use dlg += 1
+                    if dlg.wasCanceled():
+                        raise Exception("Processing canceled by user")
+                            
+
     
     def blendImages(self):
-       # print("button works")
-        for currentItem in self.canvas.selectedItems():
-            if currentItem.data.ndim == 3:
-                currentItem.filter.filterBtnClicked(True)
-            # print(currentItem)
-            # print(type(currentItem))
-    
+       raise NotImplementedError("blendImages not implemented yet")
+
     def _rescale_newimage(self, d, blimage, m, hm):
         if d.shape != blimage.shape:
             print("rescale newimage: data shape and blimage shape do not match: ", d.shape, blimage.shape)
@@ -277,9 +318,10 @@ class MosaicEditor(AnalysisModule):
         newImage = (hm[1][m]/hn[1][n])*newImage # rescale to the global max.
         return newImage
 
-    def rescaleImages(self):
+    def tileShadeImages(self):
         """
         Apply corrections to the images and rescale the data.
+        The goal is to correct for uneven illumination and to rescale the images
         This does the following:
         1. compute mean image over entire selected group
             If the group includes videos, then the max projection of each video is taken
