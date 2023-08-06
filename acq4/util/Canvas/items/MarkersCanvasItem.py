@@ -34,7 +34,7 @@ class MarkersCanvasItem(CanvasItem):
     def checkFile(cls, fh):
         return 0
     
-    def addMarker(self, name='marker', position=(0, 0, 0), params=None):
+    def addMarker(self, name='marker', position=(0, 0, 0), params=None, **kwds):
         children = [
             PointParameter(name='Position', value=position)
         ]
@@ -42,8 +42,16 @@ class MarkersCanvasItem(CanvasItem):
         # if params is not None:
         # :MC: disabled because kwds does not exist
         #     children.extend(kwds['params'])
-        
-        param = pg.parametertree.Parameter.create(name=name, autoIncrementName=True, type='group', renamable=True, removable=True, children=children)
+
+        # try to center marker in current view
+        if position == (0,0,0):
+            vr = self.graphicsItem().viewRect()
+            if vr is not None:
+                position = [vr.center().x(), vr.center().y(), 0]
+
+        param = pg.parametertree.Parameter.create(name=name, autoIncrementName=True, 
+                                                  type='group', renamable=True, removable=True,
+                                                  children=children)
         self.params.addChild(param)
 
         target = pg.graphicsItems.TargetItem.TargetItem()
@@ -53,12 +61,13 @@ class MarkersCanvasItem(CanvasItem):
         target.param = weakref.ref(param)
         target.sigPositionChangeFinished.connect(self._targetMoved)
         param.target = target
+        self._targetMoved(param.target) # update initial posistion
     
     def removeMarker(self, name):
         param = self.params.child(name)
+        param.target.scene().removeItem(param.target)
         self.params.removeChild(param)
-        param.target.scene().removeItem(target)
-
+ 
     def setMarkerPosition(self):
         self.btns['setCellPosition'].setText("Click on new cell position")
         # Evaluate items under click, ignore anything that is transparent, and raise an exception if the top item is partially transparent.
