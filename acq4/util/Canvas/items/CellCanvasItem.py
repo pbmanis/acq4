@@ -24,6 +24,19 @@ class CellCanvasItem(CanvasItem):
         opts.setdefault('rotatable', False)
         CanvasItem.__init__(self, item, **opts)
         self.selectBox.addTranslateHandle([0.5,0.5])
+        # # print(dir(CanvasItem))
+        # # # print("\nself: \n", dir(self))
+        # # print("\nparent: ", self.parent)
+        # # print("\ndir parent : \n", dir(self.parent()))
+        # if 'position' in self.opts.keys():
+        #     position = self.opts['position']
+        # else:
+        #     position = (0,0,0)
+        #     vr = self.parentItem().graphicsItem().viewRect()
+        #     if vr is not None:
+        #         position = [vr.center().x(), vr.center().y(), 0]
+
+        self.graphicsItem().setPos(0.0, 0.0)
     
     @classmethod
     def checkFile(cls, fh):
