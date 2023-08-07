@@ -23,14 +23,12 @@ class CellCanvasItem(CanvasItem):
         opts.setdefault('scalable', False)
         opts.setdefault('rotatable', False)
         CanvasItem.__init__(self, item, **opts)
-        self.selectBox.addTranslateHandle([0.5,0.5])
-
         center_pos = opts['viewRect'].center()
-
-        print(center_pos)
-
         self.graphicsItem().setPos(center_pos.x(), center_pos.y())
-    
+        self.selectBox.addTranslateHandle([0.5,0.5])
+        self.selectBox.setPos(center_pos.x(), center_pos.y())
+
+
     @classmethod
     def checkFile(cls, fh):
         if fh.isFile():
