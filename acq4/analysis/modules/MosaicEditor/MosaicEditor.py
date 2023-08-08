@@ -65,6 +65,8 @@ class MosaicEditor(AnalysisModule):
         self.ui.setupUi(self.ctrl)
         self.atlas = None
         self.parallel = False
+        self.videosSelected = False
+        self.videosShown = True
         self.canvas = Canvas(name='MosaicEditor')
 
         self._elements_ = OrderedDict([
@@ -125,6 +127,10 @@ class MosaicEditor(AnalysisModule):
         self.ui.mosaicFlipLRBtn.clicked.connect(self.flipLR)
         self.ui.mosaicFlipUDBtn.clicked.connect(self.flipUD)
         self.ui.globalParallel_checkBox.clicked.connect(self.setParallel)
+        self.ui.mosaicCreateCNMarkers.clicked.connect(self.createCNMarkers)
+        self.ui.mosaicCreateCortexMarkers.clicked.connect(self.createCortexMarkers)
+        self.ui.mosaicSelectVideos.clicked.connect(self.selectAllVideos)
+        self.ui.mosaicShowHide.clicked.connect(self.showAllVideos)
 
         self.imageMax = 0.0
         
@@ -263,6 +269,50 @@ class MosaicEditor(AnalysisModule):
             return self.canvas.addGraphicsItem(item, **kwds)
         else:
             return self.canvas.addItem(item, type, **kwds)
+
+    def createCNMarkers(self):
+        """createMarkers Instantiate a standard set of markers:
+        including the Cell, surface, AN, and slice markers.
+        """
+        markerItem = self.addItem(type='MarkersCanvasItem')
+        for marker in ["surface", "medialborder", "caudalborder", "rostralborder", "AN"]:
+            markerItem.addMarker(marker)
+    
+    def createCortexMarkers(self):
+        """createMarkers Instantiate a standard set of markers:
+        including the Cell, surface, AN, and slice markers.
+        """
+        markerItem = self.addItem(type='MarkersCanvasItem')
+        for marker in ["surface", "WM", "caudalborder", "rostralborder", "medialborder", "lateralborder",
+                       "dorsalborder", "ventralborder",
+                       "L1"]:
+            markerItem.addMarker(marker)
+
+    def selectAllVideos(self):
+        """select or deselect all of the videos in the canvas"""
+        print(dir(self.addCombo))
+        # print(self.canvas.selectedItems())
+        nitems = self.addCombo.count()
+        for n in range(nitems):
+            current = self.addCombo.itemText(n)
+            print(current)
+            if current.startswith("video_"):
+                # print(dir(item))
+                if self.videosSelected is False:
+                    self.canvas.selectItem(item)
+                else:
+                    self.canvas.selectItem(item)
+        self.videosSelected = not self.videosSelected
+
+    def showAllVideos(self):
+        for item in self.canvas.items:
+            if item.data.ndim == 3:
+                if self.videosShown is False:
+                    item.setVisible(True)
+                else:
+                    item.setVisible(False)
+        self.videosShown = not self.videosShown
+
 
     def setParallel(self):
         if self.ui.globalParallel_checkBox.isChecked():
