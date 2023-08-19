@@ -8,8 +8,8 @@ import pyqtgraph.graphicsItems.TargetItem
 from .itemtypes import registerItemType
 
 try:
-    from aiccf.ui import AtlasSliceView
-    from aiccf.data import CCFAtlasData
+    from aiccf.aiccf.ui import AtlasSliceView
+    from aiccf.aiccf.data import CCFAtlasData
     HAVE_AICCF = True
 except ImportError:
     HAVE_AICCF = False

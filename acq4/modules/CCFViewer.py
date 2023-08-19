@@ -15,8 +15,8 @@ class CCFViewer(Module):
     moduleCategory = "Utilities"
 
     def __init__(self, manager, name, config):
-        from aiccf.data import CCFAtlasData
-        from aiccf.viewer import AtlasViewer
+        from .aiccf.aiccf.data import CCFAtlasData
+        from .aiccf.viewer import AtlasViewer
 
         Module.__init__(self, manager, name, config) 
         self.man = manager

@@ -58,15 +58,15 @@ class ScanCanvasItem(CanvasItem):
         self.scatterPlotData = pts
         if len(pts) == 0:
             raise Exception("No data found in scan %s." % dirHandle.name(relativeTo=dirHandle.parent().parent()))
-        gitem = pg.ScatterPlotItem(pts, pxMode=False, pen=(50,50,50,200))
+        gitem = pg.ScatterPlotItem(pts, pxMode=False, pen=pg.mkPen((200,50,50,200)), brush=pg.mkBrush((0, 100, 255, 50)))
         CanvasItem.__init__(self, gitem, **opts)
         self.originalSpotSize = size
-        
+        self.scanImage = None
         self._ctrlWidget = Qt.QWidget()
         self.ui = Ui_Form()
         self.ui.setupUi(self._ctrlWidget)
         self.layout.addWidget(self._ctrlWidget, self.layout.rowCount(), 0, 1, 2)
-        self.ui.outlineColorBtn.setColor((50,50,50,200))
+        self.ui.outlineColorBtn.setColor((200,50,50,200))
         
         self.ui.sizeSpin.setOpts(dec=True, step=1, minStep=1e-6, siPrefix=True, suffix='m', bounds=[1e-6, None])
         self.ui.sizeSpin.setValue(self.originalSpotSize)
@@ -98,7 +98,8 @@ class ScanCanvasItem(CanvasItem):
         if 'Camera' not in dirs[0].subDirs():
             print("No image data for this scan.")
             return
-        
+        if self.scanImage is not None:
+            self.canvas.removeItem(self.scanImage) # seems we can have only one
         spotFrame = self.ui.spotFrameSpin.value()
         bgFrame = self.ui.bgFrameSpin.value()
         
@@ -118,10 +119,10 @@ class ScanCanvasItem(CanvasItem):
                 else:
                     image = frames[spotFrame]
                     
-                mx = image.max()
-                image *= (1000. / mx)
+                mx = image.max()  
+                image = image * (1000. / mx)
                 images.append(image)
-                if mx < 50:
+                if mx < 50:  # check for blank images
                     nulls.append(d.shortName())
                 dlg += 1
                 if dlg.wasCanceled():
@@ -208,7 +209,7 @@ class ScanImageCanvasItem(ImageCanvasItem):
         self.handles = handles
         ImageCanvasItem.__init__(self, self.handles[0], **kargs)
         self.graphicsItem().updateImage(self.img)
-        self.updateHistogram(autoLevels=True)
+        # self.updateHistogram(autoLevels=True)
 
     def storeUserTransform(self, fh=None):
         trans = self.saveTransform()
