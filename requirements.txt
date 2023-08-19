@@ -20,7 +20,9 @@ PyQt6==6.3.1
 PyQt6-sip==13.4
 # pyqtgraph>=0.13.3
 # while doing bug fixes to pyqtgraph::
--e git+https://github.com/pbmanis/pyqtgraph.git@common-fixes#egg=pyqtgraph
+# upstream prior to putting in PRs:
+#-e git+https://github.com/pbmanis/pyqtgraph.git@common-fixes#egg=pyqtgraph
+-e /Users/pbmanis/Desktop/Python/pyqtgraph
 pyserial==3.4
 python-dateutil==2.8.1
 requests==2.23.0

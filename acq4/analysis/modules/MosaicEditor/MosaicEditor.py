@@ -7,14 +7,16 @@ import json
 import weakref
 from collections import OrderedDict
 import numpy as np
+from pathlib import Path
 import scipy
 import scipy.stats
+from typing import Union
 
 import acq4.util.debug as debug
 import pyqtgraph as pg
 import pyqtgraph.multiprocess as MP
 import platform
-
+import MetaArray
 import multiprocessing as MPROC
 from acq4.analysis.AnalysisModule import AnalysisModule
 from acq4.util import Qt
@@ -90,7 +92,7 @@ class MosaicEditor(AnalysisModule):
                         "type": "ctrl",
                         "object": self.canvas.ui.view,
                         "pos": ("bottom", "Mosaic"),
-                        "size": (600, 800),
+                        "size": (800, 800),
                     },
                 ),
                 (
@@ -164,10 +166,12 @@ class MosaicEditor(AnalysisModule):
         self.ui.mosaicFlipLRBtn.clicked.connect(self.flipLR)
         self.ui.mosaicFlipUDBtn.clicked.connect(self.flipUD)
         self.ui.globalParallel_checkBox.clicked.connect(self.setParallel)
+        
         self.ui.mosaicCreateCNMarkers.clicked.connect(self.createCNMarkers)
         self.ui.mosaicCreateCortexMarkers.clicked.connect(self.createCortexMarkers)
         self.ui.mosaicSelectVideos.clicked.connect(self.selectAllVideos)
         self.ui.mosaicShowHide.clicked.connect(self.showAllVideos)
+        # self.ui.getSpotImage.clicked.connect(self.get_laser_spots)
 
         self.imageMax = 0.0
 
@@ -234,6 +238,8 @@ class MosaicEditor(AnalysisModule):
             if f.shortName().endswith(".mosaic"):
                 self.loadStateFile(f.name())
                 continue
+            # if f.shortName().startswith("Map_"):
+            #     spotimage = self.get_laser_spots(mapdir = f)
 
             if f in self.files:  ## Do not allow loading the same file more than once
                 item = self.files[f]
@@ -244,8 +250,8 @@ class MosaicEditor(AnalysisModule):
                 item = self.addFile(f)
             elif f.isDir():  # Directories are more complicated
                 if self.dataModel is None:
+                    print("No data model set")
                     continue
-                # print(f, self.dataModel)
                 if (
                     self.dataModel.dirType(f) == "Cell"
                 ):  #  If it is a cell, just add the cell "Marker" to the plot
@@ -272,9 +278,10 @@ class MosaicEditor(AnalysisModule):
         """Load a file and add it to the canvas.
 
         The new item will inherit the user transform from the previous item
-        (chronologocally) if it does not already have a user transform specified.
+        (chronologically) if it does not already have a user transform specified.
         """
         item = self.canvas.addFile(f, name=name)
+
         self.canvas.selectItem(item)
 
         if isinstance(item, list):
@@ -286,7 +293,6 @@ class MosaicEditor(AnalysisModule):
             item.timestamp = f.info()["__timestamp__"]
         except:
             item.timestamp = None
-
         ## load or guess user transform for this item
         if (
             inheritTransform
@@ -320,6 +326,48 @@ class MosaicEditor(AnalysisModule):
             return self.canvas.addGraphicsItem(item, **kwds)
         else:
             return self.canvas.addItem(item, type, **kwds)
+
+    def get_laser_spots(self, mapdir:Union[Path, str]):
+        """get_laser_spots from the selected map directory camera images,
+        and compare to the spot locations in the scanner file
+        Generates a maximal image projection of the camera images
+        taken during the mapping experiment, and retuns that image
+        """
+        imagecount = 0
+        mappoints = list(Path(mapdir).glob("*"))
+        mappoints = [mp for mp in mappoints if mp.is_dir()]
+        useframe = 1
+        for imagecount, mp in enumerate(mappoints):
+            cameraframe = Path(mp, 'Camera', 'frames.ma')
+            frame = MetaArray.MetaArray(file=str(cameraframe),  # read the camera frame
+                                        readAll=True,  # read all data into memory
+                                        verbose=False)
+            frame_data = frame.view(np.ndarray)
+            if imagecount == 0:
+                frame_data_max = frame_data[useframe,:,:]
+                frame_bkgd = np.zeros_like(frame_data[useframe,:,:])
+            else:
+                if useframe == 0:
+                    frame_data_max += frame_data[useframe,:,:]
+                    frame_bkgd = np.zeros_like(frame_data[useframe,:,:])
+                else:
+                    frame_data_max = np.maximum(frame_data_max, frame_data[useframe,:,:])
+                    frame_bkgd += frame_data[0,:,:]
+
+        frame_bkgd = frame_bkgd/int(imagecount)
+        if useframe == 0:
+            frames = frame_data_max/int(imagecount)
+        else:
+            frames = frame_data_max - frame_bkgd
+        # print(np.max(frames), np.min(frames))
+        # frames = frames  > np.min(frames)*1.5
+        info = frame.infoCopy()
+        spotimage = MetaArray.MetaArray(frames, info=info[1:])  # remove the time axis.
+        # fout = Path(str(mapdir)+'_spotimage.ma')
+        # print('info: ', info)
+        # spotimage.write(str(fout))
+        # exit()
+        return spotimage
 
     def createCNMarkers(self):
         """createMarkers Instantiate a standard set of markers:
@@ -686,6 +734,8 @@ class MosaicEditor(AnalysisModule):
         self.canvas.clear()
         self.items.clear()
         self.files.clear()
+        self.videosSelected = False  # reset
+        self.videosShown = True
         self.lastSaveFile = None
         return True
 

@@ -104,7 +104,9 @@ class A1AtlasCtrlWidget(Atlas.AtlasCtrlWidget):
         
         ## add ThalamocorticalMarker to canvas
         fh = DataManager.getHandle(os.path.join(self.atlasDir, 'images', 'ThalamocorticalMarker.svg'))
-        self.canvas.addFile(fh, pos=(-0.001283, -0.000205), scale=[3.78e-6, 3.78e-6], index=0, movable=False, z=10000)        
+        print(self.canvas)
+        print(self.canvas.children())
+        # self.canvas.addFile(fh, pos=(-0.001283, -0.000205), scale=[3.78e-6, 3.78e-6], index=0, movable=False, z=10000)        
      
         ## add CortexROI
         self.roi = CortexROI([-1e-3, 0])

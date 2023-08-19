@@ -904,8 +904,8 @@ class IVCurve(AnalysisModule):
                 continue
 
             if printSpikeInfo:
-                print("IVCurve 898: Commands: ", np.array(self.Clamps.values))
-                print("IVCurve 899: # traces: ", len(self.Clamps.traces))
+                print("IVCurve 907: Commands: ", np.array(self.Clamps.values))
+                print("IVCurve 908: # traces: ", len(self.Clamps.traces))
             (rmp[i], r2) = Utility.measure('mean', self.Clamps.time_base, self.Clamps.traces[i],
                                            0.0, self.Clamps.tstart)            
             (iHold[i], r2) = Utility.measure('mean', self.Clamps.time_base, self.Clamps.cmd_wave[i],
@@ -947,15 +947,24 @@ class IVCurve(AnalysisModule):
                     kbegin = k - int(0.002/dt)  # for first spike - 4 msec prior only
                     if kbegin*dt <= self.Clamps.tstart:
                         kbegin = kbegin + int(0.0002/dt) 
-                # revise k to start at max of rising phase
-                # try:
+                # start at max of rising phase
                 rise_phase = scipy.signal.savgol_filter(dv[kbegin:k], 5, 3)
                 km = np.argmax(rise_phase) + kbegin
-                # except:
-                #     continue
-                if (km - kbegin < 1):
+                # get threshold from a slightly smoothed representation (to reduce the effects of noise)
+                # of the slope of the rising phase.
+                # Try to handle cases where the maximum of the slope occurs closer to the onset of the spike
+                # by using less smoothing 
+                if (km - kbegin) < 1:
                     km = kbegin + int((k - kbegin)/2.) + 1
-                kthresh = np.argmin(np.fabs(scipy.signal.savgol_filter(dv[kbegin:km], 5, 3) - begin_dV)) + kbegin  # point where slope is closest to begin
+                if (km - kbegin >= 5):
+                    kthresh = np.argmin(np.fabs(scipy.signal.savgol_filter(dv[kbegin:km], 5, 3) - begin_dV)) + kbegin  # point where slope is closest to begin
+                elif (km - kbegin) >= 3:
+                    kthresh = np.argmin(np.fabs(scipy.signal.savgol_filter(dv[kbegin:km], 3, 2) - begin_dV)) + kbegin  # point where slope is closest to begin
+                elif (km - kbegin) >= 2:
+                    kthresh = kbegin + 1  # point where slope is closest to begin
+                else:
+                    kthresh = kbegin
+     
                 thisspike.AP_beginIndex = kthresh
                 thisspike.AP_Latency = self.Clamps.time_base[kthresh]
                 thisspike.AP_beginV = self.Clamps.traces[i][thisspike.AP_beginIndex]

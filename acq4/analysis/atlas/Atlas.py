@@ -51,6 +51,11 @@ class AtlasCtrlWidget(Qt.QWidget):
         self.host = host        
         
         self.canvas = host.getElement('Canvas')
+        print("Getting canvas: ", self.canvas)
+        print("central widget: ", self.canvas.centralWidget.childItems())
+        print("dir: ", dir(self.canvas.centralWidget))
+        itemlist = host.getElement('ItemList')
+        print("itemlist: ", itemlist)
         self.dataManager = host.dataManager()
         self.dataModel = self.dataManager.dataModel()
         self.loader = host.getElement('File Loader')

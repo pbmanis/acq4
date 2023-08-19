@@ -189,7 +189,7 @@
      <property name="maximumSize">
       <size>
        <width>16777215</width>
-       <height>150</height>
+       <height>200</height>
       </size>
      </property>
      <property name="title">
@@ -248,6 +248,19 @@
       </property>
       <property name="text">
        <string>Create Cortex Markers</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="getSpotImage">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>150</y>
+        <width>121</width>
+        <height>32</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Get Spot Image</string>
       </property>
      </widget>
     </widget>
