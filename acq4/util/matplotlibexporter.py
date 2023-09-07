@@ -124,16 +124,19 @@ def export_panel(pgitem, ax):
         symbol = opts['symbol']
         if symbol == 't':
             symbol = '^'
-        symbolPen = fn.mkPen(opts['symbolPen'])
-        symbolBrush = fn.mkBrush(opts['symbolBrush'])
-        markeredgecolor = tuple([c/255. for c in fn.colorTuple(symbolPen.color())])
-        markerfacecolor = tuple([c/255. for c in fn.colorTuple(symbolBrush.color())])
-        markersize = opts['symbolSize']
+        # print(opts.keys())
+        if 'symbolPen' in opts.keys():
+            symbolPen = fn.mkPen(opts['symbolPen'])
+            symbolBrush = fn.mkBrush(opts['symbolBrush'])
+            markeredgecolor = tuple([c/255. for c in fn.colorTuple(symbolPen.color())])
+            markerfacecolor = tuple([c/255. for c in fn.colorTuple(symbolBrush.color())])
+            markersize = opts['symbolSize']
 
-        if opts['fillLevel'] is not None and opts['fillBrush'] is not None:
-            fillBrush = fn.mkBrush(opts['fillBrush'])
-            fillcolor = tuple([c/255. for c in fn.colorTuple(fillBrush.color())])
-            ax.fill_between(x=x, y1=y, y2=opts['fillLevel'], facecolor=fillcolor)
+        if 'fillLevel' in opts.keys():
+            if opts['fillLevel'] is not None and opts['fillBrush'] is not None:
+                fillBrush = fn.mkBrush(opts['fillBrush'])
+                fillcolor = tuple([c/255. for c in fn.colorTuple(fillBrush.color())])
+                ax.fill_between(x=x, y1=y, y2=opts['fillLevel'], facecolor=fillcolor)
 
         pl = ax.plot(x, y, marker=symbol, color=color, linewidth=pen.width(),
                      linestyle=linestyle, markeredgecolor=markeredgecolor, markerfacecolor=markerfacecolor,
@@ -190,8 +193,8 @@ def update_font(axl, size=6, font=stdFont):
         #     y.set_fontproperties(fontProperties)
         #ax.set_xticklabels(ax.get_xticks(), fontProperties)
         #ax.set_yticklabels(ax.get_yticks(), fontProperties)
-        ax.xaxis.set_smart_bounds(True)
-        ax.yaxis.set_smart_bounds(True)
+        # ax.xaxis.set_smart_bounds(True)
+        # ax.yaxis.set_smart_bounds(True)
         ax.tick_params(axis='both', labelsize=9)
 
 def formatTicks(axl, axis='xy', fmt='%d', font='Arial'):
