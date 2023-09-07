@@ -11,6 +11,8 @@ matplotlib>=3.7.2
 Metaarray
 #NEURON>=7.7
 numpy==1.25.1
+openpyxl==3.1.2
+pandas>=1.5.3
 Pillow==10.0.0
 psutil
 #pyparsing==2.0.3
@@ -21,8 +23,9 @@ PyQt6-sip==13.4
 # pyqtgraph>=0.13.3
 # while doing bug fixes to pyqtgraph::
 # upstream prior to putting in PRs:
-#-e git+https://github.com/pbmanis/pyqtgraph.git@common-fixes#egg=pyqtgraph
--e /Users/pbmanis/Desktop/Python/pyqtgraph
+-e git+https://github.com/pbmanis/pyqtgraph.git@common-fixes#egg=pyqtgraph
+#-e /Users/pbmanis/Desktop/Python/pyqtgraph
+# -e git+https://github
 pyserial==3.4
 python-dateutil==2.8.1
 requests==2.23.0
