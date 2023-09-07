@@ -145,8 +145,6 @@ def export_panel(pgitem, ax):
                 fillBrush = fn.mkBrush(opts['fillBrush'])
                 fillcolor = tuple([c/255. for c in fn.colorTuple(fillBrush.color())])
                 ax.fill_between(x=x, y1=y, y2=opts['fillLevel'], facecolor=fillcolor)
-        print('x: ', x)
-        print('y: ', y)
 
         if x is not None and y is not None:
             pl = ax.plot(x, y, marker=symbol, color=color, linewidth=pen.width(),
