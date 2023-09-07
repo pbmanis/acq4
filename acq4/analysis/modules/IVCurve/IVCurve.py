@@ -198,6 +198,7 @@ class IVCurve(AnalysisModule):
         #self.scripts_form.PSPReversal_ScriptCopy_Btn.clicked.connect(self.copy_script_output)
         #self.scripts_form.PSPReversal_ScriptFormatted_Btn.clicked.connect(self.print_formatted_script_output)
         self.ctrl.IVCurve_ScriptName.setText('None')
+        self.ctrl.IVCurve_ExportTraces.clicked.connect(self.exportTraces)
         self.layout = self.getElement('Plots', create=True)
 
         # instantiate the graphs using a gridLayout (also facilitates matplotlib export; see export routine below)
@@ -234,7 +235,7 @@ class IVCurve(AnalysisModule):
             # Add a color scale
         self.color_scale = pg.GradientLegend((3, 150), (-10, -10))
         self.data_plot.scene().addItem(self.color_scale)
-        self.ctrl.pushButton.clicked.connect(functools.partial(self.initialize_regions,
+        self.ctrl.ResetButton.clicked.connect(functools.partial(self.initialize_regions,
                                                                reset=True))
 
     def window(self):
@@ -1765,7 +1766,31 @@ class IVCurve(AnalysisModule):
             clipb.setText(ltxt, mode=clipb.Clipboard)
 
         return ltxt
+    
+    def exportTraces(self):
+        import pandas as pd
+        export_filename = Qt.QFileDialog.getSaveFileName(
+                   None, 'Write to Excel file', '', 'Excel output filename (*.xlsx')[0]
+        if export_filename == '':  # cancel returns empty string
+            return None
+        print("export filename: ", export_filename)
+        dbdictV = {"time": self.Clamps.time_base}
+        dbdictI = {"time": self.Clamps.time_base}
+        for i in range(len(self.Clamps.traces)):
+            dbdictV["trace_%-03d" % i] = self.Clamps.traces[i].view(np.ndarray)
+            dbdictI["cmd_%-03d" % i] = self.Clamps.cmd_wave[i].view(np.ndarray)
+        dfV = pd.DataFrame(dbdictV)
+        dfI = pd.DataFrame(dbdictI)
+        with pd.ExcelWriter(export_filename) as writer:
+            dfV.to_excel(writer, sheet_name="Voltage")
+            dfI.to_excel(writer, sheet_name="Current")
+        dfV.to_csv(export_filename.replace(".xlsx", "_V.csv"))
+        dfI.to_csv(export_filename.replace(".xlsx", "_I.csv"))
+
+
         
+        
+
     def dbStoreClicked(self):
         """
         Store data into the current database for further analysis

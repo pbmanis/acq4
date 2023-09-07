@@ -116,6 +116,10 @@ def export_panel(pgitem, ax):
         x, y = item.getData()
         opts = item.opts
         pen = fn.mkPen(opts['pen'])
+        if 'brush' in opts.keys():
+            brush = fn.mkBrush(opts['brush'])
+        else:
+            brush = fn.mkBrush('w')
         if pen.style() == Qt.QtCore.Qt.PenStyle.NoPen:
             linestyle = ''
         else:
@@ -131,14 +135,21 @@ def export_panel(pgitem, ax):
             markeredgecolor = tuple([c/255. for c in fn.colorTuple(symbolPen.color())])
             markerfacecolor = tuple([c/255. for c in fn.colorTuple(symbolBrush.color())])
             markersize = opts['symbolSize']
+        else:
+            markeredgecolor = tuple([c/255. for c in fn.colorTuple(pen.color())])
+            markerfacecolor = tuple([c/255. for c in fn.colorTuple(brush.color())])    
+            markersize = opts['size']    
 
         if 'fillLevel' in opts.keys():
             if opts['fillLevel'] is not None and opts['fillBrush'] is not None:
                 fillBrush = fn.mkBrush(opts['fillBrush'])
                 fillcolor = tuple([c/255. for c in fn.colorTuple(fillBrush.color())])
                 ax.fill_between(x=x, y1=y, y2=opts['fillLevel'], facecolor=fillcolor)
+        print('x: ', x)
+        print('y: ', y)
 
-        pl = ax.plot(x, y, marker=symbol, color=color, linewidth=pen.width(),
+        if x is not None and y is not None:
+            pl = ax.plot(x, y, marker=symbol, color=color, linewidth=pen.width(),
                      linestyle=linestyle, markeredgecolor=markeredgecolor, markerfacecolor=markerfacecolor,
                      markersize=markersize)
         xr, yr = plitem.viewRange()
