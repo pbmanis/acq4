@@ -24,6 +24,7 @@ import itertools
 import functools
 import acq4.util.functions as functions
 import numpy as np
+import pandas as pd
 import scipy
 from acq4.util import Qt
 #from acq4.modules.Module import Module
@@ -1768,12 +1769,15 @@ class IVCurve(AnalysisModule):
         return ltxt
     
     def exportTraces(self):
-        import pandas as pd
+        options= Qt.QFileDialog.Option.DontUseNativeDialog # may be a bug in Qt6.5 with native dialog on windows
         export_filename = Qt.QFileDialog.getSaveFileName(
-                   None, 'Write to Excel file', '', 'Excel output filename (*.xlsx')[0]
+                   parent=None, caption="Write to Excel file", 
+                   directory="", initialFilter="Excel (*.xlsx)",
+                   options=options)[0]
+        print(f"export filename: {str(export_filename):s}")
         if export_filename == '':  # cancel returns empty string
             return None
-        print("export filename: ", export_filename)
+        print("exporting to  filename: ", export_filename)
         dbdictV = {"time": self.Clamps.time_base}
         dbdictI = {"time": self.Clamps.time_base}
         for i in range(len(self.Clamps.traces)):
