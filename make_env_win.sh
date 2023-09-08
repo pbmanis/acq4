@@ -11,7 +11,7 @@ then
 else
     echo "No previous environment - ok to proceed"
 fi
-
+# set up python
 #python3.11 -m venv $ENVNAME || exit 1
 py -m venv $ENVNAME || exit 1
 source $ENVNAME/Scripts/activate || exit 1
