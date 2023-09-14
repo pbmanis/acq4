@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>550</width>
-    <height>206</height>
+    <height>208</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -18,7 +18,7 @@
   </property>
   <property name="maximumSize">
    <size>
-    <width>550</width>
+    <width>600</width>
     <height>16777215</height>
    </size>
   </property>
@@ -33,7 +33,7 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="QFrame" name="frame_3">
+    <widget class="QFrame" name="AtlasFrame">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
        <horstretch>100</horstretch>
@@ -67,7 +67,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="groupBox_2">
+    <widget class="QGroupBox" name="ImageAdjBox">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
        <horstretch>10</horstretch>
@@ -76,7 +76,7 @@
      </property>
      <property name="maximumSize">
       <size>
-       <width>120</width>
+       <width>140</width>
        <height>16777215</height>
       </size>
      </property>
@@ -179,18 +179,21 @@
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="groupBox_3">
+    <widget class="QGroupBox" name="AnnotationBox">
      <property name="minimumSize">
       <size>
-       <width>130</width>
+       <width>140</width>
        <height>0</height>
       </size>
      </property>
      <property name="maximumSize">
       <size>
-       <width>16777215</width>
-       <height>200</height>
+       <width>150</width>
+       <height>16777215</height>
       </size>
+     </property>
+     <property name="autoFillBackground">
+      <bool>false</bool>
      </property>
      <property name="title">
       <string>Annotation Tools</string>
@@ -201,11 +204,17 @@
      <widget class="QPushButton" name="mosaicSelectVideos">
       <property name="geometry">
        <rect>
-        <x>0</x>
+        <x>10</x>
         <y>60</y>
-        <width>121</width>
+        <width>124</width>
         <height>32</height>
        </rect>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>140</width>
+        <height>16777215</height>
+       </size>
       </property>
       <property name="text">
        <string>Select/Deselect</string>
@@ -214,63 +223,150 @@
      <widget class="QPushButton" name="mosaicShowHide">
       <property name="geometry">
        <rect>
-        <x>0</x>
+        <x>10</x>
         <y>30</y>
         <width>121</width>
         <height>32</height>
        </rect>
       </property>
+      <property name="maximumSize">
+       <size>
+        <width>140</width>
+        <height>16777215</height>
+       </size>
+      </property>
       <property name="text">
        <string>Show/Hide</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="mosaicCreateCNMarkers">
+     <widget class="QPushButton" name="mosaicCreateMarkers">
       <property name="geometry">
        <rect>
-        <x>0</x>
-        <y>90</y>
-        <width>121</width>
+        <x>10</x>
+        <y>150</y>
+        <width>122</width>
         <height>32</height>
        </rect>
       </property>
-      <property name="text">
-       <string>Create CN Markers</string>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="mosaicCreateCortexMarkers">
-      <property name="geometry">
-       <rect>
-        <x>-1</x>
-        <y>120</y>
-        <width>121</width>
-        <height>32</height>
-       </rect>
+      <property name="maximumSize">
+       <size>
+        <width>140</width>
+        <height>16777215</height>
+       </size>
       </property>
       <property name="text">
-       <string>Create Cortex Markers</string>
+       <string>Create Markers</string>
       </property>
      </widget>
      <widget class="QPushButton" name="getSpotImage">
       <property name="geometry">
        <rect>
-        <x>0</x>
-        <y>150</y>
-        <width>121</width>
+        <x>10</x>
+        <y>90</y>
+        <width>123</width>
         <height>32</height>
        </rect>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>140</width>
+        <height>16777215</height>
+       </size>
       </property>
       <property name="text">
        <string>Get Spot Image</string>
       </property>
      </widget>
+     <widget class="QComboBox" name="MosaicMarkersCombo">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>120</y>
+        <width>140</width>
+        <height>32</height>
+       </rect>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>140</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <property name="currentText">
+       <string>Select Markers</string>
+      </property>
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <item>
+       <property name="text">
+        <string>Select Markers</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>DCN Transstrial</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>DCN Parasagittal</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>DCN Coronal</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>VCN Horizontal</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>VCN Parasagittal</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>VCN Coronal</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Cortex Coronal</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>Cortex Horizontal</string>
+       </property>
+      </item>
+     </widget>
     </widget>
    </item>
    <item>
-    <widget class="QGroupBox" name="groupBox">
+    <widget class="QGroupBox" name="TileOpBox">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>140</width>
+       <height>0</height>
+      </size>
+     </property>
      <property name="maximumSize">
       <size>
-       <width>16777215</width>
-       <height>150</height>
+       <width>150</width>
+       <height>167000</height>
       </size>
      </property>
      <property name="title">
@@ -280,7 +376,7 @@
       <set>Qt::AlignHCenter|Qt::AlignTop</set>
      </property>
      <property name="flat">
-      <bool>true</bool>
+      <bool>false</bool>
      </property>
      <property name="checkable">
       <bool>false</bool>

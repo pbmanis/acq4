@@ -22,6 +22,7 @@ from acq4.analysis.AnalysisModule import AnalysisModule
 from acq4.util import Qt
 import acq4.util.DataManager as DataManager
 import acq4.analysis.atlas as atlas
+import acq4.analysis.modules.MosaicEditor.markers as Markers
 from acq4.util.Canvas.Canvas import Canvas
 from acq4.util.Canvas import items
 from six.moves import range
@@ -167,11 +168,10 @@ class MosaicEditor(AnalysisModule):
         self.ui.mosaicFlipUDBtn.clicked.connect(self.flipUD)
         self.ui.globalParallel_checkBox.clicked.connect(self.setParallel)
         
-        self.ui.mosaicCreateCNMarkers.clicked.connect(self.createCNMarkers)
-        self.ui.mosaicCreateCortexMarkers.clicked.connect(self.createCortexMarkers)
+        self.ui.mosaicCreateMarkers.clicked.connect(self.createMarkers)
         self.ui.mosaicSelectVideos.clicked.connect(self.selectAllVideos)
         self.ui.mosaicShowHide.clicked.connect(self.showAllVideos)
-        # self.ui.getSpotImage.clicked.connect(self.get_laser_spots)
+        self.ui.getSpotImage.clicked.connect(self.get_laser_spots)
 
         self.imageMax = 0.0
 
@@ -238,8 +238,9 @@ class MosaicEditor(AnalysisModule):
             if f.shortName().endswith(".mosaic"):
                 self.loadStateFile(f.name())
                 continue
-            # if f.shortName().startswith("Map_"):
-            #     spotimage = self.get_laser_spots(mapdir = f)
+            if f.shortName().startswith("Map_"):
+                spotimage = self.get_laser_spots(mapdir = f)
+
 
             if f in self.files:  ## Do not allow loading the same file more than once
                 item = self.files[f]
@@ -334,11 +335,14 @@ class MosaicEditor(AnalysisModule):
         taken during the mapping experiment, and retuns that image
         """
         imagecount = 0
-        mappoints = list(Path(mapdir).glob("*"))
+
+        mappoints = list(Path(mapdir.name()).glob("*"))
         mappoints = [mp for mp in mappoints if mp.is_dir()]
+        print("map points: ", mappoints)
         useframe = 1
         for imagecount, mp in enumerate(mappoints):
             cameraframe = Path(mp, 'Camera', 'frames.ma')
+            print("reading: ", cameraframe)
             frame = MetaArray.MetaArray(file=str(cameraframe),  # read the camera frame
                                         readAll=True,  # read all data into memory
                                         verbose=False)
@@ -369,54 +373,29 @@ class MosaicEditor(AnalysisModule):
         # exit()
         return spotimage
 
-    def createCNMarkers(self):
+    def createMarkers(self):
         """createMarkers Instantiate a standard set of markers:
         including the Cell, surface, AN, and slice markers.
         """
-        markerItem = self.addItem(type="MarkersCanvasItem", name="CN Markers")
-        markerItem.params.setName("CN Markers")
-        # don't put all the markers in the same place - logical offsets (although,
-        # this might result in markers that assumed a particular orientation
-        markerdict = {
-            "surface": (100e-6, 0),
-            "medialborder": (-150e-6, 0),
-            "caudalborder": (-150e-6, -200e-6),
-            "rostralborder": (-150e-6, 250e-6),
-            "AN": (-80e-6, 50e-6),
-        }
-        for i, marker in enumerate(markerdict.keys()):
-            markerItem.addMarker(marker)  # adds marker centered on view
-            thismarker = markerItem.params.child(marker)
-            pos = thismarker.target.param().target.pos()
-            thismarker.target.param().target.setPos(
-                pos.x() + markerdict[marker][0], pos.y() + markerdict[marker][1]
-            )
-
-    def createCortexMarkers(self):
-        """createMarkers Instantiate a standard set of markers:
-        including the Cell, surface, and various boundaries that might be of interest.
-        """
-        markerItem = self.addItem(type="MarkersCanvasItem", name="Cortex Markers")
-        markerItem.params.setName = "Cortex Markers"
+    
+        # get the type of marker items to create
+        markerType = self.ui.MosaicMarkersCombo.currentText()
+        if markerType not in Markers.definedMarkers.keys():
+            raise ValueError("Marker type not defined: ", markerType)
         
+        markerItem = self.addItem(type="MarkersCanvasItem", name=markerType)
+        markerItem.params.setName(markerType)
         # don't put all the markers in the same place - logical offsets (although,
         # this might result in markers that assumed a particular orientation
-        markerdict = {
-            "surface": (1000e-6, 0),
-            "medialborder": (-150e-6, 0),
-            "lateralborder": (150e-6, 0),
-            "caudalborder": (-150e-6, -200e-6),
-            "rostralborder": (-150e-6, 200e-6),
-            "dorsalborder": (0, 200e-6),
-            "ventralborder": (0, -200e-6),
-        }
+        markerdict =Markers.definedMarkers[markerType]
         for i, marker in enumerate(markerdict.keys()):
             markerItem.addMarker(marker)  # adds marker centered on view
             thismarker = markerItem.params.child(marker)
             pos = thismarker.target.param().target.pos()
             thismarker.target.param().target.setPos(
-                pos.x() + markerdict[marker][0], pos.y() + markerdict[marker][1]
+                pos.x() + markerdict[marker][1], pos.y() + markerdict[marker][2]
             )
+        
 
     def selectAllVideos(self):
         """select or deselect all of the videos in the canvas.
@@ -492,7 +471,7 @@ class MosaicEditor(AnalysisModule):
                 for i, currentItem in enumerate(self.canvas.selectedItems()):
                     if not hasattr(currentItem, "data"):
                         continue
-                    if currentItem.data.ndim == 3:
+                    if currentItem.data.ndim == 3 and currentItem.name.startswith("video_"):
                         print("   operating on : ", currentItem.name)
                         currentItem.filter.filterBtnClicked(True)
                     else:
