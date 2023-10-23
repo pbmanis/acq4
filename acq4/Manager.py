@@ -149,8 +149,8 @@ class Manager(Qt.QObject):
                     self.disableDevs.append(a)
                 elif o in ['-D', '--disable-all']:
                     self.disableAllDevs = True
-                elif o in ['-e', '--env']:
-                    self.list_environment_paths()
+                # elif o in ['-e', '--env']:
+                #     self.list_environment_paths()
                 elif o == "--exit-on-error":
                     self.exitOnError = True
                 else:
