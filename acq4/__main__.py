@@ -46,6 +46,20 @@ from .util import Qt
 # Import pyqtgraph, get QApplication instance
 import pyqtgraph as pg
 
+def list_environment_paths():
+    from pathlib import Path
+    import numpy as np
+    print("\n    Environment Paths: ")
+    executable = Path(sys.executable).resolve()
+    print(f"    {'python : ':>24s}", sys.version_info)
+    print(f"        {'env: ':>24s}", str(executable))
+    print(f"    {'pyqtgraph : ':>24s}", pg.__version__)
+    print(f"        {'env: ':>24s}", pg.__file__)
+    print(f"    {'numpy : ':>24s}", np.__version__)
+    print(f"        {'env: ':>24s}", np.__file__)
+
+list_environment_paths()
+
 app = pg.mkQApp()
 
 ## Install a simple message handler for Qt errors:

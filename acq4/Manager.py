@@ -97,9 +97,9 @@ class Manager(Qt.QObject):
             if argv is not None:
                 try:
                     opts, args = getopt.getopt(
-                        argv, 'c:a:x:m:b:s:d:nD',
+                        argv, 'c:a:x:m:b:s:d:n:e:D',
                         ['config=', 'config-name=', 'module=', 'base-dir=', 'storage-dir=',
-                         'disable=', 'no-manager', 'disable-all', 'exit-on-error'])
+                         'disable=', 'no-manager', 'env', 'disable-all', 'exit-on-error'])
                 except getopt.GetoptError as err:
                     print(str(err))
                     print("""
@@ -111,6 +111,7 @@ class Manager(Qt.QObject):
         -b --base-dir=     Base directory to use
         -s --storage-dir=  Storage directory to use
         -n --no-manager    Do not load manager module
+        -e --env           Print environment information and quit
         -d --disable=      Disable the device specified
         -D --disable-all   Disable all devices
     """)
@@ -148,6 +149,8 @@ class Manager(Qt.QObject):
                     self.disableDevs.append(a)
                 elif o in ['-D', '--disable-all']:
                     self.disableAllDevs = True
+                elif o in ['-e', '--env']:
+                    self.list_environment_paths()
                 elif o == "--exit-on-error":
                     self.exitOnError = True
                 else:
@@ -161,6 +164,7 @@ class Manager(Qt.QObject):
             self.readConfig(configFile)
 
             logMsg('ACQ4 version %s started.' % __version__, importance=9)
+            self.list_environment_paths()
 
             ## Act on options if they were specified..
             try:
@@ -389,6 +393,16 @@ class Manager(Qt.QObject):
                 printExc("Error in ACQ4 configuration:")
                 if self.exitOnError:
                     raise
+
+    def list_environment_paths(self):
+        from pathlib import Path
+        executable = Path(sys.executable).resolve()
+        print("python: ", sys.version_info)
+        print("   env: ", str(executable))
+        import pyqtgraph
+        print("pyqtgraph: ", pyqtgraph.__version__)
+        print("   env: ", pyqtgraph.__file__)
+
 
     def listConfigurations(self):
         """Return a list of the named configurations available"""
