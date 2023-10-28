@@ -156,18 +156,24 @@ class MosaicEditor(AnalysisModule):
         self.canvas.sigItemTransformChangeFinished.connect(self.itemMoved)
         self.ui.atlasCombo.currentIndexChanged.connect(self.atlasComboChanged)
 
+        # Group Operations:
         self.ui.normalizeBtn.clicked.connect(self.normalizeImages)
         self.ui.blendBtn.clicked.connect(self.blendImages)
         self.ui.MaxImageProjectionBtn.clicked.connect(self.MIP_Images)
         self.ui.MaxImageProjectionGaussianBtn.clicked.connect(self.MIP_Images)
         self.ui.MaxImageProjectionMedianBtn.clicked.connect(self.MIP_Images)
-
+        self.ui.checkSelectedBtn.clicked.connect(self.checkSelected)
+        self.ui.uncheckSelectedBtn.clicked.connect(self.uncheckSelected)
+        self.ui.globalParallel_checkBox.clicked.connect(self.setParallel)
+ 
+        # Tile Operation:
         self.ui.tileShadingBtn.clicked.connect(self.tileShadeImages)
         self.ui.mosaicApplyScaleBtn.clicked.connect(self.updateScaling)
+        self.ui.mosaicResetScaleBtn.clicked.connect(self.resetScaling)
         self.ui.mosaicFlipLRBtn.clicked.connect(self.flipLR)
         self.ui.mosaicFlipUDBtn.clicked.connect(self.flipUD)
-        self.ui.globalParallel_checkBox.clicked.connect(self.setParallel)
         
+        # Annotation Tools:
         self.ui.mosaicCreateMarkers.clicked.connect(self.createMarkers)
         self.ui.mosaicSelectVideos.clicked.connect(self.selectAllVideos)
         self.ui.mosaicShowHide.clicked.connect(self.showAllVideos)
@@ -281,6 +287,22 @@ class MosaicEditor(AnalysisModule):
         The new item will inherit the user transform from the previous item
         (chronologically) if it does not already have a user transform specified.
         """
+        print(f.isFile(), f.isDir())
+        if f.isFile():
+            return self.addOneFile(f, name=name, inheritTransform=inheritTransform)
+        elif f.isDir():
+            allfiles = f.ls()
+                                      # get all the tif files in the directory
+            for fi in allfiles:
+                fh = DataManager.getDirHandle(Path(f.name(), fi))
+                if fh.ext() == ".tif":
+                    name = str(Path(fh.parent().shortName(), fh.shortName()))
+                    print("name: ", name)
+                    self.addOneFile(fh, name=name, inheritTransform=inheritTransform)
+        else:
+            raise ValueError("Cannot load file (not file or dir?) ", f)
+    
+    def addOneFile(self, f, name=None, inheritTransform=True):
         item = self.canvas.addFile(f, name=name)
 
         self.canvas.selectItem(item)
@@ -326,7 +348,36 @@ class MosaicEditor(AnalysisModule):
         if isinstance(item, Qt.QGraphicsItem):
             return self.canvas.addGraphicsItem(item, **kwds)
         else:
+            print("item type: ", type)
             return self.canvas.addItem(item, type, **kwds)
+
+    def checkSelected(self):
+        w = self.canvas.ui.canvasCtrlWidget.children()
+        tw = None
+        for c in w:  # look for the tree widget
+            if isinstance(c, pg.widgets.TreeWidget.TreeWidget):
+                tw = c
+        if tw is None:  # hmm. not there.
+            return
+        allItems = tw.listAllItems()
+        for item in allItems:
+            if item.isSelected():  # selected by name
+                item.setCheckState(0, Qt.QtCore.Qt.CheckState.Checked)
+
+    
+    def uncheckSelected(self):
+        w = self.canvas.ui.canvasCtrlWidget.children()
+        tw = None
+        for c in w:  # look for the tree widget
+            if isinstance(c, pg.widgets.TreeWidget.TreeWidget):
+                tw = c
+        if tw is None:  # hmm. not there.
+            return
+        allItems = tw.listAllItems()
+        for item in allItems:
+            if item.isSelected():  # selected by name
+                item.setCheckState(0, Qt.QtCore.Qt.CheckState.Unchecked)
+   
 
     def get_laser_spots(self, mapdir:Union[Path, str]):
         """get_laser_spots from the selected map directory camera images,
@@ -564,7 +615,7 @@ class MosaicEditor(AnalysisModule):
         m = np.argmax(hm[0])  # returns the index of the max count
 
         # now rescale each image/stack individually
-        # rescaling is done against the global histogram, in an attemptto keep the gain constant.
+        # rescaling is done against the global histogram, in an attempt to keep the gain constant.
         self.imageMax = 0
         for i in range(nsel):
             d = np.array(self.canvas.selectedItems()[i].data)
@@ -625,6 +676,22 @@ class MosaicEditor(AnalysisModule):
             thisimage.setLevels([min_image, max_image])
 
         self.canvas.autoRange()
+
+    def resetScaling(self):
+        """
+        Set all the selected images to have the original scaling (just min/max)
+        """
+        print("resetScaling")
+        nsel = len(self.canvas.selectedItems())
+        if nsel == 0:
+            return
+        for i in range(nsel):
+            thisimage = self.canvas.selectedItems()[i].graphicsItem()
+            minval = np.min(self.canvas.selectedItems()[i].data)
+            maxval = np.max(self.canvas.selectedItems()[i].data)
+            thisimage.setLevels(
+                [minval, maxval]
+            )
 
     def updateScaling(self):
         """

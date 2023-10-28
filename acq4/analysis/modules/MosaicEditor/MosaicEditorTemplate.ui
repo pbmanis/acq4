@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>550</width>
-    <height>208</height>
+    <height>248</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -152,6 +152,20 @@
         </property>
         <property name="text">
          <string>Max w/Median</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="checkSelectedBtn">
+        <property name="text">
+         <string>Check Selected</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="uncheckSelectedBtn">
+        <property name="text">
+         <string>Uncheck Selected</string>
         </property>
        </widget>
       </item>
@@ -456,6 +470,13 @@
         </property>
         <property name="singleStep">
          <double>0.250000000000000</double>
+        </property>
+       </widget>
+      </item>
+      <item row="6" column="0" colspan="2">
+       <widget class="QPushButton" name="mosaicResetScaleBtn">
+        <property name="text">
+         <string>Reset Scale</string>
         </property>
        </widget>
       </item>

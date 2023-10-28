@@ -12,7 +12,6 @@ class Canvas(OrigCanvas):
         
         maxScore = 0
         bestType = None
-        
         ## Of all available types, find the one that claims to have the best support for this file type
         for t in types:
             if not hasattr(t, 'checkFile'):
