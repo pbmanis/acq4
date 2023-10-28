@@ -300,7 +300,7 @@ class TaskRunner(Module):
             if rep == 0:
                 params = {}
             else:
-                params = {'repetitions': range(int(rep))}
+                params = {'repetitions': [int(r) for r in range(int(rep))]}
         elif dev not in self.currentTask.enabledDevices():
             return
         else:
@@ -487,6 +487,9 @@ class TaskRunner(Module):
             # print "Docks cleared."
 
             ## Update task parameters
+            # ensure that repetitions is an integer
+            if 'repetitions' in prot.conf['conf']:
+                prot.conf['conf']['repetitions'] = int(prot.conf['conf']['repetitions'])
             self.protoStateGroup.setState(prot.conf['conf'])
             prof.mark('set state')
 
