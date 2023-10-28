@@ -197,17 +197,17 @@ if __name__ == '__main__':
     import pyqtgraph as pg
     from acq4.util import Qt
     app = Qt.QApplication([])
-    win = pg.GraphicsWindow()
+    win = pg.GraphicsLayoutWidget()
     win.resize(1000,600)
     win.setWindowTitle('Testing hhSim.py')
-    p = win.addPlot(title='vc')
-    npts = 10000.
-    x1 = 2000.
-    x2 = 7000.
-    x = np.arange(-100, 41, 50)
+    p = win.addPlot(title='cc')
+    npts = 10000
+    x1 = 2000
+    x2 = 7000
+    x = np.arange(-100, 101, 50)
     cmd = np.ones((len(x), npts))*-65.0*1e-3
     data = np.zeros((len(x), npts))
-    dt = 1e-4
+    dt = 20e-5
     tb = np.arange(0, npts*dt, dt)
     for i, v in enumerate(x):
         print('V: ', v)
@@ -219,5 +219,5 @@ if __name__ == '__main__':
         }
         data[i,:] = run(opts)
         p.plot(tb, data[i])
-
-    Qt.QApplication.instance().exec_()
+    win.show()
+    Qt.QApplication.instance().exec()

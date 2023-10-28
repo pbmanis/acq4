@@ -123,10 +123,11 @@ class RecursiveMutex(Qt.QtCore.QRecursiveMutex):
     Also provides __enter__ and __exit__ methods for use in "with" statements.
     """    
     def __init__(self, *args, **kargs):
-        if kargs.get('recursive', False):
-            args = (QtCore.QRecursiveMutex,)
+        # if kargs.get('recursive', False):
+        #     # args = (Qt.QtCore.QRecursiveMutex,)
+        #     raise ValueError("Mutex.py: Call eMutex instead")
         Qt.QtCore.QRecursiveMutex.__init__(self, *args)
-        self.l =Qt.QtCore.QRecursiveMutex()  ## for serializing access to self.tb
+        self.l = Qt.QtCore.QRecursiveMutex()  ## for serializing access to self.tb
         self.tb = []
         self.debug = kargs.pop('debug', False) ## True to enable debugging functions
 

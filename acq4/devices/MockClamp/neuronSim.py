@@ -3,22 +3,40 @@ from __future__ import print_function
 Use NEURON to simulate a simple cell for testing with MockClamp
 """
 import numpy as np
+from pathlib import Path
 import sys, os
-
+import platform
 # Try standard locations to find neuron library
-for nrnpath in ['/usr/local/nrn/lib/python']:
-    if os.path.isdir(nrnpath):
-        sys.path.append(nrnpath)
-from .neuron import h
-from . import neuron
 
+print(platform.system)
 # try to load extra mechanisms
-for name in ('i386', 'x86_64'):
-    mechlib = os.path.join(os.path.dirname(__file__), name + '/.libs/libnrnmech.so')
-    print("NEURON load:", mechlib)
-    if os.path.isfile(mechlib):
-        h.nrn_load_dll(mechlib)
+# if platform.system == 'Linux':
+#     for nrnpath in ['/usr/local/nrn/lib/python']:
+#     if os.path.isdir(nrnpath):
+#         sys.path.append(nrnpath)
+#     from .neuron import h
+#     from . import neuron
+#     for name in ('i386', 'x86_64'):
+#         mechlib = os.path.join(os.path.dirname(__file__), name + '/.libs/libnrnmech.so')
+#         print("NEURON load (Linux):", mechlib)
+#         if os.path.isfile(mechlib):
+#             h.nrn_load_dll(mechlib)
 
+# elif platform.system == 'Darwin':
+#     from neuron import h
+#     import neuron
+
+#     for name in ('arm64', 'x86_64'):
+#         meclab = os.path.join(os.path.dirname(__file__), name + '/.libs/libnrnmech.dylib')
+#         print("NEURON load (arm64):", mechlib)
+#         if os.path.isfile(mechlib):
+#             h.nrn_load_dll(mechlib)
+# else:
+#     raise Exception("Unsupported platform: %s" % platform.system)
+
+from neuron import h
+import neuron
+from neuron.units import ms, mV
 
 h.celsius = 22
 
@@ -55,7 +73,7 @@ syn = h.AlphaSynapse(soma(0.5))
 t = 0
     
 def run(cmd):
-    global h, t, soma, ic, vc, syn, icRec, vcRec, vcrs
+    global t, soma, ic, vc, syn, icRec, vcRec, vcrs
     icRec.clear()
     vcRec.clear()
     
@@ -71,7 +89,7 @@ def run(cmd):
         #ic.delay = h.t
         ic.delay = 0
         vc.rs = 1e9
-        im = h.Vector(data * 1e9)
+        im = h.Vector(data)
         im.play(ic._ref_amp, dt)
 
     elif mode == 'vc':
@@ -79,7 +97,7 @@ def run(cmd):
         vc.rs = vcrs
         ic.delay = 1e9
         #vc.dur1 = h.t
-        vm = h.Vector(data * 1e3)
+        vm = h.Vector(data)
         vm.play(vc._ref_amp1, dt)
 
         syn.onset = 400. #ms
@@ -89,15 +107,16 @@ def run(cmd):
         #syn.i --- nA
         
     else:
-        sys.stderr.write("Unknown mode '%s'" % sys.argv[1])
-        raise Exception("Unknown mode '%s'" % sys.argv[1])
+        sys.stderr.write("Unknown mode '%s'" % cmd['mode'])
+        raise Exception("Unknown mode '%s'" % cmd['mode'])
 
     #t2 = t + dt * (len(data)+2)
     #print "run until:", t2
-    neuron.init()
-    h.finitialize(-65.)
+
+
+    h.finitialize(-65. * mV)
     tstop = (dt*len(data)+2)
-    neuron.run(tstop) #dt * (len(data)+2))
+    neuron.run(tstop * ms) #dt * (len(data)+2))
     #neuron.run(t2)
     #t = t2
 
@@ -105,9 +124,9 @@ def run(cmd):
     #out = np.array(out)[:len(data)]
 
     if mode == 'ic':
-        out = np.array(icRec)[:len(data)] * 1e-3 + np.random.normal(size=len(data), scale=0.3e-3)
+        out = np.array(icRec)[:len(data)] * 1e-3 #  + np.random.normal(size=len(data), scale=0.3e-3)
     elif mode == 'vc':
-        out = np.array(vcRec)[:len(data)] * 1e-9 + np.random.normal(size=len(data), scale=3.e-12)
+        out = np.array(vcRec)[:len(data)] * 1e-9 #  + np.random.normal(size=len(data), scale=3.e-12)
     return out
 
 
@@ -118,28 +137,33 @@ if __name__ == '__main__':
     import pyqtgraph as pg
     from acq4.util import Qt
     app = Qt.QApplication([])
-    win = pg.GraphicsWindow()
+    win = pg.GraphicsLayoutWidget()
+    mode = sys.argv[1].lower()
     win.resize(1000,600)
     win.setWindowTitle('Testing hhSim.py')
-    p = win.addPlot(title='VC')
-    npts = 10000.
-    x1 = 2000.
-    x2 = 7000.
-    x = np.arange(-100, 41, 10)
-    cmd = np.ones((len(x), npts))*-65.0*1e-3
+    p = win.addPlot(title=mode)
+    npts = 10000
+    x1 = 2000
+    x2 = 7000
+    if mode == 'vc':
+        x = np.arange(-100, 41, 10)*1e-3 # clamp v in V
+        cmd = np.ones((len(x), npts))*-65.0*1e-3
+    elif mode == 'ic':
+        x = np.arange(-1000, 1000, 200)*1e-3 # in A
+        cmd = np.zeros((len(x), npts))
     data = np.zeros((len(x), npts))
     dt = 1e-4
     tb = np.arange(0, npts*dt, dt)
     for i, v in enumerate(x):
         print('V: ', v)
-        cmd[i, x1:x2] = v*1e-3
+        cmd[i, x1:x2] = v
         opts = {
-            'mode': 'vc',
+            'mode': mode.lower(),
             'dt': dt,
             'data': cmd[i,:]
         }
         data[i,:] = run(opts)
         p.plot(tb, data[i])
-
-    Qt.QApplication.instance().exec_()
+    win.show()
+    Qt.QApplication.instance().exec()
     

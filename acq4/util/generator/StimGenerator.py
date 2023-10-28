@@ -38,7 +38,7 @@ class StimGenerator(Qt.QWidget):
         self.offset = 0.0
         self.ui = Ui_Form()
         self.ui.setupUi(self)
-        self.ui.functionText.setFontFamily('Courier')
+        self.ui.functionText.setFontFamily('Arial')
         self.ui.errorText.setVisible(False)
         
         self.advancedMode = None  ## if True, then the current state was generated in advanced

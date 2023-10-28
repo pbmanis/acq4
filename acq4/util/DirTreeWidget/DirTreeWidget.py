@@ -293,7 +293,7 @@ class DirTreeWidget(Qt.QTreeWidget):
         item = self.item(handle)
         Qt.QTreeWidget.editItem(self, item, 0)
 
-    def rebuildTree(self, root=None, useCache=True):
+    def rebuildTree(self, root=None, useCache=False):
         """Completely clear and rebuild the entire tree starting at root"""
         if root is None:
             root = self.invisibleRootItem()
