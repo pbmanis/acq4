@@ -132,11 +132,11 @@ class InterfaceDirectory(Qt.QObject):
                 ints[t] = list(self.typeList.get(t, {}).keys())
             return ints
             
-    def getInterface(self, type, name):
+    def getInterface(self, typeobj, name):
         """Return the object that was previously declared with *name* and interface *type*.
         """
         with self.lock:
-            return self.typeList[type][name]
+            return self.typeList[typeobj][name]
 
 
 
