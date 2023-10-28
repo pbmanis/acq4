@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 import time
+import numpy as np
 from acq4.util import Qt
 from ..Stage import Stage, MoveFuture
 from acq4.drivers.SutterMPC200 import SutterMPC200 as MPC200_Driver
@@ -41,6 +42,7 @@ class SutterMPC200(Stage):
         self.port = config.pop('port')
         self.drive = config.pop('drive')
         self.scale = config.pop('scale', (1, 1, 1))
+        config.setdefault("isManipulator", False)
         if self._drives[self.drive-1] is not None:
             raise RuntimeError("Already created MPC200 device for drive %d!" % self.drive)
         self._drives[self.drive-1] = self
@@ -51,7 +53,7 @@ class SutterMPC200(Stage):
         self._lastMove = None
 
         Stage.__init__(self, man, config, name)
-
+        self._lastPos = None
         # clear cached position for this device and re-read to generate an initial position update
         self._pos_cache[self.drive-1] = None
         self.getPosition(refresh=True)
@@ -66,17 +68,17 @@ class SutterMPC200(Stage):
         if 'axes' in self.config:
             return self.config['axes']
         else:
-            return ('x', 'y')
+            return ('x', 'y', 'z')
 
     def capabilities(self):
-        """Return a structure describing the capabilities of this device"""
+        """Return a structure describing the capabilities of this device """
         if 'capabilities' in self.config:
             return self.config['capabilities']
         else:
             return {
                 'getPos': (True, True, True),
                 'setPos': (True, True, True),
-                'limits': (False, False, False),
+                'limits': (True, True, True),
             }
 
     def stop(self):
@@ -112,9 +114,23 @@ class SutterMPC200(Stage):
 
     def _getPosition(self):
         # Called by superclass when user requests position refresh
-        drive, pos = self.dev.getPos(drive=self.drive)
-        self._checkPositionChange(drive, pos) # might as well check while we're here..
-        pos = [pos[i] * self.scale[i] for i in (0, 1, 2)]
+        with self.lock:
+            drive, pos = self.dev.getPos(drive=self.drive)
+            self._checkPositionChange(drive, pos) # might as well check while we're here.
+            self._lastUpdate = ptime.time()
+            if self._lastPos is not None:
+                dif = np.linalg.norm(np.array(pos, dtype=float) - np.array(self._lastPos, dtype=float))
+
+            # do not report changes < 100 nm
+            if self._lastPos is None or dif > 0.1:
+                self._lastPos = pos
+                emit = True
+            else:
+                emit = False
+
+            pos = [pos[i] * self.scale[i] for i in (0, 1, 2)]
+        if emit:
+            self.posChanged(pos)
         return pos
 
     def targetPosition(self):
@@ -128,10 +144,7 @@ class SutterMPC200(Stage):
         # self._monitor.stop()  # this was never set to anything but None
         Stage.quit(self)
 
-    def _move(self, abs, rel, speed, linear):
-        # convert relative to absolute position, fill in Nones with current position.
-        pos = self._toAbsolutePosition(abs, rel)
-
+    def _move(self, pos, speed, linear):
         # convert speed to values accepted by MPC200
         if speed == 'slow':
             speed = self.slowSpeed
@@ -158,7 +171,7 @@ class SutterMPC200(Stage):
             if minDiff is None or diff < minDiff:
                 minDiff = diff
                 bestKey = k
-
+        print("suttermpc200.py: getClosestSpeed Sutter: ", bestKey, v)
         return bestKey
 
 

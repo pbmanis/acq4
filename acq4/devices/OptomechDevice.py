@@ -402,6 +402,12 @@ class OptomechDevice(InterfaceMixin):
             return dev.inverseDeviceTransform() * tr 
     
     def setDeviceTransform(self, tr):
+        if isinstance(tr, dict):
+            allowed = {"pos", "scale", "angle", "axis"}  # was {"pos"... }
+            if len(set(tr.keys()) - allowed) > 0:
+                print(allowed)
+                print(tr.keys())
+                raise ValueError(f"Illegal args while creating a transform ({tr})")
         with self.__lock:
             self.__transform = pg.SRTTransform3D(tr)
             self.invalidateCachedTransforms()

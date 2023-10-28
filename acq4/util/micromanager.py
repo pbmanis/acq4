@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
+import glob
 import os
 import sys
 
@@ -8,12 +9,11 @@ import sys
 _mmc = None
 
 # default location to search for micromanager
-# microManagerPath = 'C:\\Program Files\\Micro-Manager-1.4'
-microManagerPath = "C:\\Program Files\\Micro-Manager-2.0gamma"
+microManagerPaths = glob.glob("C:\\Program Files\Micro-Manager*")
 
 
 class MMCWrapper:
-    """Wraps MMCorePy to raise more helpfule exceptions
+    """Wraps MMCorePy to raise more helpful exceptions
     """
 
     def __init__(self, mmc):
@@ -32,7 +32,11 @@ class MMCWrapper:
             try:
                 return attr(*args, **kwds)
             except RuntimeError as exc:
-                raise RuntimeError(exc.args[0].getFullMsg() + " (calling mmc.%s)" % name)
+                if exc.args and hasattr(exc.args[0], 'getFullMsg'):
+                    msg = exc.args[0].getFullMsg()
+                else:
+                    msg = exc
+                raise RuntimeError(f"{msg} (calling mmc.{name} with args {args} {kwds})")
 
         fn.__name__ = name + "_wrapped"
         self.__wrapper_cache[name] = fn
@@ -45,12 +49,17 @@ def getMMCorePy(path=None):
     global _mmc
     if _mmc is None:
         if path is None:
-            path = microManagerPath
+            paths = microManagerPaths
+        else:
+            paths = [path]
+
         try:
             import pymmcore
 
             _mmc = MMCWrapper(pymmcore.CMMCore())
-            _mmc.setDeviceAdapterSearchPaths([path])
+            _mmc.setDeviceAdapterSearchPaths(paths)
+            sys.path.extend(paths)
+            os.environ["PATH"] = os.environ["PATH"] + ";" + ';'.join(paths)
         except ImportError:
 
             try:
@@ -59,7 +68,7 @@ def getMMCorePy(path=None):
                 if sys.platform != "win32":
                     raise
                 # MM does not install itself to standard path. User should take care of this,
-                # but we can make a guess..
+                # but we can make a guess...
                 sys.path.append(path)
                 os.environ["PATH"] = os.environ["PATH"] + ";" + path
                 try:

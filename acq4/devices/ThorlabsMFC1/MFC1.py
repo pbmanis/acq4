@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+import numpy as np
 from acq4.util import Qt
 from ..Stage import Stage, StageInterface, MoveFuture
 from acq4.drivers.ThorlabsMFC1 import MFC1 as MFC1_Driver
@@ -18,8 +19,11 @@ class ThorlabsMFC1(Stage):
 
     def __init__(self, man, config, name):
         self.port = config.pop('port')
-        self.scale = config.pop('scale', (1, 1, 1))
+        self.scale = config.pop('scale', (1,1,1))
         params = config.pop('motorParams', {})
+        # Optionally read limits from config
+        lims = config.pop('limits', (None, None, None))
+        self.setLimits(z=lims["z"]) 
         self.dev = MFC1_Driver(self.port, **params)
         man.sigAbortAll.connect(self.dev.stop)
 
@@ -37,7 +41,7 @@ class ThorlabsMFC1(Stage):
         self._lastPos = None
 
         Stage.__init__(self, man, config, name)
-
+     
         self.getPosition(refresh=True)
 
         # Optionally read limits from config
@@ -46,7 +50,11 @@ class ThorlabsMFC1(Stage):
 
         self._monitor = MonitorThread(self)
         self._monitor.start()
-        
+
+    def axes(self):
+        # device only has axes 'z', but must have all 3 re capabilities
+        return ('x', 'y', 'z')
+    
     def capabilities(self):
         # device only reads/writes z-axis
         return {
@@ -55,26 +63,38 @@ class ThorlabsMFC1(Stage):
             'limits': (False, False, True),
         }
 
+    def _setHardwareLimits(self, axis:int, limit:tuple):
+        if axis != 2:
+            raise ValueError("Thorlabs MFC1: Can only set z limits")
+        self._limits = (None, None, limit)
+
     def mfcPosChanged(self, pos, oldpos):
         self.posChanged(pos)
 
     def _getPosition(self):
         pos = self.dev.position() * self.scale[2]
-        if pos != self._lastPos:
-            oldpos = self._lastPos
-            self._lastPos = pos
+      
+        if isinstance(self._lastPos[2], list):
+            lp = self._lastPos[2][0]
+        else:
+            lp = self._lastPos[2]
+        if pos != lp:
+        #    oldpos = self._lastPos
+            self._lastPos[2] = pos
             self.posChanged([0, 0, pos])
         return [0, 0, pos]
 
-    def _move(self, abs, rel, speed, linear):
-        # convert relative to absolute position, fill in Nones with current position.
-        pos = self._toAbsolutePosition(abs, rel)
+    def _move(self, pos, speed, linear=None):
+        pos = self._toAbsolutePosition(pos)
+        pos = [0, 0, pos]
         limits = self.getLimits()[2]
+    
         if limits[0] is not None:
             pos[2] = max(pos[2], limits[0])
         if limits[1] is not None:
             pos[2] = min(pos[2], limits[1])
-        return MFC1MoveFuture(self, pos, speed)
+        return MFC1MoveFuture(self, pos[2], speed)
+
 
     def targetPosition(self):
         return [0, 0, self.dev.target_position() * self.scale[2]]
@@ -91,10 +111,11 @@ class ThorlabsMFC1(Stage):
                 self._roeEnabled = True
             return
         dz = pos[2] - oldpos[2]
-        if dz == 0:
+        if np.abs(dz) <= 1e-7: # == 0:
             return
-        target = self.dev.target_position() * self.scale[2] + dz
-        self.moveTo([0, 0, target], 'fast')
+        target = (self.dev.target_position() * self.scale[2]) + dz
+        # self.moveTo([0, 0, target], 'fast')  # moveTo does not exist
+        self._move([0, 0, target], 'fast')
 
     def deviceInterface(self, win):
         return MFC1StageInterface(self, win)
@@ -120,7 +141,7 @@ class MonitorThread(Thread):
         self.dev = dev
         self.lock = Mutex(recursive=True)
         self.stopped = False
-        self.interval = 0.3
+        self.interval = 0.1 ### was 0.3
         Thread.__init__(self)
 
     def start(self):
@@ -163,14 +184,16 @@ class MFC1StageInterface(StageInterface):
     def __init__(self, dev, win):
         StageInterface.__init__(self, dev, win)
         if dev._roeDev is not None:
+            self.btnLayout.setContentsMargins(0, 0, 0, 0)
             self.connectRoeBtn = Qt.QPushButton('Enable ROE')
             self.connectRoeBtn.setCheckable(True)
             self.connectRoeBtn.setChecked(True)
-            self.layout.addWidget(self.connectRoeBtn, self.nextRow, 0, 1, 2)
+            row = self.layout.rowCount()
+            self.layout.addWidget(self.connectRoeBtn, row, 0, 1, 1) # self.nextRow, 0, 1, 2)
             self.connectRoeBtn.toggled.connect(self.connectRoeToggled)
 
             self.setZeroBtn = Qt.QPushButton('Set Zero')
-            self.layout.addWidget(self.setZeroBtn, self.nextRow, 2, 1, 1)
+            self.layout.addWidget(self.setZeroBtn, row, 1, 1, 1)
             self.setZeroBtn.clicked.connect(self.setZeroClicked)
 
     def setZeroClicked(self):

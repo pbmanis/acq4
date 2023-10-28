@@ -124,7 +124,7 @@ class TaskRunner(Module):
             try:
                 taskDir = config['taskDir']
             except KeyError:
-                taskDir = self.manager.config['protocolDir']  # for backward compatibility
+                taskDir = os.path.join(self.manager.configDir, "protocols")
             self.taskList = Loader(self, taskDir)
         except KeyError:
             raise HelpfulException("Config is missing 'taskDir'; cannot load task list.")
@@ -599,7 +599,7 @@ class TaskRunner(Module):
     def testSequence(self):
         return self.runSequence(store=False)
 
-    def runSequence(self, store=True, storeDirHandle=None):
+    def runSequence(self, store=True, storeDirHandle=None, collectResults:bool=False):
         """Start a sequence task run.
 
         Return a TaskFuture instance that can be used to monitor progress and results.
@@ -657,7 +657,7 @@ class TaskRunner(Module):
             self.sigTaskSequenceStarted.emit({})
             logMsg('Started %s task sequence of length %i' % (self.currentTask.name(), pLen), importance=6)
             # print 'PR task positions:
-            future = self.taskThread.startTask(prot, paramInds)
+            future = self.taskThread.startTask(prot, paramInds, collectResults=collectResults)
 
         except:
             self.setStartBtnsEnable(True)
@@ -971,7 +971,7 @@ class TaskThread(Thread):
         self._currentFuture = None
         self._systrace = None
 
-    def startTask(self, task, paramSpace=None):
+    def startTask(self, task, paramSpace=None, collectResults:bool=False):
         with self.lock:
             self._systrace = sys.gettrace()
             while self.isRunning():
@@ -983,7 +983,7 @@ class TaskThread(Thread):
                 for param, inds in paramSpace.items():
                     paramSize *= len(inds)
 
-            self._currentFuture = TaskFuture(self, task, paramSize)
+            self._currentFuture = TaskFuture(self, task, paramSize, collectResults=collectResults)
             self.paramSpace = paramSpace
             self.lastRunTime = None
             self.start()  ### causes self.run() to be called from new thread
@@ -1186,7 +1186,7 @@ class TaskFuture(Future):
         Future.__init__(self)
 
     def percentDone(self):
-        return self._taskCount / self._nTasks
+        return 100.*(self._taskCount / self._nTasks)
 
     def stop(self):
         self._taskThread.stop(task=self._task)

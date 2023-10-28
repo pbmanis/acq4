@@ -149,6 +149,7 @@ class CameraInterface(CameraModuleInterface):
                 bins = self.cam.listParams('binning')[0][0]
             except:
                 bins = self.cam.listParams('binningX')[0]
+            bins = list(bins) ## ensure this is a list, not a range()
             bins.sort()
             bins.reverse()
             for b in bins:
@@ -185,7 +186,7 @@ class CameraInterface(CameraModuleInterface):
         if scale != self.lastCameraScale:
             anchor = self.view.mapViewToDevice(self.lastCameraPosition)
             self.view.scaleBy(scale / self.lastCameraScale)
-            Qt.QApplication.processEvents()
+            # Qt.QApplication.processEvents()
             anchor2 = self.view.mapDeviceToView(anchor)
             diff = pos - anchor2
             self.lastCameraScale = scale

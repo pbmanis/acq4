@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-from six.moves import range
+# from six.moves import range
 """
 IVCurve: Analysis module that analyzes current-voltage and firing
 relationships from current clamp data.
 This is part of Acq4
 
 Paul B. Manis, Ph.D.
-2011-2013.
+2011-2023.
 
 Pep8 compliant (via pep8.py) 10/25/2013
 Refactoring begun 3/21/2015
@@ -22,7 +22,9 @@ import functools
 import numpy as np
 import scipy
 from acq4.util import Qt
+#from acq4.modules.Module import Module
 from acq4.analysis.AnalysisModule import AnalysisModule
+from acq4.util.HelpfulException import HelpfulException
 import pyqtgraph as pg
 import acq4.util.matplotlibexporter as matplotlibexporter
 import acq4.analysis.tools.Utility as Utility  # pbm's utilities...
@@ -52,9 +54,13 @@ class IVCurve(AnalysisModule):
     RMP as a function of time through the protocol
 
     """
-
+    moduleDisplayName = "IVCurve"
+    moduleCategory = "Analysis"
+    
     def __init__(self, host):
         AnalysisModule.__init__(self, host)
+    # def __init__(self, manager, name, config):
+        # Module.__init__(self, manager, name, config)  ## call superclass __init__
 
         self.Clamps = self.dataModel.GetClamps()  # access the "GetClamps" class for reading data
         self.data_template = (
@@ -111,6 +117,8 @@ class IVCurve(AnalysisModule):
         self.main_layout = pg.GraphicsView()  # instead of GraphicsScene?
         # make fixed widget for the module output
         self.widget = Qt.QWidget()
+        self._win = self.widget
+
         self.gridLayout = Qt.QGridLayout()
         self.widget.setLayout(self.gridLayout)
         self.gridLayout.setContentsMargins(4, 4, 4, 4)
@@ -187,10 +195,17 @@ class IVCurve(AnalysisModule):
             #    self.label_up(self.tailPlot, 'V (V)', 'I (A)', 'Tail Current')
 
             # Add a color scale
-        self.color_scale = pg.GradientLegend((20, 150), (-10, -10))
+        self.color_scale = pg.GradientLegend((3, 150), (-10, -10))
         self.data_plot.scene().addItem(self.color_scale)
         self.ctrl.pushButton.clicked.connect(functools.partial(self.initialize_regions,
                                                                reset=True))
+
+    def window(self):
+        return self._win
+    
+    def quit(self):
+        """Quit the module"""
+        pass
 
     def clear_results(self):
         """
@@ -243,20 +258,20 @@ class IVCurve(AnalysisModule):
         if forcestate is not None:
             if forcestate:
                 region['region'].show()
-                region['state'].setChecked(Qt.Qt.Checked)
+                region['state'].setChecked(True)
                 region['shstate'] = True
             else:
                 region['region'].hide()
-                region['state'].setChecked(Qt.Qt.Unchecked)
+                region['state'].setChecked(False)
                 region['shstate'] = False
         else:
             if not region['shstate']:
                 region['region'].show()
-                region['state'].setChecked(Qt.Qt.Checked)
+                region['state'].setChecked(True)
                 region['shstate'] = True
             else:
                 region['region'].hide()
-                region['state'].setChecked(Qt.Qt.Unchecked)
+                region['state'].setChecked(False)
                 region['shstate'] = False
 
     def displayFISI_ISI(self):
@@ -798,11 +813,15 @@ class IVCurve(AnalysisModule):
                 self.allisi[i] = np.diff(spikes)*1e3
             # for Adaptation ratio analysis
             if minspk <= len(spikes) <= maxspk:
-                misi = np.mean(np.diff(spikes[-3:]))*1e3
+                late_isi = np.diff(spikes[-3:])
+                misi = np.mean(late_isi)*1e3
                 ar[i] = misi / self.fisi[i]
 
         iAR = np.where(ar > 0)
-        self.adapt_ratio = np.mean(ar[iAR])  # only where we made the measurement
+        if len(ar[iAR]) > 0:
+            self.adapt_ratio = np.mean(ar[iAR])  # only where we made the measurement
+        else:
+            self.adapt_ratio = np.nan
         self.analysis_summary['AdaptRatio'] = self.adapt_ratio
         self.ctrl.IVCurve_AR.setText(u'%7.3f' % self.adapt_ratio)
         self.nospk = np.where(self.spikecount == 0)
@@ -829,8 +848,8 @@ class IVCurve(AnalysisModule):
                 continue
             trspikes = OrderedDict()
             if printSpikeInfo:
-                print(np.array(self.Clamps.values))
-                print(len(self.Clamps.traces))
+                print("IVCurve 832: Commands: ", np.array(self.Clamps.values))
+                print("IVCurve 833: # traces: ", len(self.Clamps.traces))
             (rmp[i], r2) = Utility.measure('mean', self.Clamps.time_base, self.Clamps.traces[i],
                                            0.0, self.Clamps.tstart)            
             (iHold[i], r2) = Utility.measure('mean', self.Clamps.time_base, self.Clamps.cmd_wave[i],
@@ -998,42 +1017,40 @@ class IVCurve(AnalysisModule):
         Adds the classifying information according to Druckmann et al., Cerebral Cortex, 2013
         to the analysis summary
         """
- 
+        rate = np.nan
+        AHPDepth = np.nan
         (jthr, j150) = self.getIVCurrentThresholds()  # get the indices for the traces we need to pull data from
         if jthr == j150:
-            print('\n%s:' % self.filename)
-            print('Threshold current T and 1.5T the same: using next up value for j150')
-            print('jthr, j150, len(spikeShape): ', jthr, j150, len(self.spikeShape))
-            print('1 ', self.spikeShape[jthr][0]['current']*1e12)
-            print('2 ', self.spikeShape[j150+1][0]['current']*1e12)
-            print(' >> Threshold current: %8.3f   1.5T current: %8.3f, next up: %8.3f' % (self.spikeShape[jthr][0]['current']*1e12,
-                  self.spikeShape[j150][0]['current']*1e12, self.spikeShape[j150+1][0]['current']*1e12))
-            j150 = jthr + 1
-        if len(self.spikeShape[j150]) >= 1 and self.spikeShape[j150][0]['halfwidth'] is not None:
-            self.analysis_summary['AP1_Latency'] = (self.spikeShape[j150][0]['AP_Latency'] - self.spikeShape[j150][0]['tstart'])*1e3
-            self.analysis_summary['AP1_HalfWidth'] = self.spikeShape[j150][0]['halfwidth']*1e3
-        else:
-            self.analysis_summary['AP1_Latency'] = np.inf
-            self.analysis_summary['AP1_HalfWidth'] = np.inf
+            if jthr in list(self.spikeShape.keys()):
+                print('\n%s:' % self.filename)
+                print('Threshold current T and 1.5T the same: using next up value for j150')
+                print('jthr, j150, len(spikeShape): ', jthr, j150, len(self.spikeShape))
+                print('1 ', self.spikeShape[jthr][0]['current']*1e12)
+                print('2 ', self.spikeShape[j150+1][0]['current']*1e12)
+                print(' >> Threshold current: %8.3f   1.5T current: %8.3f, next up: %8.3f' % (self.spikeShape[jthr][0]['current']*1e12,
+                    self.spikeShape[j150][0]['current']*1e12, self.spikeShape[j150+1][0]['current']*1e12))
+                j150 = jthr + 1
+        if j150 in self.spikeShape.keys():
         
-        if len(self.spikeShape[j150]) >= 2 and self.spikeShape[j150][1]['halfwidth'] is not None:
-            self.analysis_summary['AP2_Latency'] = (self.spikeShape[j150][1]['AP_Latency'] - self.spikeShape[j150][1]['tstart'])*1e3
-            self.analysis_summary['AP2_HalfWidth'] = self.spikeShape[j150][1]['halfwidth']*1e3
-        else:
-            self.analysis_summary['AP2_Latency'] = np.inf
-            self.analysis_summary['AP2_HalfWidth'] = np.inf
+            if len(self.spikeShape[j150]) >= 1 and self.spikeShape[j150][0]['halfwidth'] is not None:
+                self.analysis_summary['AP1_Latency'] = (self.spikeShape[j150][0]['AP_Latency'] - self.spikeShape[j150][0]['tstart'])*1e3
+                self.analysis_summary['AP1_HalfWidth'] = self.spikeShape[j150][0]['halfwidth']*1e3
+            else:
+                self.analysis_summary['AP1_Latency'] = np.inf
+                self.analysis_summary['AP1_HalfWidth'] = np.inf
+            
+            if len(self.spikeShape[j150]) >= 2 and self.spikeShape[j150][1]['halfwidth'] is not None:
+                self.analysis_summary['AP2_Latency'] = (self.spikeShape[j150][1]['AP_Latency'] - self.spikeShape[j150][1]['tstart'])*1e3
+                self.analysis_summary['AP2_HalfWidth'] = self.spikeShape[j150][1]['halfwidth']*1e3
+            else:
+                self.analysis_summary['AP2_Latency'] = np.inf
+                self.analysis_summary['AP2_HalfWidth'] = np.inf
         
-        rate = len(self.spikeShape[j150])/self.spikeShape[j150][0]['pulseDuration']  # spikes per second, normalized for pulse duration
-        # first AHP depth
-        # print 'j150: ', j150
-        # print self.spikeShape[j150][0].keys()
-        # print self.spikeShape[j150]
-        AHPDepth = self.spikeShape[j150][0]['AP_beginV'] - self.spikeShape[j150][0]['trough_V']
+            rate = len(self.spikeShape[j150])/self.spikeShape[j150][0]['pulseDuration']  # spikes per second, normalized for pulse duration
+
+            AHPDepth = self.spikeShape[j150][0]['AP_beginV'] - self.spikeShape[j150][0]['trough_V']
         self.analysis_summary['FiringRate'] = rate
         self.analysis_summary['AHP_Depth'] = AHPDepth*1e3  # convert to mV
-        # pprint.pprint(self.analysis_summary)
-        # except:
-        #     raise ValueError ('Failed Classification for cell: %s' % self.filename)
 
     def update_Tau_membrane(self, peak_time=None, printWindow=False, whichTau=1, vrange=[-5., -20.]):
         """
@@ -1123,7 +1140,7 @@ class IVCurve(AnalysisModule):
         fitPars = self.taupars
         xFit = np.zeros((len(self.taupars), 500))
         for i in range(len(self.taupars)):
-          xFit[i,:] = np.arange(0, self.tauwin[1]-self.tauwin[0], (self.tauwin[1]-self.tauwin[0])/500.)
+            xFit[i,:] = np.arange(0, self.tauwin[1]-self.tauwin[0], (self.tauwin[1]-self.tauwin[0])/500.)
         yFit = np.zeros((len(fitPars), xFit.shape[1]))
         fitfunc = Fits.fitfuncmap[self.taufunc]
         if len(self.tau_fits.keys()) > 0:
@@ -1131,7 +1148,9 @@ class IVCurve(AnalysisModule):
         self.tau_fits = {}
         for k, whichdata in enumerate(self.whichdata):
             yFit[k] = fitfunc[0](fitPars[k], xFit[k], C=None)  # +self.ivbaseline[whichdata]
-            self.tau_fits[k] = self.data_plot.plot(xFit[k]+self.tauwin[0], yFit[k], pen=pg.mkPen('r', width=2, style=Qt.Qt.DashLine))
+            self.tau_fits[k] = self.data_plot.plot(
+                xFit[k]+self.tauwin[0], yFit[k], 
+                pen=pg.mkPen('r', width=2, style=Qt.QtCore.Qt.PenStyle.DashLine))
         
     def update_Tauh(self, region=None, printWindow=False):
         """ compute tau (single exponential) from the onset of the markers
@@ -1198,7 +1217,7 @@ class IVCurve(AnalysisModule):
                                                fitPars=initpars)
         if not fpar:
             raise Exception('IVCurve::update_Tauh: tau_h fitting failed - see log')
-        bluepen = pg.mkPen('b', width=2.0, style=Qt.Qt.DashLine)
+        bluepen = pg.mkPen('b', width=2.0, style=Qt.QtCore.Qt.PenStyle.DashLine)
         if len(self.tauh_fits.keys()) > 0:
             [self.tauh_fits[k].clear() for k in self.tauh_fits.keys()]
         self.tauh_fits = {}
@@ -1305,9 +1324,9 @@ class IVCurve(AnalysisModule):
             # this makes the assumption that:
             # successive trials are in order (as are commands)
             # commands are not repeated...
-            if len(self.ivss_cmd) > 0 and len(self.ivss) > 0:
+            if len(self.ivss_cmd) > 1 and len(self.ivss) > 1:
                 self.r_in = np.max(np.diff
-                                   (self.ivss) / np.diff(self.ivss_cmd))
+                                   (self.ivss.view(np.ndarray)) / np.diff(self.ivss_cmd))
                 self.ctrl.IVCurve_Rin.setText(u'%9.1f M\u03A9' % (self.r_in * 1.0e-6))
                 self.analysis_summary['Rin'] = self.r_in*1.0e-6
             else:
@@ -1491,6 +1510,7 @@ class IVCurve(AnalysisModule):
                                   symbolSize=6, symbolPen=pen,
                                   symbolBrush=emptybrush)
             self.label_up(self.IV_plot, 'I (pA)', 'V (mV)', 'I-V (CC)')
+            self.IV_plot.autoRange()
         if self.Clamps.data_mode in self.dataModel.vc_modes:
             if (len(self.ivss) > 0 and
                     self.ctrl.IVCurve_showHide_lrss.isChecked()):
@@ -1505,6 +1525,7 @@ class IVCurve(AnalysisModule):
                                   symbolSize=6, symbolPen=pen,
                                   symbolBrush=emptybrush)
             self.label_up(self.IV_plot, 'V (mV)', 'I (nA)', 'I-V (VC)')
+
 
     def update_RMPPlot(self):
         """
@@ -1561,7 +1582,7 @@ class IVCurve(AnalysisModule):
         if mode == 0:  # plot with time as x axis
             xfi = self.Clamps.trace_StartTimes
             xfsl = self.Clamps.trace_StartTimes
-            select = range(len(self.Clamps.trace_StartTimes))
+            select = list(range(len(self.Clamps.trace_StartTimes)))
             xlabel = 'T (s)'
         elif mode == 1:  # plot with current as x
             select = self.spk
@@ -1571,7 +1592,7 @@ class IVCurve(AnalysisModule):
         elif mode == 2:  # plot with spike counts as x
             xfi = self.spikecount
             xfsl = self.spikecount
-            select = range(len(self.spikecount))
+            select = list(range(len(self.spikecount)))
             xlabel = 'Spikes (N)'
         else:
             return  # mode not in available list
@@ -1827,4 +1848,4 @@ class IVCurve(AnalysisModule):
         plot.setLabel('bottom', xtext)
         plot.setLabel('left', ytext)
         plot.setTitle(title)
-
+        

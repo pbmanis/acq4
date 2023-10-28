@@ -8,7 +8,8 @@ Copyright 2010  Luke Campagnola
 Distributed under MIT/X11 license. See license.txt for more infomation.
 """
 
-print("Loading ACQ4...")
+print("Loading ACQ4...  ManisLab Rig2 Python3 test")
+
 import os, sys
 
 if __package__ is None:
@@ -44,6 +45,20 @@ from .util import Qt
 
 # Import pyqtgraph, get QApplication instance
 import pyqtgraph as pg
+
+def list_environment_paths():
+    from pathlib import Path
+    import numpy as np
+    print("\n    Environment Paths: ")
+    executable = Path(sys.executable).resolve()
+    print(f"    {'python : ':>24s}", sys.version_info)
+    print(f"        {'env: ':>24s}", str(executable))
+    print(f"    {'pyqtgraph : ':>24s}", pg.__version__)
+    print(f"        {'env: ':>24s}", pg.__file__)
+    print(f"    {'numpy : ':>24s}", np.__version__)
+    print(f"        {'env: ':>24s}", np.__file__)
+
+list_environment_paths()
 
 app = pg.mkQApp()
 
@@ -103,7 +118,7 @@ installExceptionHandler()
 ## (see pyqtgraph.util.garbage_collector for more information)
 from pyqtgraph.util.garbage_collector import GarbageCollector
 
-gc = GarbageCollector(interval=1.0, debug=False)
+gc = GarbageCollector(interval=1, debug=False)
 
 ## Create Manager. This configures devices and creates the main manager window.
 man = Manager(argv=sys.argv[1:])

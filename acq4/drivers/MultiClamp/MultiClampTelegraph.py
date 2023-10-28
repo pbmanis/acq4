@@ -57,7 +57,7 @@ class MultiClampTelegraph:
         self.devIndex = dict([(self.mkDevId(channels[k]), k) for k in channels])  
         #print "DEV index:", self.devIndex
         self.callback = callback
-        self.lock = threading.RLock(verbose=debug)
+        self.lock = threading.RLock()
         self.thread = threading.Thread(name="MultiClampTelegraph", target=self.messageLoop)
         self.thread.daemon = True
         self.startMessageThread()
@@ -80,10 +80,10 @@ class MultiClampTelegraph:
     def quit(self):
         if self.debug:
             print("MultiClampTelegraph.quit called.")
-        if self.thread.isAlive():
+        if self.thread.is_alive():
             self.stopMessageThread()
             self.thread.join(5.0)
-        if self.thread.isAlive():
+        if self.thread.is_alive():
             print("WARNING: Failed to stop MultiClamp telegraph thread.")
         
     def startMessageThread(self):
@@ -214,26 +214,28 @@ class MultiClampTelegraph:
                     if mode == 'VC':
                         priSignal = ax700ADefs.defs['values']['MCTG_OUT_MUX_VC_LONG_NAMES'][data.uScaledOutSignal]
                         secSignal = ax700ADefs.defs['values']['MCTG_OUT_MUX_VC_LONG_NAMES_RAW'][data.uRawOutSignal]
-                        priUnits = UNIT_MAP[data.uScaleFactorUnits]
-                        secUnits = UNIT_MAP[data.uRawScaleFactorUnits]
                     else:
                         priSignal = ax700ADefs.defs['values']['MCTG_OUT_MUX_IC_LONG_NAMES'][data.uScaledOutSignal]
                         secSignal = ax700ADefs.defs['values']['MCTG_OUT_MUX_IC_LONG_NAMES_RAW'][data.uRawOutSignal]
-                        priUnits = UNIT_MAP[data.uScaleFactorUnits]
-                        secUnits = UNIT_MAP[data.uRawScaleFactorUnits]
                 else:
                     try:
                         priSignal = wmlib.MCTG_OUT_GLDR_LONG_NAMES[data.uScaledOutSignal]
                     except IndexError:
-                        priSignal = "Auxiliary"  # some amps give signal=44 here, which is not in the list..
+                        # Some amps report signal 44 here when either auxiliary signal is selected.
+                        # This prevents errors, but unfortunately means we can't tell the difference between
+                        # aux1 and aux2.
+                        priSignal = "Auxiliary 1"
 
                     try:
                         secSignal = wmlib.MCTG_OUT_GLDR_LONG_NAMES[data.uRawOutSignal]
                     except IndexError:
-                        secSignal = "Auxiliary"  # some amps give signal=44 here, which is not in the list..
+                        # Some amps report signal 44 here when either auxiliary signal is selected.
+                        # This prevents errors, but unfortunately means we can't tell the difference between
+                        # aux1 and aux2.
+                        secSignal = "Auxiliary 1"
 
-                    priUnits = UNIT_MAP[data.uScaleFactorUnits]
-                    secUnits = UNIT_MAP[data.uRawScaleFactorUnits]
+                priUnits = UNIT_MAP[data.uScaleFactorUnits]
+                secUnits = UNIT_MAP[data.uRawScaleFactorUnits]
                 
                 # Scale factors are 0 for aux signals.
                 sf = data.dScaleFactor if data.dScaleFactor != 0 else 1

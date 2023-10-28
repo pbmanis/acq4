@@ -104,18 +104,23 @@ PARAMETERS = {    # negative values indicate read-only parameters
     'referencing_search_speed': 194,
     'referencing_switch_speed': 195,
     'distance_end_switches': 196,
-    'mixed_decay_threshold': 203,
+    'mixed_decay_threshold': 203, # 110-42 (firmware 140) only
     'freewheeling': 204,
-    'stall_detection_threshold': 205,
+    'stall_detection_threshold': 205,  # 110-42 (firmware 140) only
     'actual_load_value': 206,
     'driver_error_flags': -208,
     'encoder_position': 209,
     'encoder_prescaler': 210,
-    'fullstep_threshold': 211,
+    'fullstep_threshold': 211,  # does not exsint in new controller
     'maximum_encoder_deviation': 212,
     'power_down_delay': 214,
     'absolute_encoder_value': -215,
 }
+
+def from_parnum(num):
+    for k in PARAMETERS.keys():
+        if num == PARAMETERS[k]:
+            return k
 
 
 GLOBAL_PARAMETERS = {
@@ -201,12 +206,12 @@ class TMCM140(SerialDevice):
         SerialDevice.__init__(self, port=self.port, baudrate=baudrate)
 
     @threadsafe
-    def command(self, cmd, type, motor, value):
+    def command(self, cmd, cmdtype, motor, value):
         """Send a command to the controller and return the reply.
         
         If an error is returned from the controller then raise an exception.
         """
-        self._send_cmd(cmd, type, motor, value)
+        self._send_cmd(cmd, cmdtype, motor, value)
         return self._get_reply()
    
     def rotate(self, velocity):
@@ -230,7 +235,26 @@ class TMCM140(SerialDevice):
         Note: does not stop currently running programs.
         """
         self.command('mst', 0, 0, 0)
-        
+    
+    def reset(self):
+        """
+        Reset to factory defaults
+        """
+        self.command('restore_factory_settings', 0, 0, 0)
+        # print('tmcm.py: RESET')
+
+    def get_firmware(self):
+        """
+        Get the firmware get_firmware_version
+        Some commands work differently with different firmware, so we have
+        to pay attention (newer Thorlabs motors use the TMCM1140 controller;
+        older ones use the TMCM-110-42 controller).
+        New firmware will be "1140V135"
+        Old firmware will be "140V4.45"
+        """
+        self.command('get_firmware_version', 0, 0, 0)
+        self.stop()
+
     def move(self, pos, relative=False, velocity=None):
         """Rotate until reaching *pos*.
         
@@ -246,8 +270,8 @@ class TMCM140(SerialDevice):
             assert 0 <= velocity < 2048
             raise NotImplementedError()
         
-        type = 1 if relative else 0
-        self.command('mvp', type, 0, pos)
+        cmdtype = 1 if relative else 0
+        self.command('mvp', cmdtype, 0, pos)
         
     def get_param(self, param):
         pnum = abs(PARAMETERS[param])
@@ -378,7 +402,7 @@ class TMCM140(SerialDevice):
             cnum = CONDITIONS[args[0]]
             self.command('jc', cnum, 0, args[1])
         
-    def _send_cmd(self, cmd, type, motor, value):
+    def _send_cmd(self, cmd, cmdtype, motor, value):
         """Send a command to the controller.
         """
         if self._waiting_for_reply:
@@ -386,21 +410,23 @@ class TMCM140(SerialDevice):
                             "received yet.")
 
         cmd_num = COMMANDS[cmd]
-        assert isinstance(type, int)
+        assert isinstance(cmdtype, int)
         assert isinstance(motor, int)
         
         # Try packing the value first as unsigned, then signed. (the overlapping
         # integer ranges have identical bit representation, so there is no 
         # ambiguity)
+
         try:
-            cmd = struct.pack('>BBBBI', self.module_addr, cmd_num, type, motor, value)
+            cmd = struct.pack('>BBBBi', self.module_addr, cmd_num, cmdtype, motor, int(value))
         except struct.error:
-            cmd = struct.pack('>BBBBi', self.module_addr, cmd_num, type, motor, value)
+            cmd = struct.pack('>BBBBI', self.module_addr, cmd_num, cmdtype, motor, int(value))
             
         chksum = sum(bytearray(cmd)) % 256
         out = cmd + struct.pack('B', chksum)
 
         self.write(out)
+        self.lastcmd = out
         self._waiting_for_reply = True
         
     def _get_reply(self):
@@ -410,21 +436,32 @@ class TMCM140(SerialDevice):
         """
         if not self._waiting_for_reply:
             raise Exception("No reply expected.")
-        
+        nread = 9
         try:
-            d = self.read(9)
+            d = self.read(nread)
         finally:
             self._waiting_for_reply = False
         d2 = self.readAll()
         if len(d2) > 0:
             raise Exception("Error: extra data while reading reply.")
         
-        parts = struct.unpack('>BBBBiB', d)
+        parts = struct.unpack('>BBBBiB', d)  # big-endian, unsigned char (B), int(i)
         reply_addr, module_addr, status, cmd_num, value, chksum = parts
         
+        if isinstance(self.lastcmd[1], str):
+            lc = ord(self.lastcmd[1])
+        else:
+            lc = self.lastcmd[1]
+        if lc == 136:
+            ver = d[1:]
+            print(f"Creating Thorlabs MFC1 device with firmware Version: {str(ver):s}")
+            self.firmware_version = ver
+            return None
+
         if chksum != sum(bytearray(d[:-1])) % 256:
             raise Exception("Invalid checksum reading from controller.")
         
+
         if status < 100:
             raise TMCMError(status)        
         

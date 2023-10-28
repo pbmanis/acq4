@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, with_statement
 
+import threading
 import time
 
 import numpy as np
@@ -246,7 +247,7 @@ class Camera(DAQGeneric, OptomechDevice):
 
     def start(self, block=True):
         """Start camera and acquisition thread"""
-        self.acqThread.start()
+        self.acqThread.start(block=block)
 
     def stop(self, block=True):
         """Stop camera and acquisition thread"""
@@ -307,13 +308,16 @@ class Camera(DAQGeneric, OptomechDevice):
             return CameraTask(self, cmd, parentTask)
 
     # @ftrace
-    def getTriggerChannel(self, daq):
-        with self.lock:
-            if not "triggerOutChannel" in self.camConfig:
-                return None
-            if self.camConfig["triggerOutChannel"]["device"] != daq:
-                return None
-            return self.camConfig["triggerOutChannel"]["channel"]
+    def getTriggerChannels(self, daq: str):
+        chans = {'input': None, 'output': None}
+        if "triggerOutChannel" in self.camConfig and self.camConfig["triggerOutChannel"]["device"] == daq:
+            chans['input'] = self.camConfig["triggerOutChannel"]['channel']
+        if "triggerInChannel" in self.camConfig and self.camConfig["triggerInChannel"]["device"] == daq:
+            chans['output'] = self.camConfig["triggerInChannel"]['channel']
+        return chans
+
+    def getExposureChannel(self):
+        return self.camConfig.get('exposeChannel', None)
 
     def taskInterface(self, taskRunner):
         return CameraTaskGui(self, taskRunner)
@@ -472,7 +476,7 @@ class CameraTask(DAQGenericTask):
     Some of these methods may need to be reimplemented for subclasses.
     """
 
-    def __init__(self, dev, cmd, parentTask):
+    def __init__(self, dev: Camera, cmd, parentTask):
         daqCmd = {}
         if "channels" in cmd:
             daqCmd = cmd["channels"]
@@ -482,6 +486,7 @@ class CameraTask(DAQGenericTask):
         self.camCmd = cmd
         self.lock = Mutex()
         self.recordHandle = None
+        self._dev_needs_restart = False
         self.stopAfter = False
         self.stoppedCam = False
         self.returnState = {}
@@ -490,6 +495,7 @@ class CameraTask(DAQGenericTask):
         self.stopRecording = False
         self._stopTime = 0
         self.resultObj = None
+        self._fixedAcqThread = FixedAcqThread(target=self.fixedAcquisition)
 
     def configure(self):
         # Merge command into default values:
@@ -509,8 +515,9 @@ class CameraTask(DAQGenericTask):
 
         # If the DAQ is triggering the camera, then the camera must start before the DAQ
         if params["triggerMode"] != "Normal":
-            daqName = self.dev.camConfig["triggerInChannel"]["device"]
-            self.__startOrder[1].append(daqName)
+            if 'triggerInChannel' in self.dev.camConfig:
+                daqName = self.dev.camConfig["triggerInChannel"]["device"]
+                self.__startOrder[1].append(daqName)
 
             # Make sure we haven't requested something stupid..
             if (
@@ -532,8 +539,9 @@ class CameraTask(DAQGenericTask):
 
         # If the camera is triggering the daq, stop acquisition now and request that it starts after the DAQ
         #   (daq must be started first so that it is armed to received the camera trigger)
-        name = self.dev.name()
         if self.camCmd.get("triggerProtocol", False):
+            assert 'triggerOutChannel' in self.dev.camConfig, f"Task requests {self.dev.name()} to trigger the protocol to start, "\
+                                                              "but no trigger lines are configured ('triggerOutChannel' needed in config)"
             restart = True
             daqName = self.dev.camConfig["triggerOutChannel"]["device"]
             self.__startOrder = [daqName], []
@@ -552,6 +560,19 @@ class CameraTask(DAQGenericTask):
         DAQGenericTask.configure(self)
         prof.mark("DAQ configure")
         prof.finish()
+
+    @property
+    def fixedFrameCount(self):
+        return self.camCmd.get("minFrames", None)
+
+    def fixedAcquisition(self):
+        try:
+            with self.lock:
+                self.frames = self.dev.acquireFrames(self.fixedFrameCount).asarray()
+        finally:
+            if self._dev_needs_restart:
+                self.dev.start()
+                self._dev_needs_restart = False
 
     def getStartOrder(self):
         order = DAQGenericTask.getStartOrder(self)
@@ -573,8 +594,13 @@ class CameraTask(DAQGenericTask):
         self.frames = []
         self.stopRecording = False
         self.recording = True
-        if not self.dev.isRunning():
-            self.dev.start(block=True)  # wait until camera is actually ready to acquire
+        if self.fixedFrameCount is not None:
+            self._dev_needs_restart = self.dev.isRunning()
+            if self._dev_needs_restart:
+                self.dev.stop(block=True)
+            self._fixedAcqThread.start()
+        elif not self.dev.isRunning():
+            self.dev.start(block=True)
 
         # Last I checked, this does nothing. It should be here anyway, though..
         DAQGenericTask.start(self)
@@ -598,6 +624,11 @@ class CameraTask(DAQGenericTask):
         with self.lock:
             self.stopRecording = True
             self._stopTime = time.time()
+            if self._fixedAcqThread.isRunning():
+                self.dev.stopCamera()
+                if self._dev_needs_restart:
+                    self.dev.start()
+                    self._dev_needs_restart = False
 
         if "popState" in self.camCmd:
             self.dev.popState(self.camCmd["popState"])  # restores previous settings, stops/restarts camera if needed
@@ -767,6 +798,7 @@ class AcquireThread(Thread):
         self.acqBuffer = None
         self.bufferTime = 5.0
         self.tasks = []
+        self.cameraStartEvent = threading.Event()
 
         # This thread does not run an event loop,
         # so we may need to deliver frames manually to some places
@@ -777,11 +809,15 @@ class AcquireThread(Thread):
         if hasattr(self, "cam"):
             self.dev.stopCamera()
 
-    def start(self, *args):
+    def start(self, *args, block=True):
+        self.cameraStartEvent.clear()
         self.lock.lock()
         self.stopThread = False
         self.lock.unlock()
         Thread.start(self, *args)
+        if block:
+            if not self.cameraStartEvent.wait(5):
+                raise Exception("Timed out waiting for camera to start.")
 
     def connectCallback(self, method):
         with self._newFrameCallbacksMutex:
@@ -802,6 +838,7 @@ class AcquireThread(Thread):
 
         try:
             self.dev.startCamera()
+            self.cameraStartEvent.set()
 
             lastFrameTime = lastStopCheck = ptime.time()
             frameInfo = {}
@@ -906,3 +943,12 @@ class AcquireThread(Thread):
             if not self.wait(10000):
                 raise Exception("Timed out while waiting for thread exit!")
             self.start()
+
+
+class FixedAcqThread(Thread):
+    def __init__(self, target, *args, **kwds):
+        super(FixedAcqThread, self).__init__(*args, **kwds)
+        self._target = target
+
+    def run(self):
+        self._target()

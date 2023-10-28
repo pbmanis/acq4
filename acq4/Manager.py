@@ -2,7 +2,7 @@
 """
 Manager.py -  Defines main Manager class for ACQ4
 Copyright 2010  Luke Campagnola
-Distributed under MIT/X11 license. See license.txt for more infomation.
+Distributed under MIT/X11 license. See license.txt for more information.
 
 This class must be invoked once to initialize the ACQ4 core system.
 The class is responsible for:
@@ -10,8 +10,6 @@ The class is responsible for:
     - Invoking/managing modules
     - Creating and executing acquisition tasks. 
 """
-from __future__ import print_function
-
 import atexit
 import gc
 import getopt
@@ -22,28 +20,22 @@ import weakref
 from collections import OrderedDict
 
 import six
+from six.moves import map
 
 import pyqtgraph as pg
 import pyqtgraph.reload as reload
+from pyqtgraph import configfile
+from pyqtgraph.debug import printExc, Profiler
+from pyqtgraph.util.mutex import Mutex
 from . import __version__
 from . import devices, modules
 from .Interfaces import InterfaceDirectory
 from .devices.Device import Device, DeviceTask
-from pyqtgraph.debug import printExc, Profiler
-from pyqtgraph import configfile
-from pyqtgraph.util.mutex import Mutex
 from .util import DataManager, ptime, Qt
 from .util.HelpfulException import HelpfulException
+from .util.debug import logExc, logMsg, createLogWindow
 
-from .util.debug import logMsg, createLogWindow, logExc # logExc needed by debug
-from six.moves import map
-
-
-### All other modules can use this function to get the manager instance
-def getManager():
-    if Manager.single is None:
-        raise Exception("No manager created yet")
-    return Manager.single
+_ = logExc  # prevent cleanup of logExc; needed by debug
 
 
 def __reload__(old):
@@ -89,6 +81,7 @@ class Manager(Qt.QObject):
         self.disableAllDevs = False
         self.alreadyQuit = False
         self.taskLock = Mutex(Qt.QMutex.Recursive)
+        self._folderTypes = None
 
         try:
             if Manager.CREATED:
@@ -104,9 +97,9 @@ class Manager(Qt.QObject):
             if argv is not None:
                 try:
                     opts, args = getopt.getopt(
-                        argv, 'c:a:x:m:b:s:d:nD',
+                        argv, 'c:a:x:m:b:s:d:n:e:D',
                         ['config=', 'config-name=', 'module=', 'base-dir=', 'storage-dir=',
-                         'disable=', 'no-manager', 'disable-all', 'exit-on-error'])
+                         'disable=', 'no-manager', 'env', 'disable-all', 'exit-on-error'])
                 except getopt.GetoptError as err:
                     print(str(err))
                     print("""
@@ -118,6 +111,7 @@ class Manager(Qt.QObject):
         -b --base-dir=     Base directory to use
         -s --storage-dir=  Storage directory to use
         -n --no-manager    Do not load manager module
+        -e --env           Print environment information and quit
         -d --disable=      Disable the device specified
         -D --disable-all   Disable all devices
     """)
@@ -155,6 +149,8 @@ class Manager(Qt.QObject):
                     self.disableDevs.append(a)
                 elif o in ['-D', '--disable-all']:
                     self.disableAllDevs = True
+                # elif o in ['-e', '--env']:
+                #     self.list_environment_paths()
                 elif o == "--exit-on-error":
                     self.exitOnError = True
                 else:
@@ -168,6 +164,7 @@ class Manager(Qt.QObject):
             self.readConfig(configFile)
 
             logMsg('ACQ4 version %s started.' % __version__, importance=9)
+            self.list_environment_paths()
 
             ## Act on options if they were specified..
             try:
@@ -245,6 +242,7 @@ class Manager(Qt.QObject):
         print("============= Starting Manager configuration from %s =================" % configFile)
         logMsg("Starting Manager configuration from %s" % configFile)
         cfg = configfile.readConfigFile(configFile)
+        self.config.update(cfg)
 
         ## read modules, devices, and stylesheet out of config
         self.configure(cfg)
@@ -277,7 +275,8 @@ class Manager(Qt.QObject):
         sys.path.insert(0, modDir)
         try:
             globs = {}
-            exec(open(pyfile, 'rb').read(), globs)
+            with open(pyfile, 'rb') as fh:
+                exec(fh.read(), globs)
         finally:
             sys.path.pop(0)
         return globs
@@ -285,6 +284,11 @@ class Manager(Qt.QObject):
     def configure(self, cfg):
         """Load the devices, modules, stylesheet, and storageDir defined in cfg"""
 
+        self._loadConfig(cfg)
+
+        self.sigConfigChanged.emit()
+
+    def _loadConfig(self, cfg):
         for key, val in cfg.items():
             try:
                 # Handle custom import / exec
@@ -349,6 +353,9 @@ class Manager(Qt.QObject):
                     import pyqtgraph.metaarray as ma
                     ma.MetaArray.defaultCompression = comp
 
+                elif key == 'folderTypes':
+                    self._folderTypes = val
+
                 ## load stylesheet
                 elif key == 'stylesheet':
                     try:
@@ -378,58 +385,53 @@ class Manager(Qt.QObject):
                 elif key == 'useOpenGL':
                     pg.setConfigOption('useOpenGL', cfg[key])
 
-                ## Copy in any other configurations.
-                ## dicts are extended, all others are overwritten.
-                else:
-                    if isinstance(cfg[key], dict):
-                        if key not in self.config:
-                            self.config[key] = {}
-                        for key2 in cfg[key]:
-                            self.config[key][key2] = cfg[key][key2]
-                    else:
-                        self.config[key] = cfg[key]
+                elif key == 'misc':
+                    # Let's start moving things out of the top level, but stay backwards compatible
+                    self._loadConfig(cfg[key])
 
             except:
                 printExc("Error in ACQ4 configuration:")
                 if self.exitOnError:
                     raise
-        # print self.config
-        self.sigConfigChanged.emit()
+
+    def list_environment_paths(self):
+        from pathlib import Path
+        executable = Path(sys.executable).resolve()
+        print("python: ", sys.version_info)
+        print("   env: ", str(executable))
+        import pyqtgraph
+        print("pyqtgraph: ", pyqtgraph.__version__)
+        print("   env: ", pyqtgraph.__file__)
+
 
     def listConfigurations(self):
         """Return a list of the named configurations available"""
-        with self.lock:
-            if 'configurations' in self.config:
-                return list(self.config['configurations'].keys())
-            else:
-                return []
+        return list(self.config.get('configurations', {}).keys())
 
     def loadDefinedConfig(self, name):
         with self.lock:
             if name not in self.config['configurations']:
                 raise Exception("Could not find configuration named '%s'" % name)
-            cfg = self.config['configurations'].get(name, )
+            cfg = self.config['configurations'][name]
         self.configure(cfg)
 
     def readConfigFile(self, fileName, missingOk=True):
-        with self.lock:
-            fileName = self.configFileName(fileName)
-            if os.path.isfile(fileName):
-                return configfile.readConfigFile(fileName)
+        fileName = self.configFileName(fileName)
+        if os.path.isfile(fileName):
+            return configfile.readConfigFile(fileName)
+        else:
+            if missingOk:
+                return {}
             else:
-                if missingOk:
-                    return {}
-                else:
-                    raise Exception('Config file "%s" not found.' % fileName)
+                raise Exception('Config file "%s" not found.' % fileName)
 
     def writeConfigFile(self, data, fileName):
         """Write a file into the currently used config directory."""
-        with self.lock:
-            fileName = self.configFileName(fileName)
-            dirName = os.path.dirname(fileName)
-            if not os.path.exists(dirName):
-                os.makedirs(dirName)
-            return configfile.writeConfigFile(data, fileName)
+        fileName = self.configFileName(fileName)
+        dirName = os.path.dirname(fileName)
+        if not os.path.exists(dirName):
+            os.makedirs(dirName)
+        return configfile.writeConfigFile(data, fileName)
 
     def appendConfigFile(self, data, fileName):
         with self.lock:
@@ -440,8 +442,7 @@ class Manager(Qt.QObject):
                 raise Exception("Could not find file %s" % fileName)
 
     def configFileName(self, name):
-        with self.lock:
-            return os.path.join(self.configDir, name)
+        return os.path.join(self.configDir, name)
 
     def loadDevice(self, devClassName, conf, name):
         """Create a new instance of a device.
@@ -513,7 +514,7 @@ class Manager(Qt.QObject):
         ## Find an unused name for this module
         baseName = name
         n = 0
-        while name in self.modules:
+        while name in self.listInterfaces().get("module", []):
             name = "%s_%d" % (baseName, n)
             n += 1
 
@@ -582,10 +583,7 @@ class Manager(Qt.QObject):
             conf = self.definedModules[name]
 
         mod = conf['module']
-        if 'config' in conf:
-            config = conf['config']
-        else:
-            config = {}
+        config = conf.get('config', {})
 
         # Allow mechanisms for importing custom modules
         execPath = conf.get('exec', None)
@@ -811,8 +809,9 @@ class Manager(Qt.QObject):
                 if 'dirType' in info:
                     # infoKeys.remove('dirType')
                     dt = info['dirType']
-                    if dt in self.config['folderTypes']:
-                        fields = self.config['folderTypes'][dt]['info']
+                    folderTypesConfig = self._folderTypesConfig()
+                    if dt in folderTypesConfig:
+                        fields = folderTypesConfig[dt]['info']
 
         if 'notes' not in fields:
             fields['notes'] = 'text', 5
@@ -820,6 +819,9 @@ class Manager(Qt.QObject):
             fields['important'] = 'bool'
 
         return fields
+
+    def _folderTypesConfig(self):
+        return self._folderTypes
 
     def showDocumentation(self, label=None):
         self.documentation.show(label)
@@ -863,6 +865,13 @@ class Manager(Qt.QObject):
                 Qt.QApplication.instance().processEvents()
             print("\n    ciao.")
         Qt.QApplication.quit()
+
+
+# All other modules can use this function to get the manager instance
+def getManager() -> Manager:
+    if Manager.single is None:
+        raise Exception("No manager created yet")
+    return Manager.single
 
 
 class DeviceLocker(object):

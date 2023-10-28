@@ -1,6 +1,7 @@
 # coding: utf8
 from __future__ import print_function
 import os, re
+
 import numpy as np
 import json
 from collections import OrderedDict
@@ -14,6 +15,7 @@ from .pipetteControl import PipetteControl
 from .mockPatch import MockPatch
 from six.moves import zip
 
+from ...devices.PatchPipette.statemanager import PatchPipetteStateManager
 
 Ui_MultiPatch = Qt.importTemplate('.multipatchTemplate')
 
@@ -103,8 +105,13 @@ class MultiPatchWindow(Qt.QWidget):
 
             self.pipCtrls.append(ctrl)
 
+
+        # load profile configurations from old location
+        for name, profile in module.config.get('patchProfiles', {}).items():
+            PatchPipetteStateManager.addProfile(name, profile, overwrite=True)
+
         # set up patch profile menu
-        profiles = list(module.config.get('patchProfiles', {}).keys())
+        profiles = PatchPipetteStateManager.listProfiles()
         if 'default' not in profiles:
             profiles.insert(0, 'default')
         for profile in profiles:
@@ -166,38 +173,35 @@ class MultiPatchWindow(Qt.QWidget):
         config = {
             'geometry': [geom.x(), geom.y(), geom.width(), geom.height()],
             'plotModes': self.pipCtrls[0].getPlotModes(),
+            "plots": {
+                (ctrl.pip.name(), plot.mode): plot.plot.saveState()
+                for ctrl in self.pipCtrls for plot in ctrl.plots
+            },
         }
-        configfile = os.path.join('modules', self.module.name + '.cfg')
-        man = getManager()
-        man.writeConfigFile(config, configfile)
+        getManager().writeConfigFile(config, self._configFileName())
 
     def loadConfig(self):
-        configfile = os.path.join('modules', self.module.name + '.cfg')
-        man = getManager()
-        config = man.readConfigFile(configfile)
+        config = getManager().readConfigFile(self._configFileName())
         if 'geometry' in config:
             geom = Qt.QRect(*config['geometry'])
             self.setGeometry(geom)
         if 'plotModes' in config:
             self.setPlotModes(config['plotModes'])
+        if "plots" in config:
+            for pipette, plotname in config["plots"]:
+                ctrl = next((ctrl for ctrl in self.pipCtrls if ctrl.pip.name() == pipette), None)
+                if ctrl is not None:
+                    plot = next((plot for plot in ctrl.plots if plot.mode == plotname), None)
+                    if plot is not None:
+                        plot.plot.restoreState(config["plots"][(pipette, plotname)])
+
+    def _configFileName(self):
+        return os.path.join('modules', f'{self.module.name}.cfg')
 
     def profileComboChanged(self):
-        default = self.module.config['patchProfiles'].get('default')
-        profile = self.module.config['patchProfiles'].get(self.ui.profileCombo.currentText(), {})
-
-        if default is not None:
-            # mix defaults in with selected profile
-            p = {}
-            for k in set(list(default.keys()) + list(profile.keys())):
-                p[k] = default.get(k, {}).copy()
-                p[k].update(profile.get(k, {}))
-            profile = p
-
-        from pprint import pprint
-        pprint(profile)
-
+        profile = self.ui.profileCombo.currentText()
         for pip in self.pips:
-            pip.stateManager().setStateConfig(profile)
+            pip.stateManager().setProfile(profile)
 
     def setPlotModes(self, modes):
         for ctrl in self.pipCtrls:
@@ -221,44 +225,41 @@ class MultiPatchWindow(Qt.QWidget):
     def moveAboveTarget(self):
         speed = self.selectedSpeed(default='fast')
         pips = self.selectedPipettes()
-        if len(pips) == 1:
-            pips[0].pipetteDevice.goAboveTarget(speed=speed)
-            return
-
-        fut = []
-        wp = []
-        for pip in pips:
-            w1, w2 = pip.pipetteDevice.aboveTargetPath()
-            wp.append(w2)
-            fut.append(pip.pipetteDevice._moveToGlobal(w1, speed))
-        for f in fut:
-            f.wait(updates=True)
-        for pip, waypoint in zip(pips, wp):
-            pip.pipetteDevice._moveToGlobal(waypoint, 'slow')
-
-        self.calibrateWithStage(pips, wp)
+        pipDevs = [p.pipetteDevice if isinstance(p, PatchPipette) else p for p in pips]
+        for pip in pipDevs:
+            pip.goAboveTarget(speed, raiseErrors=True)
 
     def moveApproach(self):
-        speed = self.selectedSpeed(default='slow')
+        speed = self.selectedSpeed(default='fast')
         for pip in self.selectedPipettes():
-            pip.pipetteDevice.goApproach(speed)
             if isinstance(pip, PatchPipette):
+                pip.pipetteDevice.goApproach(speed, raiseErrors=True)
+                pip.setState('bath')
                 pip.clampDevice.autoPipetteOffset()
+            else:
+                pip.goApproach(speed, raiseErrors=True)
 
     def moveToTarget(self):
-        speed = self.selectedSpeed(default='slow')
+        speed = self.selectedSpeed(default='fast')
         for pip in self.selectedPipettes():
-            pip.pipetteDevice.goTarget(speed)
+            if isinstance(pip, PatchPipette):
+                pip = pip.pipetteDevice
+            pip.goTarget(speed, raiseErrors=True)
 
     def moveHome(self):
         speed = self.selectedSpeed(default='fast')
         for pip in self.selectedPipettes():
-            pip.goHome(speed)
+            if isinstance(pip, PatchPipette):
+                pip.setState('out')
+                pip = pip.pipetteDevice
+            pip.goHome(speed, raiseErrors=True)
 
     def moveIdle(self):
         speed = self.selectedSpeed(default='fast')
         for pip in self.selectedPipettes():
-            pip.pipetteDevice.goIdle(speed)
+            if isinstance(pip, PatchPipette):
+                pip = pip.pipetteDevice
+            pip.goIdle(speed, raiseErrors=True)
 
     def selectedSpeed(self, default):
         if self.ui.fastBtn.isChecked():
@@ -288,7 +289,8 @@ class MultiPatchWindow(Qt.QWidget):
         for pip in pips:
             if isinstance(pip, PatchPipette):
                 pip.setState('bath')
-            pip.pipetteDevice.goSearch(speed, distance=distance)
+                pip = pip.pipetteDevice
+            pip.goSearch(speed, distance=distance, raiseErrors=True)
 
     def calibrateWithStage(self, pipettes, positions):
         """Begin calibration of selected pipettes and move the stage to a selected position for each pipette.
@@ -340,10 +342,12 @@ class MultiPatchWindow(Qt.QWidget):
 
         # Set next pipette position from mouse click
         pip = self._calibratePips.pop(0)
+        if isinstance(pip, PatchPipette):
+            pip = pip.pipetteDevice
         pos = self._cammod.window().getView().mapSceneToView(ev.scenePos())
         spos = pip.scopeDevice().globalPosition()
         pos = [pos.x(), pos.y(), spos.z()]
-        pip.pipetteDevice.resetGlobalPosition(pos)
+        pip.resetGlobalPosition(pos)
 
         # if calibration stage positions were requested, then move the stage now
         if len(self._calibrateStagePositions) > 0:
@@ -360,10 +364,12 @@ class MultiPatchWindow(Qt.QWidget):
 
         # Set next pipette position from mouse click
         pip = self._setTargetPips.pop(0)
+        if isinstance(pip, PatchPipette):
+            pip = pip.pipetteDevice
         pos = self._cammod.window().getView().mapSceneToView(ev.scenePos())
         spos = pip.scopeDevice().globalPosition()
         pos = [pos.x(), pos.y(), spos.z()]
-        pip.pipetteDevice.setTarget(pos)
+        pip.setTarget(pos)
 
         if len(self._setTargetPips) == 0:
             self.ui.setTargetBtn.setChecked(False)
@@ -371,7 +377,9 @@ class MultiPatchWindow(Qt.QWidget):
 
     def hideBtnToggled(self, hide):
         for pip in self.pips:
-            pip.pipetteDevice.hideMarkers(hide)
+            if isinstance(pip, PatchPipette):
+                pip = pip.pipetteDevice
+            pip.hideMarkers(hide)
 
     def pipetteTestPulseEnabled(self, pip, enabled):
         self.updateSelectedPipControls()
@@ -525,7 +533,7 @@ class MultiPatchWindow(Qt.QWidget):
         pips = self.selectedPipettes()
         for pip in pips:
             if isinstance(pip, PatchPipette):
-                pip.setState('pipette clean')
+                pip.setState('clean')
         
     def pipetteMoveStarted(self, pip):
         self.updateXKeysBacklight()
@@ -569,5 +577,5 @@ class MultiPatchWindow(Qt.QWidget):
         if self.storageFile is None:
             return
         for rec in recs:
-            self.storageFile.write(json.dumps(rec) + ",\n")
+            self.storageFile.write(json.dumps(rec).encode("utf8") + b",\n")
         self.storageFile.flush()

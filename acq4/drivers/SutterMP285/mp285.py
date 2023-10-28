@@ -100,7 +100,7 @@ class SutterMP285(SerialDevice):
             currentPos = self.getPos(scaled=False)
         pos = [(pos[i]/scale if pos[i] is not None else currentPos[i]) for i in range(3)]
             
-        cmd = 'm' + struct.pack('=3l', int(pos[0]), int(pos[1]), int(pos[2])) + '\r'
+        cmd = b'm' + struct.pack('=3l', int(pos[0]), int(pos[1]), int(pos[2])) + b'\r'
         self.write(cmd)
         self.moving = True
         if block:
@@ -139,7 +139,7 @@ class SutterMP285(SerialDevice):
         currentPos = self.getPos(scaled=False)
         pos = [pos[i]/scale + currentPos[i] for i in range(3)]
             
-        cmd = 'm' + struct.pack('=3l', int(pos[0]), int(pos[1]), int(pos[2])) + '\r'
+        cmd = b'm' + struct.pack('=3l', int(pos[0]), int(pos[1]), int(pos[2])) + b'\r'
         self.write(cmd)
         if block:
             self.blockWhileMoving(timeout=timeout)
@@ -182,7 +182,7 @@ class SutterMP285(SerialDevice):
         #print "MP285 speed:", v
         if fine:
             v |= 0x8000
-        cmd = 'V' + struct.pack('=H', v) + '\r'
+        cmd = 'V' + str(struct.pack('=H', v)) + '\r'
 
         self.write(cmd)
         self.read(1, term='\r', timeout=timeout)

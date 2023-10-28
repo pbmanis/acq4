@@ -37,7 +37,7 @@ import pyqtgraph as pg
 
 # make one large namespace containing everything; pyqtgraph handles translation
 # between different Qt versions
-for mod in [pg.Qt, pg.Qt.QtGui, pg.Qt.QtCore, pg.Qt.QtTest]:
+for mod in [pg.Qt, pg.Qt.QtGui, pg.Qt.QtCore, pg.Qt.QtTest, pg.Qt.QtWidgets]:
     ns = mod.__dict__.copy()
     # don't copy special variables like __name__, __file__, etc.
     for k in list(ns.keys()):
@@ -89,7 +89,7 @@ def loadUiType(uiFile, package=None):
 
     #Fetch the base_class and form class based on their type in the xml from designer
     form_class = globalns['Ui_%s'%form_class]
-    base_class = getattr(QtGui, widget_class)
+    base_class = getattr(QtWidgets, widget_class)
 
     return form_class, base_class
 
