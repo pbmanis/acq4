@@ -22,6 +22,7 @@ from acq4.util.Thread import Thread
 from acq4.util.debug import printExc, Profiler, logMsg
 from acq4.util.Mutex import Mutex, RecursiveMutex
 from acq4.util.future import Future
+from MetaArray import MetaArray
 from . import analysisModules
 from ..Module import Module
 
@@ -479,12 +480,13 @@ class TaskRunner(Module):
             prof.mark('cleared')
 
             ## Create task object from requested file
+            print("Loading task from file: ", fn)
             prot = Task(self, fileName=fn)
             ## Set current task
+            print("   result prot = ", prot)
+            print(dir(prot ))
             self.currentTask = prot
             prof.mark('made task')
-
-            # print "Docks cleared."
 
             ## Update task parameters
             # ensure that repetitions is an integer
@@ -879,6 +881,7 @@ class Task:
 
         if fileName is not None:
             self.fileName = fileName
+            print("Class Task in TaskRunner: , getting configuration from : ", fileName)
             conf = configfile.readConfigFile(fileName)
             if 'protocol' not in conf:
                 self.conf = conf
@@ -1048,10 +1051,15 @@ class TaskThread(Thread):
             params = {}
 
         ## Select correct command to execute
-        cmd = self.task
+        cmd = self.task[()]
+        print("="*80)
+        print("RunOnce cmd: ", cmd)
+        print("RunOnce params: ", params)
+    
         if params is not None:
             for p in params:
                 cmd = cmd[p: params[p]]
+        print("RunOnce cmd after adjustment... : ", cmd)
         prof.mark('select command')
 
         ## Wait before starting if we've already run too recently
@@ -1078,15 +1086,26 @@ class TaskThread(Thread):
 
         prof.mark('pause')
 
-        if type(cmd) is not dict:
-            print("========= TaskRunner.runOnce cmd: ==================")
-            print(cmd)
-            print("========= TaskRunner.runOnce params: ==================")
-            print("Params:", params)
-            print("===========================")
-            raise TypeError(
-                "TaskRunner.runOnce failed to generate a proper command structure. Object type was '%s', should have been 'dict'." % type(
-                    cmd))
+        # if type(cmd) is not dict:
+        #     print("========= TaskRunner.runOnce cmd, not dict: ==================")
+        #     print("cmd type is: ", type(cmd))
+        #     print("   cmd: ", cmd)
+        #     cmd = cmd[0]
+        #     if cmd is not None:
+        #         print("len cmd: ", cmd)
+        #     else:
+        #         print("cmd is empty")
+
+        #     print("========= TaskRunner.runOnce params: ==================")
+        #     print("Params:", params)
+        #     print("===========================")
+        #     self.sigExitFromError.emit()
+        #     raise TypeError(
+        #         "TaskRunner.runOnce failed to generate a proper command structure. Object type was '%s', should have been 'dict'." % type(
+        #             cmd))
+        # else:
+        #     print("TaskRunner.runOnce cmd is dict. \n       cmd: ", cmd)
+        #     print("len cmd: ", len(cmd))
 
         task = self.dm.createTask(cmd)
         prof.mark('create task')

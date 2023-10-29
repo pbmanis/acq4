@@ -136,6 +136,10 @@ class InterfaceDirectory(Qt.QObject):
         """Return the object that was previously declared with *name* and interface *type*.
         """
         with self.lock:
+            # print("getInterface: ")
+            # print(self.typeList, typeobj, name)
+            # for dev in self.typeList.keys():
+                # print("    ", dev, list(self.typeList[dev].keys()))
             return self.typeList[typeobj][name]
 
 

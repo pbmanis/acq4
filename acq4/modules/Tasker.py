@@ -213,7 +213,7 @@ class Tasker(Module):
             self.test_mode = False
 
     def runOnce(self):
-        print("\nself.running: ", self.running)
+        print("\nrunOnce : self.running: ", self.running)
         if self.running:
             print("runOnce: already Running")
             return
@@ -222,7 +222,9 @@ class Tasker(Module):
         taskFuture = None
         for task in self.taskList:
             if not self.running:
+                print("   :: running is False")
                 break
+            print("task ", task, "in tasklist: ", self.taskList)
             shortTaskName = Path(task).name
             print("   ... Running task: ", shortTaskName)
 
@@ -233,12 +235,14 @@ class Tasker(Module):
                 self.stopTasks(taskFuture)
                 self.running = False
                 raise ValueError()
+            finally:
+                Qt.QApplication.restoreOverrideCursor()
         
             # self.startBtn.setText(f"Running: {shortTaskName:s}")
             self.fileLabel.setText(f"Running: {shortTaskName:s}")
 
             if self.test_mode:
-                print("Test mode: loading but not running sequence")
+                print("Test mode: loading task but not running sequence")
                 continue
 
             try:

@@ -75,7 +75,7 @@ class MockClamp(PatchClamp):
         global ivModes
         with self.devLock:
             currentMode = self.getMode()
-            if mode is None:
+            if mode is None or len(mode) == 0:
                 mode = currentMode
             ivMode = ivModes[mode]  ## determine vc/ic
 
@@ -107,8 +107,9 @@ class MockClamp(PatchClamp):
     def getHolding(self, mode=None):
         global ivModes
         with self.devLock:
-            if mode is None:
+            if mode is None or len(mode) == 0:
                 mode = self.getMode()
+            # print("MODE: ", mode)
             ivMode = ivModes[mode]  ## determine vc/ic
             return self.holding[ivMode]
 
@@ -133,7 +134,7 @@ class MockClamp(PatchClamp):
         if (startIvMode == 'VC' and ivMode == 'IC') or (startIvMode == 'IC' and ivMode == 'VC'):
             ## switch to I=0 first
             # self.requestModeSwitch('I=0')
-            self.mode = 'I=0'
+            self.mode = 'IC'
 
         self.setHolding(ivMode, force=True)  ## we're in I=0 mode now, so it's ok to force the holding value.
 
@@ -143,6 +144,10 @@ class MockClamp(PatchClamp):
         self.sigStateChanged.emit(self.getState())
 
     def getMode(self):
+        # print("\n***********\nMODE IN self.mode: ", self.mode)
+        if self.mode is None or len(self.mode) == 0:
+            self.mode = 'IC'
+            self.modeChanged()
         return self.mode
 
     def getChanUnits(self, chan):
@@ -363,6 +368,8 @@ class MockClampTaskGui(DAQGenericTaskGui):
         self.cmdWidget.updateHolding()
 
     def getMode(self):
+        if self.modeCombo.currentText() == '':
+            self.modeCombo.setCurrentIndex(2)  # IC
         return str(self.modeCombo.currentText())
 
     def sequenceChanged(self):
@@ -401,7 +408,7 @@ class MockClampDevGui(Qt.QWidget):
     def updateStatus(self):
         global modeNames
         mode = self.dev.getMode()
-        if mode is None:
+        if mode is None or len(mode) == 0:
             return
         vcHold = self.dev.getHolding('VC')
         icHold = self.dev.getHolding('IC')

@@ -650,7 +650,7 @@ class GetClamps():
         sequence_values = None
         self.sequence = listSequenceParams(dh)
         # building command voltages - get amplitudes to clamp
-        clamp = ('Clamp1', 'Pulse_amplitude')
+        clamp = ('MultiClamp1', 'Pulse_amplitude')
         reps = ('protocol', 'repetitions')
 
         if clamp in self.sequence:

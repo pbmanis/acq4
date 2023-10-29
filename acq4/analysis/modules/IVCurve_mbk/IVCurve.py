@@ -65,7 +65,7 @@ class IVCurve(AnalysisModule):
             
         dataPlot = self.getElement('Data Plot')
         
-        ## Attempt to stick all the traces into one big away -- not sure I like this because you lose the metaInfo.
+        ## Attempt to stick all the traces into one big array -- not sure I like this because you lose the metaInfo.
         a = fh[dirs[0]]['Clamp1.ma'].read()
         data = np.empty((a.shape[0], a.shape[1], len(dirs)), dtype=np.float)        
         

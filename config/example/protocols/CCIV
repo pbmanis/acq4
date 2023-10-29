@@ -1,77 +1,95 @@
 protocol:
-    windowState: '%00%00%00%FF%00%00%00%00%FD%00%00%00%02%00%00%00%02%00%00%03%F5%00%00%00%C6%FC%01%00%00%00%04%FB%00%00%00%14%00L%00o%00a%00d%00e%00r%00D%00o%00c%00k%01%00%00%00%00%00%00%01%14%00%00%00%C9%01%00%00%05%FB%00%00%00%18%00P%00r%00o%00t%00o%00c%00o%00l%00D%00o%00c%00k%01%00%00%01%5B%00%00%02~%00%00%00%00%00%00%00%00%FB%00%00%00%10%00T%00a%00s%00k%00D%00o%00c%00k%01%00%00%01%17%00%00%01Y%00%00%01%26%01%00%00%05%FB%00%00%00%18%00S%00e%00q%00u%00e%00n%00c%00e%00D%00o%00c%00k%01%00%00%02s%00%00%01%82%00%00%01W%01%00%00%05%00%00%00%03%00%00%03%F5%00%00%01%FF%FC%01%00%00%00%01%FC%00%00%00%00%00%00%03%F5%00%00%01%3C%00%FF%FF%FF%FA%00%00%00%02%02%00%00%00%03%FB%00%00%00%14%00d%00o%00c%00k%00W%00i%00d%00g%00e%00t%01%00%00%00%00%FF%FF%FF%FF%00%00%00%5B%01%00%00%05%FB%00%00%00%06%00D%00A%00Q%01%00%00%00%00%FF%FF%FF%FF%00%00%00%F3%01%00%00%05%FB%00%00%00%0C%00C%00l%00a%00m%00p%001%01%00%00%01%E6%00%00%02%25%00%00%01%3D%01%00%00%05%00%00%03%F5%00%00%00%00%00%00%00%04%00%00%00%04%00%00%00%08%00%00%00%08%FC%00%00%00%00'
-    params: [('Clamp1', 'command.Pulse_amplitude', True, [])]
     conf:
         continuous: False
-        cycleTime: 0.3
-        loop: False
-        duration: 0.08
-        repetitions: 0
+        duration: 0.2
         leadTime: 0.01
+        loop: False
         loopCycleTime: 0.3
+        cycleTime: 0.3
+        repetitions: 0.0
+    params: [('MultiClamp1', 'command.Pulse_amplitude', False, [])]
+    windowState: '%00%00%00%FF%00%00%00%00%FD%00%00%00%02%00%00%00%02%00%00%04%C5%00%00%01r%FC%01%00%00%00%05%FB%00%00%00%14%00L%00o%00a%00d%00e%00r%00D%00o%00c%00k%01%00%00%00%00%00%00%00%D4%00%00%00%B8%00%FF%FF%FF%FB%00%00%00%18%00P%00r%00o%00t%00o%00c%00o%00l%00D%00o%00c%00k%01%00%00%01%5B%00%00%02~%00%00%00%00%00%00%00%00%FB%00%00%00%10%00T%00a%00s%00k%00D%00o%00c%00k%01%00%00%00%D5%00%00%01%9C%00%00%01%60%00%FF%FF%FF%FB%00%00%00%18%00S%00e%00q%00u%00e%00n%00c%00e%00D%00o%00c%00k%01%00%00%02r%00%00%01%E3%00%00%01%A0%00%FF%FF%FF%FB%00%00%00%14%00d%00o%00c%00k%00W%00i%00d%00g%00e%00t%01%00%00%04V%00%00%00o%00%00%00%60%00%FF%FF%FF%00%00%00%03%00%00%04%C5%00%00%01r%FC%01%00%00%00%02%FC%00%00%00%00%00%00%02%AB%00%00%00%00%00%FF%FF%FF%FA%00%00%00%00%02%00%00%00%01%FB%00%00%00%0C%00C%00l%00a%00m%00p%001%01%00%00%01%E6%00%00%02%25%00%00%00%00%00%00%00%00%FC%00%00%00%00%00%00%04%C5%00%00%01%5E%00%FF%FF%FF%FA%00%00%00%01%02%00%00%00%02%FB%00%00%00%06%00D%00A%00Q%01%00%00%00%00%FF%FF%FF%FF%00%00%00%F4%00%FF%FF%FF%FB%00%00%00%16%00M%00u%00l%00t%00i%00C%00l%00a%00m%00p%001%01%00%00%00%C0%00%00%01E%00%00%01%28%00%FF%FF%FF%00%00%04%C5%00%00%00%00%00%00%00%04%00%00%00%04%00%00%00%08%00%00%00%08%FC%00%00%00%00'
     analysis:
 devices:
-    Clamp1:
+    MultiClamp1:
         daqState:
-            splitter2: '%00%00%00%FF%00%00%00%00%00%00%00%03%00%00%00%1C%00%00%00%DC%00%00%02%08%01%00%00%00%03%01%00%00%00%02'
-            splitter3: '%00%00%00%FF%00%00%00%00%00%00%00%02%00%00%020%00%00%00%D0%01%00%00%00%03%01%00%00%00%02'
-            splitter1: '%00%00%00%FF%00%00%00%00%00%00%00%02%00%00%01j%00%00%04%F5%01%00%00%00%03%01%00%00%00%01'
+            splitter1: '%00%00%00%FF%00%00%00%01%00%00%00%02%00%00%01j%00%00%04%F5%01%00%00%00%03%01%00%00%00%01%01'
+            splitter2: '%00%00%00%FF%00%00%00%01%00%00%00%03%00%00%00%20%00%00%00%DC%00%00%02%08%01%00%00%00%03%01%00%00%00%02%01'
+            splitter3: '%00%00%00%FF%00%00%00%01%00%00%00%02%00%00%020%00%00%00%D0%01%00%00%00%03%01%00%00%00%02%01'
             channels:
-                command:
+                primary:
+                    groupBox: False
+                    recordCheck: True
+                    displayCheck: True
+                    recordInitCheck: False
                     plot:
-                        yGridCheck: False
+                        logYCheck: False
                         logXCheck: False
+                        fftCheck: False
+                        derivativeCheck: False
+                        phasemapCheck: False
                         clipToViewCheck: False
                         maxTracesCheck: False
-                        autoDownsampleCheck: True
+                        downsampleCheck: False
                         peakRadio: True
-                        downsampleSpin: 1
-                        pointsGroup: True
-                        gridAlphaSlider: 128
                         maxTracesSpin: 0
+                        forgetTracesCheck: False
+                        meanRadio: False
+                        subsampleRadio: False
+                        autoDownsampleCheck: True
+                        downsampleSpin: 1
                         averageGroup: False
                         alphaGroup: True
-                        logYCheck: False
-                        xGridCheck: False
                         autoAlphaCheck: False
                         alphaSlider: 1000
-                        meanRadio: False
-                        paramList:
-                        subsampleRadio: False
-                        fftCheck: False
+                        xGridCheck: False
+                        yGridCheck: False
+                        gridAlphaSlider: 128
+                        pointsGroup: True
                         autoPointsCheck: True
-                        downsampleCheck: False
-                        forgetTracesCheck: False
+                        paramList:
+                            MutliClamp1.command.Pulse_amplitude: False
                         view:
-                            wheelScaleFactor: -0.125
-                            viewRange: [[-0.0029727660103012156, 0.082972766010301222], [-4.7960297521679917e-10, 4.7960297521679917e-10]]
+                            targetRange: [[-0.0027729821907417356, 0.08274798219074174], [-0.08196554129658738, 0.031723176227282046]]
+                            viewRange: [[-0.0027729821907417356, 0.08274798219074174], [-0.08196554129658738, 0.031723176227282046]]
+                            yInverted: False
+                            xInverted: False
+                            aspectLocked: False
+                            autoRange: [1.0, 1.0]
                             autoPan: [False, False]
+                            autoVisibleOnly: [False, False]
+                            linkedViews: [None, None]
+                            defaultPadding: 0.02
+                            mouseEnabled: [True, True]
+                            mouseMode: 3
+                            enableMenu: True
+                            wheelScaleFactor: -0.125
+                            background: None
+                            logMode: [False, False]
                             limits:
                                 xRange: [None, None]
                                 yLimits: [None, None]
                                 yRange: [None, None]
                                 xLimits: [None, None]
-                            enableMenu: True
-                            mouseEnabled: [True, True]
-                            linkedViews: [None, None]
-                            mouseMode: 3
-                            background: None
-                            yInverted: False
-                            autoVisibleOnly: [False, False]
-                            targetRange: [[-0.0029727660103012156, 0.082972766010301222], [-4.7960297521679917e-10, 4.7960297521679917e-10]]
-                            xInverted: False
-                            autoRange: [1.0, 1.0]
-                            aspectLocked: False
+                command:
+                    groupBox: False
+                    preSetCheck: False
+                    preSetSpin: 0.0
                     holdingCheck: False
                     holdingSpin: 0.0
                     functionCheck: True
-                    preSetCheck: False
-                    groupBox: False
                     displayCheck: True
-                    preSetSpin: 0.0
                     waveGeneratorWidget:
-                        function: 'pulse(0.01, 0.05, Pulse_amplitude)'
+                        function: 'pulse(0.01, 0.1, Pulse_amplitude)'
+                        params:
+                            Pulse_amplitude:
+                                default: '100*pA'
+                                sequence: 'range'
+                                start: '-400*pA'
+                                stop: '400*pA'
+                                steps: 11
                         autoUpdate: True
+                        advancedMode: False
                         stimuli:
                             Pulse:
                                 start:
@@ -79,7 +97,7 @@ devices:
                                     value: 0.01
                                 length:
                                     sequence: 'off'
-                                    value: 0.05
+                                    value: 0.1
                                 amplitude:
                                     sequence: 'range'
                                     start: -4e-10
@@ -89,80 +107,70 @@ devices:
                                 sum:
                                     affect: 'length'
                                     sequence: 'off'
-                                    value: 5.0000000000000005e-12
+                                    value: 1.0000000000000001e-11
                                 type: 'pulse'
-                        params:
-                            Pulse_amplitude:
-                                default: '100*pA'
-                                sequence: 'range'
-                                start: '-400*pA'
-                                stop: '400*pA'
-                                steps: 11
-                        advancedMode: False
-                primary:
-                    recordInitCheck: False
                     plot:
-                        yGridCheck: False
+                        logYCheck: False
                         logXCheck: False
+                        fftCheck: False
+                        derivativeCheck: False
+                        phasemapCheck: False
                         clipToViewCheck: False
                         maxTracesCheck: False
-                        autoDownsampleCheck: True
+                        downsampleCheck: False
                         peakRadio: True
-                        downsampleSpin: 1
-                        pointsGroup: True
-                        gridAlphaSlider: 128
                         maxTracesSpin: 0
+                        forgetTracesCheck: False
+                        meanRadio: False
+                        subsampleRadio: False
+                        autoDownsampleCheck: True
+                        downsampleSpin: 1
                         averageGroup: False
                         alphaGroup: True
-                        logYCheck: False
-                        xGridCheck: False
                         autoAlphaCheck: False
                         alphaSlider: 1000
-                        meanRadio: False
-                        paramList:
-                            Clamp1.command.Pulse_amplitude: False
-                        subsampleRadio: False
-                        fftCheck: False
+                        xGridCheck: False
+                        yGridCheck: False
+                        gridAlphaSlider: 128
+                        pointsGroup: True
                         autoPointsCheck: True
-                        downsampleCheck: False
-                        forgetTracesCheck: False
+                        paramList:
                         view:
-                            wheelScaleFactor: -0.125
-                            viewRange: [[-0.002949521047276026, 0.08292452104727603], [-0.1648354109974907, 0.0324514260218138]]
+                            targetRange: [[-0.006846922116448161, 0.20684692211644817], [-4.894293333333334e-10, 4.894293333333334e-10]]
+                            viewRange: [[-0.006846922116448161, 0.20684692211644817], [-4.894293333333334e-10, 4.894293333333334e-10]]
+                            yInverted: False
+                            xInverted: False
+                            aspectLocked: False
+                            autoRange: [1.0, 1.0]
                             autoPan: [False, False]
+                            autoVisibleOnly: [False, False]
+                            linkedViews: [None, None]
+                            defaultPadding: 0.02
+                            mouseEnabled: [True, True]
+                            mouseMode: 3
+                            enableMenu: True
+                            wheelScaleFactor: -0.125
+                            background: None
+                            logMode: [False, False]
                             limits:
                                 xRange: [None, None]
                                 yLimits: [None, None]
                                 yRange: [None, None]
                                 xLimits: [None, None]
-                            enableMenu: True
-                            mouseEnabled: [True, True]
-                            linkedViews: [None, None]
-                            mouseMode: 3
-                            background: None
-                            yInverted: False
-                            autoVisibleOnly: [False, False]
-                            targetRange: [[-0.002949521047276026, 0.08292452104727603], [-0.1648354109974907, 0.0324514260218138]]
-                            xInverted: False
-                            autoRange: [1.0, 1.0]
-                            aspectLocked: False
-                    groupBox: False
-                    recordCheck: True
-                    displayCheck: True
-        mode: 'ic'
+        mode: 'IC'
     DAQ:
-        butterworthStopband: 40000.0
-        denoiseThreshold: 4.0
-        denoiseMethod: u'None'
-        downsample: 1
-        filterMethod: u'None'
-        butterworthPassband: 20000.0
-        butterworthPassDB: 2.0
-        denoiseWidth: 1
-        butterworthStopDB: 10.0
         rate: 40000.0
-        butterworthBidirectional: False
-        besselOrder: 4
-        triggerDevice: u'No Trigger'
-        besselBidirectional: False
+        downsample: 1
+        triggerDevice: 'No Trigger'
+        denoiseMethod: 'None'
+        denoiseThreshold: 4.0
+        denoiseWidth: 1
+        filterMethod: 'None'
         besselCutoff: 20000.0
+        besselOrder: 4
+        besselBidirectional: False
+        butterworthPassband: 20000.0
+        butterworthStopband: 40000.0
+        butterworthPassDB: 2.0
+        butterworthStopDB: 10.0
+        butterworthBidirectional: False

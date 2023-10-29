@@ -467,14 +467,19 @@ class Manager(Qt.QObject):
         self.devices[name] = dev  # just to prevent device being collected
         return dev
 
-    def getDevice(self, name):
+    def getDevice(self, device_name):
         """Return a device instance given its name.
         """
-        name = str(name)
+        device_name = str(device_name)
         try:
-            return self.getInterface('device', name)
+            return self.getInterface('device', device_name)
         except KeyError:
-            raise Exception("No device named %s. Options are %s" % (name, ','.join(self.listDevices())))
+            print("--------------")
+            print(device_name, type(device_name))
+            for d in self.listDevices():
+                print(d, type(d), device_name in self.listDevices())
+            print("------------------")
+            raise Exception("No device named %s. Options are %s" % (device_name, ','.join(self.listDevices())))
 
     def listDevices(self):
         """Return a list of the names of available devices.
@@ -488,6 +493,7 @@ class Manager(Qt.QObject):
                 # .. do stuff
 
         """
+        print("Manager devices reserved: ", devices)
         devices = [self.getDevice(d) if isinstance(d, six.string_types) else d for d in devices]
         return DeviceLocker(self, devices, timeout=timeout)
 
@@ -674,6 +680,7 @@ class Manager(Qt.QObject):
         """
         Creates a new Task instance from the specified command structure.
         """
+        print("creating a new task with: ", cmd)
         t = Task(self, cmd)
         self.sigTaskCreated.emit(cmd, t)
         return t
@@ -924,7 +931,6 @@ class Task:
 
     def __init__(self, dm, command):
         self.dm = dm
-        self.command = command
         self.result = None
 
         self.taskLock = RecursiveMutex(recursive=True)
@@ -934,11 +940,13 @@ class Task:
         self.startTime = None
         self.stopTime = None
 
+        self.command = command
+
         # self.reserved = False
         try:
             self.cfg = command['protocol']
         except:
-            print("================== Manager Task.__init__ command: =================")
+            print("================== Manager Task.__init__ command failing on command:=================")
             print(command)
             print("===========================================================")
             raise TypeError("Command specified for task is invalid. (Must be dictionary with 'protocol' key)")
@@ -950,7 +958,7 @@ class Task:
         self.devNames = list(command.keys())
         self.devNames.remove('protocol')
         self.devs = {devName: self.dm.getDevice(devName) for devName in self.devNames}
-
+        print("devices: ", self.devs)
         ## Create task objects. Each task object is a handle to the device which is unique for this task run.
         self.tasks = {}
         # print "devNames: ", self.devNames
