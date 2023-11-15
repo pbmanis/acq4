@@ -12,8 +12,12 @@ from acq4.util.HelpfulException import HelpfulException
 import acq4.util.DirTreeWidget as DirTreeWidget
 import acq4.util.InterfaceCombo  # just to register 'interface' parameter type
 from acq4.modules.Module import Module
-from acq4.util import Qt
+from acq4.util import Qt, threadrun
 from acq4.util.DataManager import getDirHandle
+from acq4.util.Mutex import Mutex
+from acq4.util.StatusBar import StatusBar
+from acq4.util.Thread import Thread
+
 """
 Work with task lists. A task list is just a list of paths to protocols
 under the 'sequences' directory in the configuration directory.
@@ -63,6 +67,7 @@ class Tasker(Module):
         self.isStarted = False
         self.test_mode = False
         self.win = Qt.QSplitter()
+        self.thread = SequencerThread()
 
         if "Task Runner" not in self.manager.modules:
             raise ValueError("Tasker requires a loaded *Task Runner* module")
@@ -86,16 +91,24 @@ class Tasker(Module):
         # self.startBtn.setCheckable(True)
         self.testBtn = Qt.QPushButton("Test")
         self.testBtn.setCheckable(True)
-        self.cancelBtn = Qt.QPushButton("Cancel")
+        self.stopBtn = Qt.QPushButton("Stop")
         self.fileLabel = Qt.QLabel()
+        self.message = Qt.QLabel()
+        self.statusLabel = Qt.QLabel()
+        self.intervalBtn = Qt.QSpinBox()
+        self.intervalBtn.setMaximum(30)
+        self.intervalBtn.setMinimum(1)
 
         self.protocolWidget.addWidget(self.loadBtn, 0, 1, colspan=2)
         self.protocolWidget.addWidget(self.saveBtn, 0, 3, colspan=2)
 
         self.ctrlWidget.addWidget(self.startBtn, 1, 0)
-        self.ctrlWidget.addWidget(self.cancelBtn, 2, 0)
+        self.ctrlWidget.addWidget(self.stopBtn, 2, 0)
         self.ctrlWidget.addWidget(self.testBtn, 3, 0)
-        self.ctrlWidget.addWidget(self.fileLabel, 4, 0)
+        self.ctrlWidget.addWidget(self.intervalBtn, 4, 0)
+        self.ctrlWidget.addWidget(self.fileLabel, 5, 0)
+        self.ctrlWidget.addWidget(self.message, 6, 0)
+        self.ctrlWidget.addWidget(self.statusLabel, 7, 0)
         self.listWidget = Qt.QListWidget()
         self.listWidget.setDragDropMode(Qt.QAbstractItemView.DragDropMode.InternalMove)
         self.protocolWidget.addWidget(self.listWidget, 1, 1, colspan=4, rowspan=6)
@@ -103,10 +116,12 @@ class Tasker(Module):
         self.loadBtn.clicked.connect(self.loadClicked)
         self.saveBtn.clicked.connect(self.saveClicked)
         self.startBtn.clicked.connect(self.startClicked)
-        self.cancelBtn.clicked.connect(self.cancelClicked)
+        self.stopBtn.clicked.connect(self.stopClicked)
         self.testBtn.toggled.connect(self.test_runOnce)
-        # self.addBtn.clicked.connect(self.addTask)
-        # self.delBtn.clicked.connect(self.removeTask)
+
+        # Threading signals
+        self.thread.finished.connect(self.threadStopped)
+        self.thread.sigMessage.connect(self.threadMessage)
 
 
         try:
@@ -155,7 +170,7 @@ class Tasker(Module):
         self.win.show()
 
         self.timer = Qt.QTimer()
-        self.timer.timeout.connect(self.runOnce)
+        # self.timer.timeout.connect(self.runOnce)
 
     def quit(self):
         # self.startBtn.setChecked(False)
@@ -165,7 +180,6 @@ class Tasker(Module):
         """
         From the list widget
         """
-        self.taskList = []
         self.taskList = [self.listWidget.item(i).text() for i in range(self.listWidget.count())]
 
 
@@ -205,102 +219,52 @@ class Tasker(Module):
     def refreshTaskList(self):
         pass
 
+    
     def test_runOnce(self):
         if self.testBtn.isChecked():
+            self.updateTaskList()
             self.test_mode = True
+            # taskFuture = threadrun.runInGuiThread(self.runOnce)
             self.runOnce()
             self.testBtn.setChecked(False)
             self.test_mode = False
 
-    def runOnce(self):
-        print("\nself.running: ", self.running)
-        if self.running:
-            print("runOnce: already Running")
-            return
-        print("runOnce... ")
-        self.running = True
-        taskFuture = None
-        for task in self.taskList:
-            if not self.running:
-                break
-            shortTaskName = Path(task).name
-            print("   ... Running task: ", shortTaskName)
-
-            try:
-                self.TR.loadTask(getDirHandle(task))
-            except:
-                print("Failed to load the task")
-                self.stopTasks(taskFuture)
-                self.running = False
-                raise ValueError()
-        
-            # self.startBtn.setText(f"Running: {shortTaskName:s}")
-            self.fileLabel.setText(f"Running: {shortTaskName:s}")
-
-            if self.test_mode:
-                print("Test mode: loading but not running sequence")
-                continue
-
-            try:
-                print("trying to start runSequence")
-                taskFuture = self.TR.runSequence(collectResults=True)
-                print("run sequence started ok")
-                print("percent done: ", taskFuture.percentDone())
-                done = 0
-                while taskFuture.percentDone() < 100:
-                    pcd = taskFuture.percentDone()
-                    if pcd > done + 5:
-                        done = pcd
-                        print("task running, % done: ", done)                    
-            except:
-                print("failed to start somehow")
-                self.stopTasks(taskFuture)
-                self.running = False
-                raise ValueError()
-            print("    task: ", shortTaskName, " completed...or failed")
-            self.fileLabel.setText(f"Completed: {shortTaskName:s}")
-        self.stopTasks(taskFuture)
-        
-    def stopTasks(self, taskFuture):
-        if taskFuture is not None:
-            taskFuture.stop()
-        self.startBtn.setText("Start")
-        self.isStarted = False
-
-        self.running = False
-        print("stopTasks: Stopping")
-        self.TR.stopSequence()
-        print("stop sequence called")
-        self.timer.stop()
-
     def startClicked(self):
-        self.runOnce()
+        self.updateTaskList()
+        print(self.taskList)
+        try:
+            print("\nself.running: ", self.running)
+            if self.running:
+                print("runOnce: already Running")
+                return
+            self.updateTaskList()
+            print("runOnce... ")
+            self.running = True
+            taskFuture = None
+            tasks = {"tasks": self.taskList, 'TaskRunnerInstance': self.TR}
+            self.thread.start(tasks)
+        
+        except:
+            self.threadStopped()
+            raise()
+        
 
-    # def startToggled(self):
-    #     print('is started: ', self.isStarted)
-    #     if not self.isStarted:
-    #         try:
-    #             # if self.recordDir is None or not self.recordWritable:
-    #             #     self.newRecord()
-    #             if self.startTime is None:
-    #                 self.startTime = time.time()
-    #             self.timer.start(int(self.params["interval"] * 1000))
-    #             self.isStarted = True
-    #             print("now run once: ")
-    #             self.runOnce()
-    #         except:
-    #             self.startBtn.setChecked(False)
-    #             raise
-
-    #         self.startBtn.setText("Stop")
-    #     # else:
-    #     #     self.stopTasks()
+    def threadMessage(self, message):
+        self.statusLabel.setText(message)
     
-    def cancelClicked(self):
-        print("Cancelling; ? isstarted: ", self.isStarted, "running: ", self.running)
-        if not self.isStarted:
-            return
-        self.TR.stopSequence()  # stop the current sequence
+    def stopTasks(self, taskFuture):
+        self.thread.stop()
+
+    def pauseClicked(self, b):
+        self.thread.pause(b)
+    
+    def threadStopped(self):
+        pass
+
+    
+    def stopClicked(self):
+        self.thread.stop()
+        # self.TR.stopSequence()  # stop the current sequence
         self.timer.stop()
         self.isStarted = False
         self.startBtn.setText("Start")
@@ -338,3 +302,126 @@ class Tasker(Module):
         with open(filename, "w") as fh:
             for line in self.taskList:
                 fh.write(line+"\n")
+
+
+
+class SequencerThread(Thread):
+
+    sigMessage = Qt.Signal(object)  # message
+
+    def __init__(self):
+        Thread.__init__(self)
+        self.prot = None
+        self._stop = False
+        self._frame = None
+        self._paused = False
+        self.lock = Mutex(recursive=True)
+
+    def start(self, tasklist):
+        if self.isRunning():
+            raise Exception("Sequence is already running.")
+        self.taskList = tasklist['tasks']
+        self.TR = tasklist['TaskRunnerInstance']
+        self._stop = False
+        self.sigMessage.emit("[ running.. ]")
+        Thread.start(self)
+
+    def stop(self):
+        with self.lock:
+            self._stop = True
+
+    def pause(self, p):
+        with self.lock:
+            self._paused = p
+
+    # def newFrame(self, frame):
+    #     with self.lock:
+    #         self._frame = frame
+
+    def run(self):
+        try:
+            self.runSequence()
+        except Exception as e:
+            raise
+
+    def runSequence(self):
+        for task in self.taskList:
+            shortTaskName = Path(task).name
+            print("   ... Running task: ", shortTaskName)
+
+            try:
+                #  taskFuture = threadrun.runInThread(
+                taskFuture = self.TR.loadTask(getDirHandle(task))
+                #  )
+            except:
+                print("Failed to load the task")
+                self.stopTasks(taskFuture)
+                self.running = False
+                raise ValueError()
+        
+            # self.startBtn.setText(f"Running: {shortTaskName:s}")
+            # self.fileLabel.setText(f"Running: {shortTaskName:s}")
+
+            if self.test_mode:
+                print("Test mode: loading but not running sequence")
+                continue
+
+            try:
+                print("trying to start runSequence")
+                taskFuture = threadrun.runInThread(self.TR.runSequence, collectResults=True)
+                Qt.QtThread.yieldCurrentThread()
+                print("run sequence started ok")
+                print("percent done: ", taskFuture.percentDone())
+                done = 0
+                while taskFuture.percentDone() < 100:
+                    Qt.QtThread.yieldCurrentThread()
+                    pcd = taskFuture.percentDone()
+                    if pcd > done + 5:
+                        done = pcd
+                        print("task running, % done: ", done)                    
+            except:
+                print("failed to start somehow")
+                self.stop() # Tasks(taskFuture)
+                raise ValueError()
+            print("    task: ", shortTaskName, " completed...or failed")
+            # self.fileLabel.setText(f"Completed: {shortTaskName:s}")
+        self.stop()
+
+    def sendStatusMessage(self, iter, maxIter, depthIndex, depths):
+        if maxIter == 0:
+            itermsg = "iter=%d" % (iter + 1)
+        else:
+            itermsg = "iter=%d/%s" % (iter + 1, maxIter)
+
+        if depthIndex is None or depths[depthIndex] is None:
+            depthmsg = ""
+        else:
+            depthstr = pg.siFormat(depths[depthIndex], suffix="m")
+            depthmsg = "depth=%s %d/%d" % (depthstr, depthIndex + 1, len(depths))
+
+        self.sigMessage.emit("[ running  %s  %s ]" % (itermsg, depthmsg))
+
+   
+
+    def sleep(self, until):
+        # Wait until some event occurs
+        # check for pause / stop while waiting
+        while True:
+            with self.lock:
+                if self._stop:
+                    raise Exception("stopped")
+                paused = self._paused
+                frame = self._frame
+            if paused:
+                wait = 0.1
+            else:
+                if until == "frame":
+                    if frame is not None:
+                        return
+                    wait = 0.1
+                else:
+                    now = ptime.time()
+                    wait = until - now
+                    if wait <= 0:
+                        return
+            time.sleep(min(0.1, wait))
