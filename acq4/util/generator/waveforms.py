@@ -316,3 +316,64 @@ def noise(params, mean, sigma, start=0.0, stop=None):
 
     d[start:stop] = numpy.random.normal(size=stop-start, loc=mean, scale=sigma)
     return d
+
+def sweptSinWave(params, freq_start, freq_end, 
+                 amplitude=1.0, phase=0.0, start=0.0, stop=None, base=0.0,
+                 mode:str="linear"):
+    rate = params['rate']
+    nPts = params['nPts']
+    params['message'] = ""
+
+    ## Check all arguments 
+    if not isNum(amplitude):
+        raise Exception("Amplitude argument must be a number")
+    if not isNum(freq_start):
+        raise Exception("Start frequency argument must be a number")
+    if not isNum(freq_end):
+        raise Exception("End frequency argument must be a number")
+    if not isNum(phase):
+        raise Exception("Phase argument must be a number")
+    if not isNumOrNone(start):
+        raise Exception("Start argument must be a number")
+    if not isNumOrNone(stop):
+        raise Exception("Stop argument must be a number")
+    if not isinstance(mode, str) or mode not in ["linear", "log"]:
+        raise Exception("Mode argument must be a string in ['linear', 'log']")
+    
+    ## initialize array
+    d = numpy.empty(nPts)
+    d[:] = base
+    
+    ## Define start and end points
+    if start is None:
+        start = 0
+    else:
+        start = int(start * rate)
+    if stop is None:
+        stop = nPts-1
+    else:
+        stop = int(stop * rate)
+        
+    if stop > nPts-1:
+        params['message'] += "WARNING: Function is longer than generated waveform\n"    
+        stop = nPts-1
+    nsweep_pts = stop-start
+    cycleTime_start = int(rate/freq_start)
+    if cycleTime_start < 10:
+        params['message'] += 'Warning: Period_start is less than 10 samples\n'
+    cycleTime_end = int(rate/freq_end)
+    if cycleTime_end < 10:
+        params['message'] += 'Warning: Period_end is less than 10 samples\n'
+    t = numpy.linspace(0, nsweep_pts/rate, nsweep_pts)
+    # params['message'] = f"Mode: {mode:s}, nsweep: {nsweep_pts:d} "
+    if mode == 'linear':
+        freqs = numpy.linspace(freq_start, freq_end, nsweep_pts)
+    elif mode == 'log':
+        freqs = numpy.logspace(numpy.log10(freq_start), numpy.log10(freq_end), nsweep_pts)
+    # params['message'] += f"# points in periods: {len(freqs):d}" # {periods[0]:f}, {periods[-1]:f}"
+    sw = amplitude*numpy.sin(2.0*numpy.pi * (phase + (freqs/2.0 *  t)))
+    d[start:stop] = sw
+    #d[start:stop] = numpy.fromfunction(lambda i: amplitude * numpy.sin(phase * 2.0 * numpy.pi + i * 2.0 * numpy.pi / (period * rate)), (stop-start,))
+    # d[start:stop] = (amplitude * numpy.sin(phase * 2.0 * numpy.pi + numpy.arange(stop-start)
+    #                                         * 2.0 * numpy.pi / (period * rate)))
+    return d
