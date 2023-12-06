@@ -80,6 +80,9 @@ class TaskRunner(Module):
     sigTaskSequenceStarted = Qt.Signal(object)  ## called whenever single task OR task sequence has started
     sigTaskStarted = Qt.Signal(object)  ## called at start of EVERY task, including within sequences
     sigTaskChanged = Qt.Signal(object, object)
+    sigTaskErrored = Qt.Signal()
+    sigTaskStopped = Qt.Signal()
+    sigTaskFutureAvailable = Qt.Signal(object)
 
     def __init__(self, manager, name, config):
         Module.__init__(self, manager, name, config)
@@ -151,11 +154,16 @@ class TaskRunner(Module):
         self.ui.pauseSequenceBtn.toggled.connect(self.pauseSequence)
         self.ui.deviceList.itemClicked.connect(self.deviceItemClicked)
         self.taskList.sigCurrentFileChanged.connect(self.fileChanged)  ## called if loaded task file is renamed or moved
+        
         self.taskThread.finished.connect(self.taskThreadStopped)
         self.taskThread.sigNewFrame.connect(self.handleFrame)
         self.taskThread.sigPaused.connect(self.taskThreadPaused)
         self.taskThread.sigTaskStarted.connect(self.taskStarted)
-        self.taskThread.sigExitFromError.connect(self.taskErrored)
+        self.taskThread.sigTaskAborted.connect(self.taskErrored)
+        self.taskThread.sigTaskStopped.connect(self.taskStopped)
+        self.taskThread.sigLoadTask.connect(self.loadTask)
+        self.taskThread.sigRunSequence.connect(self.runSequence)
+        
         self.protoStateGroup.sigChanged.connect(self.protoGroupChanged)
         self.win.show()
         self.ui.sequenceParamList.itemChanged.connect(self.updateSeqReport)
@@ -464,7 +472,7 @@ class TaskRunner(Module):
             prof.mark('stopped')
 
             fn = handle.name()
-
+            prof.mark(f"Loading Task: {fn:s}")
             ## Remove all docks
             self.clearDocks()
             prof.mark('cleared')
@@ -661,8 +669,9 @@ class TaskRunner(Module):
 
         except:
             self.setStartBtnsEnable(True)
+            self.sigTaskErrored.emit()
             raise
-
+        self.sigTaskFutureAvailable.emit(future)
         return future
 
     def generateTask(self, dh, params=None, progressDlg=None):
@@ -765,7 +774,9 @@ class TaskRunner(Module):
             self.setStartBtnsEnable(True)
 
     def taskErrored(self):
+        self.sigTaskErrored.emit()
         self.setStartBtnsEnable(True)
+
 
     def taskThreadPaused(self):
         self.sigTaskPaused.emit()
@@ -781,6 +792,7 @@ class TaskRunner(Module):
         if self.taskThread.isRunning():
             self.taskThread.stop()
         self.ui.pauseSequenceBtn.setChecked(False)
+        self.sigTaskStopped.emit()
 
     def pauseSequence(self, pause):
         self.taskThread.pause(pause)
@@ -804,6 +816,9 @@ class TaskRunner(Module):
                     params[subp] = params[p[:2]]
 
         self.sigTaskStarted.emit(params)
+
+    def taskStopped(self):
+        self.sigTaskFinished.emit()
 
     def handleFrame(self, frame):
 
@@ -864,7 +879,6 @@ class TaskRunner(Module):
 class Task:
     def __init__(self, ui, fileName=None):
         self.ui = ui
-
         if fileName is not None:
             self.fileName = fileName
             conf = configfile.readConfigFile(fileName)
@@ -956,8 +970,13 @@ class Task:
 class TaskThread(Thread):
     sigPaused = Qt.Signal()
     sigNewFrame = Qt.Signal(object)
-    sigExitFromError = Qt.Signal()
+    sigTaskAborted = Qt.Signal()
     sigTaskStarted = Qt.Signal(object)
+    sigTaskStopped = Qt.Signal()
+    sigLoadTask = Qt.Signal(object)
+    sigRunSequence = Qt.Signal(object)
+
+
 
     def __init__(self, ui):
         Thread.__init__(self)
@@ -1020,7 +1039,7 @@ class TaskThread(Thread):
             printExc("Error in task thread, exiting.")
             self._currentFuture._taskDone(interrupted=True, error=str(exc))
             self._currentFuture = None
-            self.sigExitFromError.emit()
+            self.sigTaskAborted.emit()
         else:
             self._currentFuture._taskDone()
             self._currentFuture = None
@@ -1046,6 +1065,7 @@ class TaskThread(Thread):
         while (self.lastRunTime is not None) and (ptime.time() < self.lastRunTime + cmd['protocol']['cycleTime']):
             with self.lock:
                 if self.abortThread or self.stopThread:
+                    self.sigTaskAborted.emit()
                     # print "Task run aborted by user"
                     return
             time.sleep(1e-3)
@@ -1055,6 +1075,7 @@ class TaskThread(Thread):
         while True:
             with self.lock:
                 if self.abortThread or self.stopThread:
+                    self.sigTaskAborted.emit()
                     return
                 pause = self.paused
             if not pause:
@@ -1138,6 +1159,7 @@ class TaskThread(Thread):
         self.sigNewFrame.emit(frame)
         prof.mark('emit newFrame')
         if self.stopThread:
+            self.sigTaskAborted.emit()
             raise Exception('stop', result)
 
         ## Give everyone else a chance to catch up
@@ -1148,6 +1170,7 @@ class TaskThread(Thread):
     def checkStop(self):
         with self.lock:
             if self.stopThread:
+                self.sigTaskAborted.emit()
                 raise Exception('stop')
 
     def stop(self, block=False, task=None):
@@ -1155,8 +1178,10 @@ class TaskThread(Thread):
             if task is not None and self._currentTask is not task:
                 return
             self.stopThread = True
+            self.sigTaskStopped.emit()
         if block:
             if not self.wait(10000):
+                self.sigTaskAborted.emit()
                 raise Exception("Timed out while waiting for thread exit!")
 
     def abort(self):
