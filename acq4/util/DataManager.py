@@ -527,10 +527,11 @@ class DirHandle(FileHandle):
             (fileName, ext) = os.path.splitext(fileName)
         else:
             ext = ''
-        regex = re.compile(fileName + r'_(\d+)')
+        regex = re.compile(fileName + r'_(\d{3})')
         files = [f for f in files if regex.match(f)]
         if len(files) > 0:
             files.sort()
+            matches = regex.match(files[-1])
             maxVal = int(regex.match(files[-1]).group(1)) + 1
         else:
             maxVal = 0
@@ -538,7 +539,8 @@ class DirHandle(FileHandle):
         return ret
     
     def mkdir(self, name, autoIncrement=False, info=None):
-        """Create a new subdirectory, return a new DirHandle object. If autoIncrement is true, add a number to the end of the dir name if it already exists."""
+        """Create a new subdirectory, return a new DirHandle object. 
+        If autoIncrement is true, add a number to the end of the dir name if it already exists."""
         if info is None:
             info = {}
         with self.lock:
