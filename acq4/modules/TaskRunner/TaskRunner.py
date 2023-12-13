@@ -77,6 +77,7 @@ class TaskRunner(Module):
     sigTaskPaused = Qt.Signal()
     sigTaskFinished = Qt.Signal()  ## emitted when the task thread exits (end of task, end of sequence, or exit due to error)
     sigNewFrame = Qt.Signal(object)  ## emitted at the end of each individual task
+    sigTaskLoaded = Qt.Signal(object)  ## emitted with "loaded" when a task has been successfully loaded or "error" when load fails
     sigTaskSequenceStarted = Qt.Signal(object)  ## called whenever single task OR task sequence has started
     sigTaskStarted = Qt.Signal(object)  ## called at start of EVERY task, including within sequences
     sigTaskChanged = Qt.Signal(object, object)
@@ -506,6 +507,7 @@ class TaskRunner(Module):
                         self.docks[d].widget().restoreState(prot.devices[d])
                         prof.mark('configured dock: ' + d)
                     except:
+                        self.sigTaskLoaded.emit("error")
                         printExc("Error while loading task dock:")
 
             ## create and configure analysis docks
@@ -517,6 +519,7 @@ class TaskRunner(Module):
                         self.analysisDocks[k].widget().restoreState(conf)
                         prof.mark('configured dock: ' + k)
                     except:
+                        self.sigTaskLoaded.emit("error")
                         printExc("Error while loading analysis dock:")
 
             ## Load sequence parameter state (must be done after docks have loaded)
@@ -528,9 +531,12 @@ class TaskRunner(Module):
             winState = prot.conf['windowState']
             if winState is not None:
                 self.win.restoreState(winState)
-
             prof.mark('position docks')
+            self.sigTaskLoaded.emit("loaded")  # notify others of success
 
+        except:
+            self.sigTaskLoaded.emit("error")
+            printExc("Error while loading Task")
         finally:
             Qt.QApplication.restoreOverrideCursor()
             prof.finish()

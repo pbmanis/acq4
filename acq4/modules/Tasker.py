@@ -80,7 +80,6 @@ class Tasker(Module):
 
         self.startTime = None
         self.isStarted = False
-        self.test_mode = False
         self.taskList:list = []
         self.window = TaskerWindow(self)
         self.win = Qt.QSplitter()
@@ -131,7 +130,6 @@ class Tasker(Module):
         self.startBtn.setCheckable(True)
         self.testBtn = Qt.QPushButton("Test")
         self.testBtn.setCheckable(True)
-        # self.stopBtn = Qt.QPushButton("Stop")
         self.fileLabel = Qt.QLabel()
         self.message = Qt.QLabel()
         self.infoLabel = Qt.QLabel()
@@ -141,7 +139,6 @@ class Tasker(Module):
         self.intervalBtn.setMinimum(1)
 
         self.ctrlWidget.addWidget(self.startBtn, 1, 0)
-        # self.ctrlWidget.addWidget(self.stopBtn, 2, 0)
         self.ctrlWidget.addWidget(self.testBtn, 2, 0)
         self.ctrlWidget.addWidget(self.intervalBtn, 3, 0)
         self.ctrlWidget.addWidget(self.fileLabel, 4, 0)
@@ -152,7 +149,6 @@ class Tasker(Module):
         self.loadBtn.clicked.connect(self.loadClicked)
         self.saveBtn.clicked.connect(self.saveClicked)
         self.startBtn.clicked.connect(self.startClicked)
-        # self.stopBtn.clicked.connect(self.stopClicked)
         self.testBtn.toggled.connect(self.testClicked)
 
         self.sigTestLoadTask.connect(self.TR.loadTask)
@@ -164,7 +160,7 @@ class Tasker(Module):
         self.thread.sigStopTasks.connect(self.threadStopped)
         self.thread.sigLoadTask.connect(self.TR.loadTask)
         self.thread.sigRunSequence.connect(self.TR.runSequence)
-        self.thread.sigProtocolSequenceDone.connect(self.stopClicked)
+        self.TR.sigTaskLoaded.connect(self.thread.taskLoaded)
         self.TR.sigTaskFinished.connect(self.thread.taskRunnerFinished)
         self.TR.sigTaskFutureAvailable.connect(self.thread.taskFutures)
         self.TR.sigTaskErrored.connect(self.thread.taskErrored)
@@ -218,10 +214,9 @@ class Tasker(Module):
         self.win.show()
 
         self.timer = Qt.QTimer()
-        # self.timer.timeout.connect(self.runOnce)
 
     def quit(self):
-        # self.startBtn.setChecked(False)
+        self.startBtn.setChecked(False)
         self.thread.stop()
         self.TR.stopSequence()
         Module.quit(self)
@@ -287,19 +282,14 @@ class Tasker(Module):
 
         if b:
             self.start()
-            print("start")
-        else:
-            self.stop()
-            print("stop")
+
 
     def start(self):
         try:
             self.updateTaskList()
-
             self.startBtn.setChecked(True)
-            self.startBtn.setText("Stop")
+            self.startBtn.setText("Running")
             self.thread.start(self.taskList)  # which also calls the thread.run() function
-            print("startClicked: thread started")
         except Exception:
             self.threadStopped()
             raise Exception("Error in starting thread or updating task list")
@@ -310,19 +300,9 @@ class Tasker(Module):
         self.startBtn.setChecked(False)
         self.startBtn.setText("Start")
 
-    def stopClicked(self):
-            self.thread.future.stop()
-            self.TR.stopSequence()
-            self.timer.stop()
-            self.isStarted = False
-            self.startBtn.setText("Start")
-            self.startBtn.setChecked(False)
-
     def stop(self):
         self.thread.stop()
     
-    def pauseClicked(self, b):
-        self.thread.pause(b)
 
     def testTaskSequence(self):
         """
@@ -409,6 +389,12 @@ class Tasker(Module):
 
 
 class TaskerThread(Thread):
+    """
+    Invoke the TaskRunner with sequential protocols through this thread.
+    The thread is started with the Tasker "start" button. 
+    The thread is stopped only when (a) the sequence is done, or (b) there is an error or "stop sequence" 
+    has been clicked in the TaskRunner.
+    """
     sigMessage = Qt.Signal(object)  # message about the current run state
     sigStatus = Qt.Signal(
         object
@@ -475,91 +461,96 @@ class TaskerThread(Thread):
         except Exception as e:
             raise
 
+    def taskLoaded(self, message):
+        with self.lock:
+            if message == "loaded":
+                self.taskLoaded = True
+            elif message == "error":
+                self.taskLoadFailed = True
+
     def taskRunnerFinished(self):
-        print("Tasker: Received taskRunnerFinished signal from TaskRunner")
-        self.oneTaskFinished = True
+        """The TaskRunner signals when each task is finished.
+        We just set a local flag
+        """
+        with self.lock:
+            self.oneTaskFinished = True
+            self.sigInfoMessage.emit("Tasker: TaskRunner finished a protocol")
 
     def taskErrored(self):
+        """
+        The TaskRunner signals when there is an error in the task
+        Again, we just set a local flag
+        """
         with self.lock:
             self.taskError = True
             self.sigInfoMessage.emit("Tasker: Received Error signal from TaskRunner")
-        # print("Tasker STOPPED with error signal from TaskRunner: taskError")
 
 
     def runTaskSequence(self):
+        """run a sequence of tasks (protocols) in the TaskRunner
+        Requires that we start this thread first.
+        The tasks are expected to be in self.taskList. Each task is loaded
+        (we wait for a loaded signal from the TaskRuner, or fail signal).
+        We then tell the TaskRunner to run the protocol (sequence), and
+        wait for 2 signals in succession: The first is for the 'future' 
+        variable to be set, which indicates that the TaskRunner is set up,
+        and the secnd is for either the task to finish or for the task to error.
+        When a taskFinished signal is received, we try to advance to the next
+        protocol in the list. When an error is received, either the TaskRUnner errored
+        or the 'Stop Sequence' button was clicked. In either case, we terminate
+        running the sequence of protocols.
+        The thread is stopped when we have either errored or exhausted the 
+        taskList.
+        """
 
-        print("Running a sequence of protocols")
-        print(self.taskList)
-        # if self.busy:
-        #     raise ValueError("Tasker is already running another task sequence")
         if not self.isRunning():
             raise ValueError("Thread for Tasker is not running")
         nprots = 0
         testing = False
         tasks = self.taskList.copy()
-        state = 0
-        while True:
-            while len(tasks) > 0:
-                task = tasks[0]  # get the first task
-                print("    Loading protocol: ", nprots+1, task)
-                # # self.showState("ta:: ")
-                shortTaskName = Path(task).name
-                self.sigMessage.emit(shortTaskName)
-                self.taskError = False
-                try:
-                    dirhandle = getDirHandle(task)
-                    self.sigInfoMessage.emit(f"Loading Protocol {dirhandle!s}")
+
+        while len(tasks) > 0:
+            task = tasks[0]  # get the first task
+            shortTaskName = Path(task).name
+            self.sigMessage.emit(shortTaskName)
+            self.taskError = False
+            self.oneTaskFinished = False
+            # load the protocol into the TaskRunner
+            try:
+                self.taskLoaded = False
+                self.taskLoadFailed = False
+                dirhandle = getDirHandle(task)
+                self.sigInfoMessage.emit(f"Loading Protocol {dirhandle!s}")
+                with self.lock:
+                    self.sigLoadTask.emit(dirhandle)
+                while (not self.taskLoaded) and (not self.taskLoadFailed):
+                    Qt.QtCore.QThread.msleep(100) # give task time to get loaded
+            except:
+                raise FileNotFoundError(f"Failed to load Protocol: {shortTaskName:s}")
+            nprots += 1
+            self.sigMessage.emit(f"Loaded {shortTaskName:s}")
+            try:
+                self.sigRunSequence.emit(True)  # start the TaskRunner sequence
+                while (self.future is None): # give time for Task Runner to generate protocol and return
+                    Qt.QtCore.QThread.msleep(100)
+                while (not self.oneTaskFinished) and (not self.taskError): # wait for task or error
+                    Qt.QtCore.QThread.msleep(100)
+                # print("Task ended with flags: finished: ", self.oneTaskFinished, 
+                #         " taskError: ", self.taskError,)
+                if self.taskError:  # pick up error/abort
                     with self.lock:
-                        self.sigLoadTask.emit(dirhandle)
-                    Qt.QtCore.QThread.msleep(250)
-                except:
-                    raise FileNotFoundError(f"Failed to load Protocol: {shortTaskName:s}")
-                nprots += 1
-                self.sigMessage.emit(f"Loaded {shortTaskName:s}")
-                print("        Protocol loaded: ", shortTaskName)
-                state = 1
-                try:
-                    self.sigRunSequence.emit(True)  # start the TaskRunner sequence
-                    while (self.future is None): # give time for Task Runner to generate protocol and return
-                        Qt.QtCore.QThread.msleep(100)
-                    while (not self.oneTaskFinished) and (not self.taskError):
-                        Qt.QtCore.QThread.msleep(100)
-                        # print("in while waiting for task or error", self.oneTaskFinished, self.taskError)
-                    print("Task terminated flags: finished: ", self.oneTaskFinished, 
-                          " taskError: ", self.taskError,)
-                    self.oneTaskFinished = False  # reset
-                    if self.taskError:  # pick up error/abort
-                        print("Terminated with task Error")
                         self.sigInfoMessage.emit("Sequence terminated mid-way")
                         self.future.stop()
-                        self.taskError = False
                         tasks = []
                         state=2
-                        break
-                    # check for stop / pause
-                    state = 3
-                    print("state before sleep: ", state)
-                    self.sleep(until=0)
-                finally:
-                    print("finally state: ", state)
-                    if len(tasks) > 0:
-                        tasks.pop(0) # remove the first task remaining in the list
-                        self.sigInfoMessage.emit(f"    task {nprots:d}: {shortTaskName:s}, completed")
-                if len(tasks) == 0 or self.taskError:
-                    print("empty list or error state: ", state)
-                    break
-                print("before sleep state: ", state)
-                self.sleep(until=0)
-            print("exiting runsequence state: ", state)
-            self.taskError = False
-            self.sigProtocolSequenceDone.emit()
-            if len(tasks) == 0:
-                break
-
-    def stopSequence(self):
-        """Call this to stop the sequence (can trigger from StopSequence in TaskRunner or Stop button in Tasker)
-        """
-        self.stoppedSequence = True
+                        self.stop()
+            finally:
+                if len(tasks) > 0:
+                    tasks.pop(0) # remove the first task remaining in the list
+                    self.sigInfoMessage.emit(f"    task {nprots:d}: {shortTaskName:s}, completed")
+        self.taskError = False
+        self.sigProtocolSequenceDone.emit()
+        self.stop()
 
     def sendStatusMessage(self, iter, maxIter, depthIndex, depths):
         if maxIter == 0:
@@ -575,25 +566,3 @@ class TaskerThread(Thread):
 
         self.sigStatus.emit("[ running  %s  %s ]" % (itermsg, depthmsg))
 
-    def sleep(self, until):
-        # Wait until some event occurs
-        # check for pause / stop while waiting
-        while True:
-            with self.lock:
-                if self._stop:  # not needed here - 
-                    raise Exception("stopped")
-                paused = self._paused
-                frame = self._frame
-            if paused:
-                wait = 0.1
-            else:
-                if until == "frame":
-                    if frame is not None:
-                        return
-                    wait = 0.1
-                else:
-                    now = ptime.time()
-                    wait = until - now
-                    if wait <= 0:
-                        return
-            time.sleep(min(0.1, wait))
