@@ -287,12 +287,13 @@ class MosaicEditor(AnalysisModule):
         The new item will inherit the user transform from the previous item
         (chronologically) if it does not already have a user transform specified.
         """
-        print(f.isFile(), f.isDir())
         if f.isFile():
+            fp = Path(f.name())
+            if fp.suffix in [".ma", ".tif"]:
+                name = str(Path(fp.parent.name, fp.name)) # give a name that includes the parent directory
             return self.addOneFile(f, name=name, inheritTransform=inheritTransform)
         elif f.isDir():
-            allfiles = f.ls()
-                                      # get all the tif files in the directory
+            allfiles = f.ls()                                      # get all the tif files in the directory
             for fi in allfiles:
                 fh = DataManager.getDirHandle(Path(f.name(), fi))
                 if fh.ext() == ".tif":
@@ -346,10 +347,20 @@ class MosaicEditor(AnalysisModule):
         *type* which is a string specifying the type of item to create and add.
         """
         if isinstance(item, Qt.QGraphicsItem):
+            print("Loading qgraphics item: ", item)
             return self.canvas.addGraphicsItem(item, **kwds)
         else:
-            print("item type: ", type)
-            return self.canvas.addItem(item, type, **kwds)
+            print("type: ", type)
+            if type == "CellCanvasItem":
+                fh = self.ui.fileLoader.selectedFiles()
+                if len(fh) == 1:
+                    fh = fh[0]
+                    name = fh.shortName()
+                    kwds['name'] = name
+           # elif type == ""
+            item = self.canvas.addItem(item, type, **kwds)
+            self.canvas.selectItem(item)
+            return item
 
     def checkSelected(self):
         w = self.canvas.ui.canvasCtrlWidget.children()
@@ -436,15 +447,17 @@ class MosaicEditor(AnalysisModule):
         
         markerItem = self.addItem(type="MarkersCanvasItem", name=markerType)
         markerItem.params.setName(markerType)
+
         # don't put all the markers in the same place - logical offsets (although,
         # this might result in markers that assumed a particular orientation
-        markerdict =Markers.definedMarkers[markerType]
+        markerdict = Markers.definedMarkers[markerType]
         for i, marker in enumerate(markerdict.keys()):
             markerItem.addMarker(marker)  # adds marker centered on view
             thismarker = markerItem.params.child(marker)
             pos = thismarker.target.param().target.pos()
+            print("MarkerDict: ", markerdict[marker])
             thismarker.target.param().target.setPos(
-                pos.x() + markerdict[marker][1], pos.y() + markerdict[marker][2]
+                pos.x() + markerdict[marker][0], pos.y() + markerdict[marker][1]
             )
         
 

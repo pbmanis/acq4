@@ -27,6 +27,13 @@ class CellCanvasItem(CanvasItem):
         self.graphicsItem().setPos(center_pos.x(), center_pos.y())
         self.selectBox.addTranslateHandle([0.5,0.5])
         self.selectBox.setPos(center_pos.x(), center_pos.y())
+        self.textLabel= None
+        if "name" in opts.keys():  # add text label to cell so we can identify it
+            self.textLabel = pg.TextItem(text=opts["name"])
+            self.setObjectName(opts["name"])
+            self.textLabel.setParentItem(self.graphicsItem())
+            self.textLabel.setPos(center_pos.x(), center_pos.y())
+
 
 
     @classmethod
