@@ -350,12 +350,21 @@ class MosaicEditor(AnalysisModule):
             print("Loading qgraphics item: ", item)
             return self.canvas.addGraphicsItem(item, **kwds)
         else:
-            print("type: ", type)
+            # print("type: ", type)
             if type == "CellCanvasItem":
                 fh = self.ui.fileLoader.selectedFiles()
                 if len(fh) == 1:
                     fh = fh[0]
-                    name = fh.shortName()
+                    if fh.shortName().startswith("cell"):
+                        name = fh.shortName()
+                        kwds['name'] = name
+                elif len(fh) > 0:
+                    pname = fh[0].parent().shortName()
+                    if pname.startswith("cell"):
+                        name = pname
+                        kwds['name'] = name
+                else:
+                    name = "Cell"
                     kwds['name'] = name
            # elif type == ""
             item = self.canvas.addItem(item, type, **kwds)
