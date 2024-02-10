@@ -71,6 +71,9 @@ class MosaicEditor(AnalysisModule):
         self.videosSelected = False
         self.videosShown = True
         self.canvas = Canvas(name="MosaicEditor")
+        self.host_window = self._host_.window()
+        self.statusBar = self.host_window.statusBar()  # get this from the host window
+        # self.host_window.setBaseSize(1440, 1280)  # Try to make the winow large enough: this causes the windo to jump around though
 
         self._elements_ = OrderedDict(
             [
@@ -93,7 +96,7 @@ class MosaicEditor(AnalysisModule):
                         "type": "ctrl",
                         "object": self.canvas.ui.view,
                         "pos": ("bottom", "Mosaic"),
-                        "size": (800, 800),
+                        "size": (1280, 1024),
                     },
                 ),
                 (
@@ -102,7 +105,7 @@ class MosaicEditor(AnalysisModule):
                         "type": "ctrl",
                         "object": self.canvas.ui.canvasCtrlWidget,
                         "pos": ("right", "Canvas"),
-                        "size": (200, 400),
+                        "size": (160, 600),
                     },
                 ),
                 (
@@ -111,7 +114,7 @@ class MosaicEditor(AnalysisModule):
                         "type": "ctrl",
                         "object": self.canvas.ui.canvasItemCtrl,
                         "pos": ("bottom", "ItemList"),
-                        "size": (200, 400),
+                        "size": (160, 400),
                     },
                 ),
             ]
@@ -130,9 +133,11 @@ class MosaicEditor(AnalysisModule):
             pass
 
         for a in atlas.listAtlases():
+            if a.startswith("__") or a.find("pyqt")>= 0:
+                continue
             self.ui.atlasCombo.addItem(a)
 
-        # Add buttons to the canvas control panel
+        # Add buttons to the canvas control panel (Window named "ItemList")
         self.btnBox = Qt.QWidget()
         self.btnLayout = Qt.QGridLayout()
         self.btnLayout.setContentsMargins(0, 0, 0, 0)
@@ -142,16 +147,24 @@ class MosaicEditor(AnalysisModule):
 
         self.addCombo = Qt.QComboBox()
         self.addCombo.currentIndexChanged.connect(self._addItemChanged)
-        self.btnLayout.addWidget(self.addCombo, 0, 0, 1, 2)
+        self.btnLayout.addWidget(self.addCombo, 0, 0, 1, 1)
         self.addCombo.addItem("Add item..")
+
+        self.checkBtn = Qt.QPushButton("Check Selected")
+        self.checkBtn.clicked.connect(self.checkSelected)
+        self.btnLayout.addWidget(self.checkBtn, 1, 0)
+
+        self.checkBtn = Qt.QPushButton("UnCheck Selected")
+        self.checkBtn.clicked.connect(self.uncheckSelected)
+        self.btnLayout.addWidget(self.checkBtn, 1, 1)
 
         self.saveBtn = Qt.QPushButton("Save ...")
         self.saveBtn.clicked.connect(self.saveClicked)
-        self.btnLayout.addWidget(self.saveBtn, 1, 0)
+        self.btnLayout.addWidget(self.saveBtn, 2, 0)
 
         self.clearBtn = Qt.QPushButton("Clear All")
         self.clearBtn.clicked.connect(self._handleClearBtnClick)
-        self.btnLayout.addWidget(self.clearBtn, 1, 1)
+        self.btnLayout.addWidget(self.clearBtn, 2, 1)
 
         self.canvas.sigItemTransformChangeFinished.connect(self.itemMoved)
         self.ui.atlasCombo.currentIndexChanged.connect(self.atlasComboChanged)
@@ -162,16 +175,16 @@ class MosaicEditor(AnalysisModule):
         self.ui.MaxImageProjectionBtn.clicked.connect(self.MIP_Images)
         self.ui.MaxImageProjectionGaussianBtn.clicked.connect(self.MIP_Images)
         self.ui.MaxImageProjectionMedianBtn.clicked.connect(self.MIP_Images)
-        self.ui.checkSelectedBtn.clicked.connect(self.checkSelected)
-        self.ui.uncheckSelectedBtn.clicked.connect(self.uncheckSelected)
+        # self.ui.checkSelectedBtn.clicked.connect(self.checkSelected)
+        # self.ui.uncheckSelectedBtn.clicked.connect(self.uncheckSelected)
         self.ui.globalParallel_checkBox.clicked.connect(self.setParallel)
  
         # Tile Operation:
-        self.ui.tileShadingBtn.clicked.connect(self.tileShadeImages)
-        self.ui.mosaicApplyScaleBtn.clicked.connect(self.updateScaling)
-        self.ui.mosaicResetScaleBtn.clicked.connect(self.resetScaling)
-        self.ui.mosaicFlipLRBtn.clicked.connect(self.flipLR)
-        self.ui.mosaicFlipUDBtn.clicked.connect(self.flipUD)
+        self.ui.mosaicAutoLevelBtn.clicked.connect(self.mosaicAutoLevels)
+        self.ui.mosaicApplyLevelBtn.clicked.connect(self.mosaicApplyLevels)
+        # self.ui.mosaicResetScaleBtn.clicked.connect(self.resetScaling)
+        # self.ui.mosaicFlipLRBtn.clicked.connect(self.flipLR)
+        # self.ui.mosaicFlipUDBtn.clicked.connect(self.flipUD)
         
         # Annotation Tools:
         self.ui.mosaicCreateMarkers.clicked.connect(self.createMarkers)
@@ -188,7 +201,12 @@ class MosaicEditor(AnalysisModule):
         self.registerItemType(items.getItemType("AtlasCanvasItem"))
 
     def _handleClearBtnClick(self):
-        self.clear(ask=True)
+        if self.clear(ask=True):
+            self.statusBar = self.host_window.statusBar()  # get this from the host window
+            self.statusBar.showMessage("Cleared")
+
+    def updateStatusBar(self, message):
+        self.statusBar.showMessage(message)
 
     def registerItemType(self, itemclass, menuString=None):
         """Add an item type to the list of addable items."""
@@ -353,19 +371,17 @@ class MosaicEditor(AnalysisModule):
             # print("type: ", type)
             if type == "CellCanvasItem":
                 fh = self.ui.fileLoader.selectedFiles()
-                if len(fh) == 1:
-                    fh = fh[0]
-                    if fh.shortName().startswith("cell"):
-                        name = fh.shortName()
-                        kwds['name'] = name
-                elif len(fh) > 0:
-                    pname = fh[0].parent().shortName()
+                name = "Cell" # default
+                if len(fh) > 0:  # try to get the name from the file handle
+                    pname = fh[0].parent().shortName()  # parens of the first selected files
                     if pname.startswith("cell"):
                         name = pname
-                        kwds['name'] = name
-                else:
-                    name = "Cell"
-                    kwds['name'] = name
+                    elif len(fh) == 1:  # maybe the cell directory is selected?
+                        fh = fh[0]
+                        if fh.shortName().startswith("cell"):
+                            name = fh.shortName()
+
+                kwds['name'] = name
            # elif type == ""
             item = self.canvas.addItem(item, type, **kwds)
             self.canvas.selectItem(item)
@@ -699,7 +715,7 @@ class MosaicEditor(AnalysisModule):
 
         self.canvas.autoRange()
 
-    def resetScaling(self):
+    def mosaicAutoLevels(self):
         """
         Set all the selected images to have the original scaling (just min/max)
         """
@@ -715,7 +731,7 @@ class MosaicEditor(AnalysisModule):
                 [minval, maxval]
             )
 
-    def updateScaling(self):
+    def mosaicApplyLevels(self):
         """
         Set all the selected images to have the scaling in the editor bar (absolute values)
         """
@@ -799,8 +815,11 @@ class MosaicEditor(AnalysisModule):
             if response != Qt.QtWidgets.QMessageBox.StandardButton.Ok:
                 return False
 
+        self.updateStatusBar("Clearing canvas")
         self.canvas.clear()
+        self.updateStatusBar("Clearing Items")
         self.items.clear()
+        self.updateStatusBar("Clearing files")
         self.files.clear()
         self.videosSelected = False  # reset
         self.videosShown = True
@@ -830,6 +849,7 @@ class MosaicEditor(AnalysisModule):
         dh = DataManager.getDirHandle(os.path.dirname(filename))
         state = self.saveState(relativeTo=dh)
         json.dump(state, open(filename, "w"), indent=4, cls=Encoder)
+        self.updateStatusBar("Saved mosaic to %s" % filename)
 
     def restoreState(self, state, rootPath=None):
         if state.get("contents", None) != "MosaicEditor_save":
@@ -871,16 +891,18 @@ class MosaicEditor(AnalysisModule):
                 else:
                     fh = root[fname]
                 item = self.addFile(fh, name=itemState["name"], inheritTransform=False)
+            self.updateStatusBar("Loading item %s" % itemState["name"])
             item.restoreState(itemState)
 
         self.canvas.view.setState(state["view"])
         if len(loadfail) > 0:
             msg = "\n".join(["%s: %s" % m for m in loadfail])
             raise Exception("Failed to load some items:\n%s" % msg)
-
+   
     def loadStateFile(self, filename):
         state = json.load(open(filename, "r"))
         self.restoreState(state, rootPath=os.path.dirname(filename))
+        self.updateStatusBar("Loaded mosaic from %s" % filename)
 
     def saveClicked(self):
         base = self.ui.fileLoader.baseDir()
@@ -899,7 +921,7 @@ class MosaicEditor(AnalysisModule):
         self.lastSaveFile = filename
 
         self.saveStateFile(filename)
-
+    
     def quit(self):
         self.files = None
         self.items = None

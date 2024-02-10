@@ -319,6 +319,7 @@ class MosaicEditor(AnalysisModule):
         May provide either *item* which is a CanvasItem or QGraphicsItem instance, or
         *type* which is a string specifying the type of item to create and add.
         """
+        print("Item: ", item)
         if isinstance(item, Qt.QGraphicsItem):
             return self.canvas.addGraphicsItem(item, **kwds)
         else:
