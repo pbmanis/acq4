@@ -130,6 +130,7 @@ class MosaicEditor(AnalysisModule):
         try:
             self.ui.fileLoader.setBaseClicked()  # get the currently selected directory in the DataManager
         except:
+            raise FileNotFoundError("Failed to find selected base directory")
             pass
 
         for a in atlas.listAtlases():
@@ -368,10 +369,11 @@ class MosaicEditor(AnalysisModule):
             print("Loading qgraphics item: ", item)
             return self.canvas.addGraphicsItem(item, **kwds)
         else:
-            # print("type: ", type)
             if type == "CellCanvasItem":
                 fh = self.ui.fileLoader.selectedFiles()
                 name = "Cell" # default
+                if "name" in kwds.keys():
+                    name = kwds["name"]
                 if len(fh) > 0:  # try to get the name from the file handle
                     pname = fh[0].parent().shortName()  # parens of the first selected files
                     if pname.startswith("cell"):
@@ -474,13 +476,12 @@ class MosaicEditor(AnalysisModule):
         markerItem.params.setName(markerType)
 
         # don't put all the markers in the same place - logical offsets (although,
-        # this might result in markers that assumed a particular orientation
+        # this might result in markers that assumed a particular orientation)
         markerdict = Markers.definedMarkers[markerType]
         for i, marker in enumerate(markerdict.keys()):
             markerItem.addMarker(marker)  # adds marker centered on view
             thismarker = markerItem.params.child(marker)
             pos = thismarker.target.param().target.pos()
-            print("MarkerDict: ", markerdict[marker])
             thismarker.target.param().target.setPos(
                 pos.x() + markerdict[marker][0], pos.y() + markerdict[marker][1]
             )

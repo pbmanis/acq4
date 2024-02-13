@@ -78,9 +78,10 @@ class MarkersCanvasItem(CanvasItem):
 
     def _targetMoved(self, target):
         pos = target.pos()
-        param = target.param()
-        param['Position', 'x'] = pos.x()
-        param['Position', 'y'] = pos.y()
+        if hasattr(target, 'param'):
+            param = target.param()
+            param['Position', 'x'] = pos.x()
+            param['Position', 'y'] = pos.y()
 
     def _paramsChanged(self, root, changes):
         for param, change, args in changes:
