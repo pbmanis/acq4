@@ -456,7 +456,7 @@ class _CameraClass:
         
         ## If this is an enum parameter, convert string values to int before setting
         if paramName in self.enumTable:
-            if isinstance(value, six.string_types):
+            if isinstance(value, six.string_types) or isinstance(value, bytes):
                 strVal = value
                 value = self.enumTable[paramName][0][value]
             else:

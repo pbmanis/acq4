@@ -483,7 +483,7 @@ class TaskRunner(Module):
             ## Set current task
             self.currentTask = prot
             prof.mark('made task')
-
+            print("load task prot: ", prot)
             # print "Docks cleared."
 
             ## Update task parameters

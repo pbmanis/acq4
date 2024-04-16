@@ -578,7 +578,7 @@ class Laser(DAQGeneric, OptomechDevice):
         
     def getPCellWaveform(self, powerCmd, cmd):
         ### return a waveform of pCell voltages to give the power in powerCmd
-        return
+        return powerCmd
         #if self.hasPCell:
             #print cmd
             #print 'powercmd: ',powerCmd
@@ -603,9 +603,12 @@ class Laser(DAQGeneric, OptomechDevice):
         
         nPts = len(cmdWaveform)
         daqCmd = {}
+        print("self.hasPCell: ", self.hasPCell)
         #if self.dev.config.get('pCell', None) is not None:
         if self.hasPCell:
             ## convert power values using calibration data
+            print("cmd: ", cmd)
+            print("params: ", self.params)
             if 'switchWaveform' in cmd:
                 with self.variableLock:
                     if self.params['useExpectedPower']:
@@ -620,6 +623,7 @@ class Laser(DAQGeneric, OptomechDevice):
             else:
                 powerCmd = cmd['powerWaveform']
             daqCmd['pCell'] = self.getPCellWaveform(powerCmd, cmd)
+            print(daqCmd['pCell'])
         else:
             if len(np.unique(cmdWaveform)) > 2: ## check to make sure command doesn't specify powers we can't do
                 raise Exception("%s device does not have an analog power modulator, so can only have a binary power command." %str(self.name()))

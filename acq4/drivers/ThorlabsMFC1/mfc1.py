@@ -56,7 +56,7 @@ class MFC1(object):
         Parameter dictionaries for two different firmware versions
         """
         params_1140 = OrderedDict([
-            ('maximum_current', 100),  # range is 0-255; in 32 steps. Do not make too large
+            ('maximum_current', 100),  # range is 0-255; in 32 steps. Do not make too 
             ('maximum_acceleration',100),
             ('maximum_speed', 800),
             ('ramp_divisor',2),
