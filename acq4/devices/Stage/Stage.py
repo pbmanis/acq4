@@ -735,7 +735,7 @@ class StageInterface(Qt.QWidget):
 
         self.globalLabel = Qt.QLabel('global')
         self.positionLabelLayout.addWidget(self.globalLabel, 0, 1)
-        if dev.isManipulator:
+        if self.dev.isManipulator:
             self.stageLabel = Qt.QLabel('manipulator')
         else:
             self.stageLabel = Qt.QLabel('stage')
