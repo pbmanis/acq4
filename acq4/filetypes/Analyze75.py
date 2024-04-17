@@ -34,15 +34,15 @@ class Analyze75(FileType):
 
 
 ## Function for reading NiFTI-1 and ANALYZE 7.5 image formats  (.nii and .hdr/.img files)
-
+# correct for deprecations in numpy >= 1.20 (int, complex)
 dataTypes = {
     0: None,
     1: 'BINARY',
     2: np.ubyte,
     4: np.short,
-    8: np.int,
+    8: int,
     16: np.float32,
-    32: np.complex,   ## two floats: (re, im)
+    32: complex,   ## two floats: (re, im)
     64: np.float64,
     128: [('R', np.ubyte), ('G', np.ubyte), ('B', np.ubyte)],
     256: 'ALL'
