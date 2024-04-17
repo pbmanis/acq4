@@ -42,7 +42,10 @@ class SutterMPC200(Stage):
         self.port = config.pop('port')
         self.drive = config.pop('drive')
         self.scale = config.pop('scale', (1, 1, 1))
+        self.config = config
+        self.isManipulator = False
         config.setdefault("isManipulator", False)
+        # print("SMPC200 config: ", config)
         if self._drives[self.drive-1] is not None:
             raise RuntimeError("Already created MPC200 device for drive %d!" % self.drive)
         self._drives[self.drive-1] = self
@@ -111,6 +114,12 @@ class SutterMPC200(Stage):
 
             return (drive, pos, oldpos)
         return False
+    
+    def _setHardwareLimits(self, axis:int, limit:tuple):
+        if axis not in [0, 1, 2]:
+            raise ValueError("Sutter MPC200: can only set x, y and z limits")
+        # print("sutter mpc200 axis: ", axis, "limit: ", limit, "current: ", self._limits)
+        self._limits[axis] = limit
 
     def _getPosition(self):
         # Called by superclass when user requests position refresh
