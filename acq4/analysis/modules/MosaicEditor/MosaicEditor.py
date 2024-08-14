@@ -805,7 +805,7 @@ class MosaicEditor(AnalysisModule):
         If ask is True (and there are items loaded), then the user is prompted
         before clearing. If the user declines, then this method returns False.
         """
-        if ask and len(self.items) > 0:
+        if ask: # and len(self.items) > 0:
             response = Qt.QtWidgets.QMessageBox.question(
                 self.clearBtn,
                 "Warning",
@@ -861,7 +861,7 @@ class MosaicEditor(AnalysisModule):
                 % (state["version"][0], state["version"][1], self._saveVersion[0])
             )
 
-        if not self.clear():
+        if not self.clear(ask=False):
             return
 
         root = state["rootPath"]
