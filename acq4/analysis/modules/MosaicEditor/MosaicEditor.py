@@ -14,6 +14,7 @@ from typing import Union
 
 import acq4.util.debug as debug
 import pyqtgraph as pg
+import acq4.util.configfile as CF
 import pyqtgraph.multiprocess as MP
 import platform
 import MetaArray
@@ -22,7 +23,7 @@ from acq4.analysis.AnalysisModule import AnalysisModule
 from acq4.util import Qt
 import acq4.util.DataManager as DataManager
 import acq4.analysis.atlas as atlas
-import acq4.analysis.modules.MosaicEditor.markers as Markers
+# import acq4.analysis.modules.MosaicEditor.markers as Markers
 from acq4.util.Canvas.Canvas import Canvas
 from acq4.util.Canvas import items
 from six.moves import range
@@ -60,6 +61,9 @@ class MosaicEditor(AnalysisModule):
 
         self.items = weakref.WeakKeyDictionary()
         self.files = weakref.WeakValueDictionary()
+        # print(os.getcwd())
+        self.Markers = dict(CF.readConfigFile("config/modules/MosaicEditor.cfg"))
+        # print(self.Markers["definedMarkers"])
 
         self._addTypes = OrderedDict()
 
@@ -134,7 +138,7 @@ class MosaicEditor(AnalysisModule):
             pass
 
         for a in atlas.listAtlases():
-            if a.startswith("__") or a.find("pyqt")>= 0:
+            if a.startswith("__") or a.find("pyqt") >= 0:
                 continue
             self.ui.atlasCombo.addItem(a)
 
@@ -179,14 +183,14 @@ class MosaicEditor(AnalysisModule):
         # self.ui.checkSelectedBtn.clicked.connect(self.checkSelected)
         # self.ui.uncheckSelectedBtn.clicked.connect(self.uncheckSelected)
         self.ui.globalParallel_checkBox.clicked.connect(self.setParallel)
- 
+
         # Tile Operation:
         self.ui.mosaicAutoLevelBtn.clicked.connect(self.mosaicAutoLevels)
         self.ui.mosaicApplyLevelBtn.clicked.connect(self.mosaicApplyLevels)
         # self.ui.mosaicResetScaleBtn.clicked.connect(self.resetScaling)
         # self.ui.mosaicFlipLRBtn.clicked.connect(self.flipLR)
         # self.ui.mosaicFlipUDBtn.clicked.connect(self.flipUD)
-        
+
         # Annotation Tools:
         self.ui.mosaicCreateMarkers.clicked.connect(self.createMarkers)
         self.ui.mosaicSelectVideos.clicked.connect(self.selectAllVideos)
@@ -264,8 +268,7 @@ class MosaicEditor(AnalysisModule):
                 self.loadStateFile(f.name())
                 continue
             if f.shortName().startswith("Map_"):
-                spotimage = self.get_laser_spots(mapdir = f)
-
+                spotimage = self.get_laser_spots(mapdir=f)
 
             if f in self.files:  ## Do not allow loading the same file more than once
                 item = self.files[f]
@@ -286,13 +289,9 @@ class MosaicEditor(AnalysisModule):
                     filesindir = glob.glob(f.name() + "/*.ma")
                     for (
                         fd
-                    ) in (
-                        filesindir
-                    ):  # add files in the directory (ma files: e.g., images, videos)
+                    ) in filesindir:  # add files in the directory (ma files: e.g., images, videos)
                         try:
-                            fdh = DataManager.getFileHandle(
-                                fd
-                            )  # open file to get handle.
+                            fdh = DataManager.getFileHandle(fd)  # open file to get handle.
                         except IOError:
                             continue  # just skip file
                         item = self.addFile(fdh)
@@ -309,10 +308,12 @@ class MosaicEditor(AnalysisModule):
         if f.isFile():
             fp = Path(f.name())
             if fp.suffix in [".ma", ".tif"]:
-                name = str(Path(fp.parent.name, fp.name)) # give a name that includes the parent directory
+                name = str(
+                    Path(fp.parent.name, fp.name)
+                )  # give a name that includes the parent directory
             return self.addOneFile(f, name=name, inheritTransform=inheritTransform)
         elif f.isDir():
-            allfiles = f.ls()                                      # get all the tif files in the directory
+            allfiles = f.ls()  # get all the tif files in the directory
             for fi in allfiles:
                 fh = DataManager.getDirHandle(Path(f.name(), fi))
                 if fh.ext() == ".tif":
@@ -321,7 +322,7 @@ class MosaicEditor(AnalysisModule):
                     self.addOneFile(fh, name=name, inheritTransform=inheritTransform)
         else:
             raise ValueError("Cannot load file (not file or dir?) ", f)
-    
+
     def addOneFile(self, f, name=None, inheritTransform=True):
         item = self.canvas.addFile(f, name=name)
 
@@ -337,11 +338,7 @@ class MosaicEditor(AnalysisModule):
         except:
             item.timestamp = None
         ## load or guess user transform for this item
-        if (
-            inheritTransform
-            and not item.hasUserTransform()
-            and item.timestamp is not None
-        ):
+        if inheritTransform and not item.hasUserTransform() and item.timestamp is not None:
             ## Record the timestamp for this file, see what is the most recent transformation to copy
             best = None
             for i2 in self.items:
@@ -371,7 +368,7 @@ class MosaicEditor(AnalysisModule):
         else:
             if type == "CellCanvasItem":
                 fh = self.ui.fileLoader.selectedFiles()
-                name = "Cell" # default
+                name = "Cell"  # default
                 if "name" in kwds.keys():
                     name = kwds["name"]
                 if len(fh) > 0:  # try to get the name from the file handle
@@ -383,8 +380,8 @@ class MosaicEditor(AnalysisModule):
                         if fh.shortName().startswith("cell"):
                             name = fh.shortName()
 
-                kwds['name'] = name
-           # elif type == ""
+                kwds["name"] = name
+            # elif type == ""
             item = self.canvas.addItem(item, type, **kwds)
             self.canvas.selectItem(item)
             return item
@@ -402,7 +399,6 @@ class MosaicEditor(AnalysisModule):
             if item.isSelected():  # selected by name
                 item.setCheckState(0, Qt.QtCore.Qt.CheckState.Checked)
 
-    
     def uncheckSelected(self):
         w = self.canvas.ui.canvasCtrlWidget.children()
         tw = None
@@ -415,9 +411,8 @@ class MosaicEditor(AnalysisModule):
         for item in allItems:
             if item.isSelected():  # selected by name
                 item.setCheckState(0, Qt.QtCore.Qt.CheckState.Unchecked)
-   
 
-    def get_laser_spots(self, mapdir:Union[Path, str]):
+    def get_laser_spots(self, mapdir: Union[Path, str]):
         """get_laser_spots from the selected map directory camera images,
         and compare to the spot locations in the scanner file
         Generates a maximal image projection of the camera images
@@ -430,26 +425,28 @@ class MosaicEditor(AnalysisModule):
         print("map points: ", mappoints)
         useframe = 1
         for imagecount, mp in enumerate(mappoints):
-            cameraframe = Path(mp, 'Camera', 'frames.ma')
+            cameraframe = Path(mp, "Camera", "frames.ma")
             print("reading: ", cameraframe)
-            frame = MetaArray.MetaArray(file=str(cameraframe),  # read the camera frame
-                                        readAll=True,  # read all data into memory
-                                        verbose=False)
+            frame = MetaArray.MetaArray(
+                file=str(cameraframe),  # read the camera frame
+                readAll=True,  # read all data into memory
+                verbose=False,
+            )
             frame_data = frame.view(np.ndarray)
             if imagecount == 0:
-                frame_data_max = frame_data[useframe,:,:]
-                frame_bkgd = np.zeros_like(frame_data[useframe,:,:])
+                frame_data_max = frame_data[useframe, :, :]
+                frame_bkgd = np.zeros_like(frame_data[useframe, :, :])
             else:
                 if useframe == 0:
-                    frame_data_max += frame_data[useframe,:,:]
-                    frame_bkgd = np.zeros_like(frame_data[useframe,:,:])
+                    frame_data_max += frame_data[useframe, :, :]
+                    frame_bkgd = np.zeros_like(frame_data[useframe, :, :])
                 else:
-                    frame_data_max = np.maximum(frame_data_max, frame_data[useframe,:,:])
-                    frame_bkgd += frame_data[0,:,:]
+                    frame_data_max = np.maximum(frame_data_max, frame_data[useframe, :, :])
+                    frame_bkgd += frame_data[0, :, :]
 
-        frame_bkgd = frame_bkgd/int(imagecount)
+        frame_bkgd = frame_bkgd / int(imagecount)
         if useframe == 0:
-            frames = frame_data_max/int(imagecount)
+            frames = frame_data_max / int(imagecount)
         else:
             frames = frame_data_max - frame_bkgd
         # print(np.max(frames), np.min(frames))
@@ -466,18 +463,18 @@ class MosaicEditor(AnalysisModule):
         """createMarkers Instantiate a standard set of markers:
         including the Cell, surface, AN, and slice markers.
         """
-    
+
         # get the type of marker items to create
         markerType = self.ui.MosaicMarkersCombo.currentText()
-        if markerType not in Markers.definedMarkers.keys():
+        if markerType not in self.Markers["definedMarkers"].keys():
             raise ValueError("Marker type not defined: ", markerType)
-        
+
         markerItem = self.addItem(type="MarkersCanvasItem", name=markerType)
         markerItem.params.setName(markerType)
 
         # don't put all the markers in the same place - logical offsets (although,
         # this might result in markers that assumed a particular orientation)
-        markerdict = Markers.definedMarkers[markerType]
+        markerdict = self.Markers["definedMarkers"][markerType]
         for i, marker in enumerate(markerdict.keys()):
             markerItem.addMarker(marker)  # adds marker centered on view
             thismarker = markerItem.params.child(marker)
@@ -485,7 +482,6 @@ class MosaicEditor(AnalysisModule):
             thismarker.target.param().target.setPos(
                 pos.x() + markerdict[marker][0], pos.y() + markerdict[marker][1]
             )
-        
 
     def selectAllVideos(self):
         """select or deselect all of the videos in the canvas.
@@ -555,9 +551,7 @@ class MosaicEditor(AnalysisModule):
         else:
             # Non parallelized version:
             print("Not running parallel")
-            with pg.ProgressDialog(
-                "Processing..", 0, len(self.canvas.selectedItems())
-            ) as dlg:
+            with pg.ProgressDialog("Processing..", 0, len(self.canvas.selectedItems())) as dlg:
                 for i, currentItem in enumerate(self.canvas.selectedItems()):
                     if not hasattr(currentItem, "data"):
                         continue
@@ -643,14 +637,10 @@ class MosaicEditor(AnalysisModule):
                 print("image i = %d failed" % i)
                 print("file name: ", self.canvas.selectedItems()[i].name)
                 print("expected shape of nxm: ", nxm)
-                print(
-                    " but got data shape: ", self.canvas.selectedItems()[i].data.shape
-                )
+                print(" but got data shape: ", self.canvas.selectedItems()[i].data.shape)
         meanImage = meanImage / n  # np.mean(meanImage[0:n], axis=0)
         filtwidth = np.floor(nxm[0] / 10 + 1)
-        blimg = scipy.ndimage.filters.gaussian_filter(
-            meanImage, filtwidth, order=0, mode="reflect"
-        )
+        blimg = scipy.ndimage.filters.gaussian_filter(meanImage, filtwidth, order=0, mode="reflect")
         m = np.argmax(hm[0])  # returns the index of the max count
 
         # now rescale each image/stack individually
@@ -659,9 +649,7 @@ class MosaicEditor(AnalysisModule):
         for i in range(nsel):
             d = np.array(self.canvas.selectedItems()[i].data)
             #            hmd = np.histogram(d, 512) # return (count, bins)
-            xh = (
-                d.shape
-            )  # capture shape just in case it is not right (have data that is NOT !!)
+            xh = d.shape  # capture shape just in case it is not right (have data that is NOT !!)
             if d.ndim == 3:
                 for j in range(xh[0]):
                     newImage = self._rescale_newimage(d[j], blimg, m, hm)
@@ -728,9 +716,7 @@ class MosaicEditor(AnalysisModule):
             thisimage = self.canvas.selectedItems()[i].graphicsItem()
             minval = np.min(self.canvas.selectedItems()[i].data)
             maxval = np.max(self.canvas.selectedItems()[i].data)
-            thisimage.setLevels(
-                [minval, maxval]
-            )
+            thisimage.setLevels([minval, maxval])
 
     def mosaicApplyLevels(self):
         """
@@ -755,9 +741,7 @@ class MosaicEditor(AnalysisModule):
         if nsel == 0:
             return
         for i in range(nsel):
-            self.canvas.selectedItems()[i].data = np.fliplr(
-                self.canvas.selectedItems()[i].data
-            )
+            self.canvas.selectedItems()[i].data = np.fliplr(self.canvas.selectedItems()[i].data)
             self.canvas.selectedItems()[i].graphicsItem().updateImage(
                 self.canvas.selectedItems()[i].data
             )
@@ -771,9 +755,7 @@ class MosaicEditor(AnalysisModule):
         if nsel == 0:
             return
         for i in range(nsel):
-            self.canvas.selectedItems()[i].data = np.flipud(
-                self.canvas.selectedItems()[i].data
-            )
+            self.canvas.selectedItems()[i].data = np.flipud(self.canvas.selectedItems()[i].data)
             self.canvas.selectedItems()[i].graphicsItem().updateImage(
                 self.canvas.selectedItems()[i].data
             )
@@ -805,7 +787,7 @@ class MosaicEditor(AnalysisModule):
         If ask is True (and there are items loaded), then the user is prompted
         before clearing. If the user declines, then this method returns False.
         """
-        if ask: # and len(self.items) > 0:
+        if ask:  # and len(self.items) > 0:
             response = Qt.QtWidgets.QMessageBox.question(
                 self.clearBtn,
                 "Warning",
@@ -880,9 +862,7 @@ class MosaicEditor(AnalysisModule):
                 itemtype = itemState.get("type")
                 if itemtype not in items.itemTypes():
                     # warn the user later on that we could not load this item
-                    loadfail.append(
-                        (itemState.get("name"), 'Unknown item type "%s"' % itemtype)
-                    )
+                    loadfail.append((itemState.get("name"), 'Unknown item type "%s"' % itemtype))
                     continue
                 item = self.addItem(type=itemtype, name=itemState["name"])
             else:
@@ -899,7 +879,7 @@ class MosaicEditor(AnalysisModule):
         if len(loadfail) > 0:
             msg = "\n".join(["%s: %s" % m for m in loadfail])
             raise Exception("Failed to load some items:\n%s" % msg)
-   
+
     def loadStateFile(self, filename):
         state = json.load(open(filename, "r"))
         self.restoreState(state, rootPath=os.path.dirname(filename))
@@ -922,7 +902,7 @@ class MosaicEditor(AnalysisModule):
         self.lastSaveFile = filename
 
         self.saveStateFile(filename)
-    
+
     def quit(self):
         self.files = None
         self.items = None
