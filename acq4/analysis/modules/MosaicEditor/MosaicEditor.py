@@ -61,9 +61,7 @@ class MosaicEditor(AnalysisModule):
 
         self.items = weakref.WeakKeyDictionary()
         self.files = weakref.WeakValueDictionary()
-        # print(os.getcwd())
-        self.Markers = dict(CF.readConfigFile("config/modules/MosaicEditor.cfg"))
-        # print(self.Markers["definedMarkers"])
+        self.Markers = dict(CF.readConfigFile("config/MosaicEditor.cfg"))
 
         self._addTypes = OrderedDict()
 
@@ -141,6 +139,12 @@ class MosaicEditor(AnalysisModule):
             if a.startswith("__") or a.find("pyqt") >= 0:
                 continue
             self.ui.atlasCombo.addItem(a)
+
+        # get the markers combox box
+        # "MosaicMarkersCombo" is the name of the combo box in the template
+        self.ui.MosaicMarkersCombo.clear()
+        for marker in self.Markers["definedMarkers"].keys():
+            self.ui.MosaicMarkersCombo.addItem(marker)
 
         # Add buttons to the canvas control panel (Window named "ItemList")
         self.btnBox = Qt.QWidget()
