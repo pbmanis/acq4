@@ -6,6 +6,7 @@ from .CanvasItem import CanvasItem
 import pyqtgraph as pg
 import pyqtgraph.graphicsItems.TargetItem
 from .itemtypes import registerItemType
+import os
 
 
 class MarkersCanvasItem(CanvasItem):
@@ -27,7 +28,7 @@ class MarkersCanvasItem(CanvasItem):
         self.params.addNew = self.addMarker
         self.params.sigTreeStateChanged.connect(self._paramsChanged)
 
-        self._markerCtrl = MarkerItemCtrlWidget(self)
+        self._markerCtrl = MarkerItemCtrlWidget(self, path=os.getcwd())
         self.layout.addWidget(self._markerCtrl, self.layout.rowCount(), 0, 1, 2)
 
     @classmethod
@@ -150,10 +151,10 @@ registerItemType(MarkersCanvasItem)
 
 
 class MarkerItemCtrlWidget(Qt.QWidget):
-    def __init__(self, canvasitem):
+    def __init__(self, canvasitem, path):
         Qt.QWidget.__init__(self)
         self.canvasitem = weakref.ref(canvasitem)
-
+        self.path = path
         self.layout = Qt.QGridLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(self.layout)
@@ -162,16 +163,16 @@ class MarkerItemCtrlWidget(Qt.QWidget):
         self.ptree.setParameters(canvasitem.params)
         self.layout.addWidget(self.ptree, 0, 0, 1, 2)
 
-        self.saveJsonBtn = Qt.QPushButton('Save Json')
+        self.saveJsonBtn = Qt.QPushButton('Save JSON')
         self.layout.addWidget(self.saveJsonBtn, 1, 0)
         self.saveJsonBtn.clicked.connect(self.saveJson)
         
-        self.copyJsonBtn = Qt.QPushButton('Copy Json')
-        self.layout.addWidget(self.copyJsonBtn, 1, 0)
+        self.copyJsonBtn = Qt.QPushButton('Copy JSON')
+        self.layout.addWidget(self.copyJsonBtn, 1, 1)
         self.copyJsonBtn.clicked.connect(self.copyJson)
 
     def saveJson(self):
-        filename = Qt.QFileDialog.getSaveFileName(None, "Save markers", path, "JSON files (*.json)")
+        filename = Qt.QFileDialog.getSaveFileName(None, "Save markers", self.path, "JSON files (*.json)")
         if filename == '':
             return
         if not filename.endswith('.json'):
