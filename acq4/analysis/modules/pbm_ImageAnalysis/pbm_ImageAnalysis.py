@@ -948,7 +948,7 @@ class pbm_ImageAnalysis(AnalysisModule):
 
         """
         #        sh = self.imageData.shape
-        print("spectrum calc")
+        # print("spectrum calc")
         if self.specImageCalcFlag is False:  # calculate spectrum info
             self.freq_image = np.abs(
                 np.fft.fft(self.imageData, axis=0) / self.imageData.shape[0]
@@ -975,7 +975,7 @@ class pbm_ImageAnalysis(AnalysisModule):
             self.freq_image.take(frl, axis=0), axis=0
         )  # and get the average across the frequenies selected
         self.specFreq = np.max(self.freq_image.take(frl, axis=0), axis=0)  # highest amplitude frequency
-        print(self.specFreq.shape)
+        # print(self.specFreq.shape)
         if sigma is False:
             sigma = self.ctrlROIFunc.ImagePhys_FFTSmooth.value()
         self.specImageDisplay = scipy.ndimage.filters.gaussian_filter(
@@ -2100,7 +2100,7 @@ class pbm_ImageAnalysis(AnalysisModule):
                 roi.plot.setPen(pg.mkPen(color=c, width=2.0, alpha=1.0))
                 roi.plot.setZValue(1000)
                 roi.show()  # make sure the roi is visible
-                print(f"setting roi {str(roi):s}, color: {str(c):s}")
+                # print(f"setting roi {str(roi):s}, color: {str(c):s}")
 
         for otherroi in self.AllRois:
             if otherroi != roi:

@@ -76,8 +76,8 @@
       </property>
       <property name="geometry">
        <rect>
-        <x>195</x>
-        <y>180</y>
+        <x>205</x>
+        <y>200</y>
         <width>91</width>
         <height>32</height>
        </rect>
@@ -98,8 +98,8 @@
       </property>
       <property name="geometry">
        <rect>
-        <x>290</x>
-        <y>185</y>
+        <x>295</x>
+        <y>205</y>
         <width>76</width>
         <height>16</height>
        </rect>
@@ -117,11 +117,17 @@
      <widget class="QPushButton" name="ImagePhys_Update">
       <property name="geometry">
        <rect>
-        <x>200</x>
-        <y>155</y>
+        <x>205</x>
+        <y>170</y>
         <width>78</width>
         <height>32</height>
        </rect>
+      </property>
+      <property name="font">
+       <font>
+        <family>Arial Unicode MS</family>
+        <pointsize>12</pointsize>
+       </font>
       </property>
       <property name="text">
        <string>Update</string>
@@ -133,7 +139,7 @@
         <x>190</x>
         <y>20</y>
         <width>171</width>
-        <height>136</height>
+        <height>151</height>
        </rect>
       </property>
       <property name="title">
@@ -145,7 +151,7 @@
          <x>5</x>
          <y>20</y>
          <width>165</width>
-         <height>132</height>
+         <height>136</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -157,10 +163,16 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>25</height>
+           </size>
+          </property>
           <property name="font">
            <font>
-            <family>Lucida Grande</family>
-            <pointsize>13</pointsize>
+            <family>Arial Black</family>
+            <pointsize>12</pointsize>
            </font>
           </property>
           <item>
@@ -203,10 +215,16 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>25</height>
+           </size>
+          </property>
           <property name="font">
            <font>
-            <family>Lucida Grande</family>
-            <pointsize>13</pointsize>
+            <family>Arial</family>
+            <pointsize>12</pointsize>
            </font>
           </property>
           <property name="sizeAdjustPolicy">
@@ -252,6 +270,12 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="font">
+           <font>
+            <family>Arial Unicode MS</family>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
           <property name="text">
            <string>dF/F -&gt; MPL</string>
           </property>
@@ -264,6 +288,12 @@
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="font">
+           <font>
+            <family>Arial Unicode MS</family>
+            <pointsize>12</pointsize>
+           </font>
           </property>
           <property name="text">
            <string>Export TIFF</string>
@@ -282,7 +312,7 @@
         <x>10</x>
         <y>15</y>
         <width>166</width>
-        <height>226</height>
+        <height>246</height>
        </rect>
       </property>
       <property name="sizePolicy">
@@ -318,13 +348,19 @@
          <x>-5</x>
          <y>45</y>
          <width>146</width>
-         <height>21</height>
+         <height>25</height>
         </rect>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>25</height>
+        </size>
        </property>
        <property name="font">
         <font>
-         <family>Lucida Grande</family>
-         <pointsize>13</pointsize>
+         <family>Arial</family>
+         <pointsize>12</pointsize>
         </font>
        </property>
        <item>
@@ -338,19 +374,6 @@
         </property>
        </item>
       </widget>
-      <widget class="QPushButton" name="ImagePhys_clearRatio">
-       <property name="geometry">
-        <rect>
-         <x>0</x>
-         <y>170</y>
-         <width>141</width>
-         <height>30</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Clear Ratio Image</string>
-       </property>
-      </widget>
       <widget class="QPushButton" name="ImagePhys_GetFileInfo">
        <property name="geometry">
         <rect>
@@ -360,21 +383,14 @@
          <height>31</height>
         </rect>
        </property>
+       <property name="font">
+        <font>
+         <family>Arial Unicode MS</family>
+         <pointsize>12</pointsize>
+        </font>
+       </property>
        <property name="text">
         <string>Get File Info</string>
-       </property>
-      </widget>
-      <widget class="QPushButton" name="ImagePhys_getRatio">
-       <property name="geometry">
-        <rect>
-         <x>0</x>
-         <y>145</y>
-         <width>141</width>
-         <height>30</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Get Ratio Image</string>
        </property>
       </widget>
       <widget class="QWidget" name="layoutWidget">
@@ -389,6 +405,12 @@
        <layout class="QHBoxLayout" name="horizontalLayout_3">
         <item>
          <widget class="QLabel" name="label_5">
+          <property name="font">
+           <font>
+            <family>Arial Unicode MS</family>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
           <property name="text">
            <string>Data</string>
           </property>
@@ -400,10 +422,22 @@
         <item>
          <widget class="QComboBox" name="ImagePhys_DataStruct">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>25</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Arial</family>
+            <pointsize>12</pointsize>
+           </font>
           </property>
           <property name="maxCount">
            <number>10</number>
@@ -440,6 +474,18 @@
        <layout class="QHBoxLayout" name="horizontalLayout_4">
         <item>
          <widget class="QLabel" name="label_4">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>25</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Arial Unicode MS</family>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
           <property name="text">
            <string>Ignore</string>
           </property>
@@ -447,6 +493,18 @@
         </item>
         <item>
          <widget class="QSpinBox" name="ImagePhys_ignoreFirst">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>25</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Arial Unicode MS</family>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
           <property name="suffix">
            <string/>
           </property>
@@ -472,6 +530,12 @@
        <layout class="QHBoxLayout" name="horizontalLayout_5">
         <item>
          <widget class="QLabel" name="label_2">
+          <property name="font">
+           <font>
+            <family>Arial Unicode MS</family>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
           <property name="text">
            <string>Downsamp</string>
           </property>
@@ -482,10 +546,16 @@
         </item>
         <item>
          <widget class="QComboBox" name="ImagePhys_Downsample">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>25</height>
+           </size>
+          </property>
           <property name="font">
            <font>
-            <family>Lucida Grande</family>
-            <pointsize>13</pointsize>
+            <family>Arial Unicode MS</family>
+            <pointsize>12</pointsize>
            </font>
           </property>
           <property name="editable">
@@ -551,26 +621,59 @@
         </item>
        </layout>
       </widget>
-      <widget class="QPushButton" name="ImagePhys_RegisterStack">
+      <widget class="QSplitter" name="splitter">
        <property name="geometry">
         <rect>
-         <x>0</x>
-         <y>195</y>
-         <width>141</width>
-         <height>29</height>
+         <x>10</x>
+         <y>150</y>
+         <width>127</width>
+         <height>99</height>
         </rect>
        </property>
-       <property name="text">
-        <string>Register Stack</string>
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
        </property>
+       <widget class="QPushButton" name="ImagePhys_getRatio">
+        <property name="font">
+         <font>
+          <family>Arial Unicode MS</family>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Get Ratio Image</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="ImagePhys_clearRatio">
+        <property name="font">
+         <font>
+          <family>Arial Unicode MS</family>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Clear Ratio Image</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="ImagePhys_RegisterStack">
+        <property name="font">
+         <font>
+          <family>Arial Unicode MS</family>
+          <pointsize>12</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Register Stack</string>
+        </property>
+       </widget>
       </widget>
      </widget>
      <widget class="QGroupBox" name="groupBox_3">
       <property name="geometry">
        <rect>
         <x>195</x>
-        <y>205</y>
-        <width>116</width>
+        <y>230</y>
+        <width>176</width>
         <height>96</height>
        </rect>
       </property>
@@ -582,13 +685,19 @@
         <rect>
          <x>10</x>
          <y>25</y>
-         <width>100</width>
-         <height>62</height>
+         <width>109</width>
+         <height>71</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
          <widget class="QCheckBox" name="ImagePhys_Camera_check">
+          <property name="font">
+           <font>
+            <family>Arial</family>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
           <property name="contextMenuPolicy">
            <enum>Qt::NoContextMenu</enum>
           </property>
@@ -602,6 +711,12 @@
         </item>
         <item>
          <widget class="QCheckBox" name="ImagePhys_PMT_check">
+          <property name="font">
+           <font>
+            <family>Arial</family>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
           <property name="text">
            <string>PMT</string>
           </property>
@@ -612,6 +727,12 @@
         </item>
         <item>
          <widget class="QCheckBox" name="ImagePhys_Image_check">
+          <property name="font">
+           <font>
+            <family>Arial</family>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
           <property name="text">
            <string>Imaging.ma</string>
           </property>
@@ -624,7 +745,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>235</y>
+        <y>260</y>
         <width>151</width>
         <height>171</height>
        </rect>
@@ -640,6 +761,12 @@
          <width>81</width>
          <height>20</height>
         </rect>
+       </property>
+       <property name="font">
+        <font>
+         <family>Arial</family>
+         <pointsize>12</pointsize>
+        </font>
        </property>
        <property name="layoutDirection">
         <enum>Qt::LeftToRight</enum>
@@ -657,6 +784,12 @@
          <height>16</height>
         </rect>
        </property>
+       <property name="font">
+        <font>
+         <family>Arial</family>
+         <pointsize>12</pointsize>
+        </font>
+       </property>
        <property name="text">
         <string>Decomb</string>
        </property>
@@ -669,6 +802,12 @@
          <width>71</width>
          <height>25</height>
         </rect>
+       </property>
+       <property name="font">
+        <font>
+         <family>Arial</family>
+         <pointsize>12</pointsize>
+        </font>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -689,6 +828,12 @@
          <height>32</height>
         </rect>
        </property>
+       <property name="font">
+        <font>
+         <family>Arial</family>
+         <pointsize>12</pointsize>
+        </font>
+       </property>
        <property name="text">
         <string>Restore Decomb</string>
        </property>
@@ -701,6 +846,12 @@
          <width>51</width>
          <height>20</height>
         </rect>
+       </property>
+       <property name="font">
+        <font>
+         <family>Arial</family>
+         <pointsize>12</pointsize>
+        </font>
        </property>
        <property name="layoutDirection">
         <enum>Qt::LeftToRight</enum>
@@ -715,8 +866,14 @@
          <x>80</x>
          <y>80</y>
          <width>61</width>
-         <height>23</height>
+         <height>25</height>
         </rect>
+       </property>
+       <property name="font">
+        <font>
+         <family>Arial</family>
+         <pointsize>12</pointsize>
+        </font>
        </property>
        <property name="text">
         <string>Auto</string>
@@ -734,6 +891,12 @@
        <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
          <widget class="QCheckBox" name="ImagePhys_PMT_LPF_check">
+          <property name="font">
+           <font>
+            <family>Arial</family>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
           <property name="text">
            <string>LPF</string>
           </property>
@@ -741,6 +904,18 @@
         </item>
         <item>
          <widget class="QDoubleSpinBox" name="ImagePhys_PMT_LPF">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>25</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Arial</family>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
@@ -769,6 +944,12 @@
        <layout class="QHBoxLayout" name="horizontalLayout_7">
         <item>
          <widget class="QCheckBox" name="ImagePhys_PMT_Notch_check">
+          <property name="font">
+           <font>
+            <family>Arial</family>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
           <property name="text">
            <string>Notch</string>
           </property>
@@ -776,6 +957,24 @@
         </item>
         <item>
          <widget class="QDoubleSpinBox" name="ImagePhys_PMT_Notch">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>25</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Arial</family>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
@@ -797,8 +996,8 @@
       <property name="geometry">
        <rect>
         <x>195</x>
-        <y>300</y>
-        <width>116</width>
+        <y>335</y>
+        <width>181</width>
         <height>96</height>
        </rect>
       </property>
@@ -810,13 +1009,19 @@
         <rect>
          <x>10</x>
          <y>25</y>
-         <width>96</width>
-         <height>64</height>
+         <width>100</width>
+         <height>73</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
          <widget class="QCheckBox" name="ImagePhys_PhysROIPlot">
+          <property name="font">
+           <font>
+            <family>Arial</family>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
           <property name="text">
            <string>MultiPlot</string>
           </property>
@@ -824,6 +1029,12 @@
         </item>
         <item>
          <widget class="QCheckBox" name="ImagePhys_RectSelect">
+          <property name="font">
+           <font>
+            <family>Arial</family>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
           <property name="text">
            <string>1-Button</string>
           </property>
@@ -840,6 +1051,12 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="font">
+           <font>
+            <family>Arial</family>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
           <property name="text">
            <string>Baseline 1</string>
           </property>
@@ -852,10 +1069,16 @@
       <property name="geometry">
        <rect>
         <x>15</x>
-        <y>415</y>
+        <y>440</y>
         <width>356</width>
-        <height>61</height>
+        <height>36</height>
        </rect>
+      </property>
+      <property name="font">
+       <font>
+        <family>Arial</family>
+        <pointsize>12</pointsize>
+       </font>
       </property>
       <property name="text">
        <string>FileInfo</string>
