@@ -186,7 +186,7 @@ class Manager(Qt.QObject):
                     except:
                         if not loadManager:
                             self.showGUI()
-                        raise
+                        raise ("Error loading module '%s':" % m)
 
             except:
                 printExc("\nError while acting on command line options: (but continuing on anyway..)")
@@ -535,7 +535,6 @@ class Manager(Qt.QObject):
             self.exec_(execPath)
 
         modclass = modules.getModuleClass(moduleClassName)
-
         mod = modclass(self, name, config)
         with self.lock:
             self.modules[name] = mod
@@ -688,7 +687,11 @@ class Manager(Qt.QObject):
     def showGUI(self):
         """Show the Manager GUI"""
         if self.gui is None:
-            self.gui = self.loadModule('Manager', 'Manager', {})
+            try:
+                self.gui = self.loadModule('Manager', 'Manager')    
+            except:
+                printExc("Error loading Manager GUI module:")
+                raise
         self.gui.show()
 
     def getCurrentDir(self):

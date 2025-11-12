@@ -8,7 +8,8 @@ from acq4.modules.Module import Module
 from acq4.util import Qt
 from acq4.util.debug import printExc
 
-Ui_MainWindow = Qt.importTemplate(".ManagerTemplate")
+from acq4.modules.Manager.ManagerTemplate_pyqt6 import Ui_MainWindow
+# Ui_MainWindow = Qt.importTemplate(".ManagerTemplate_pyqt6")
 
 
 class Manager(Module):
