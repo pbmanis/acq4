@@ -1,6 +1,8 @@
 *.pyc
 *_pyqt5.py
 *_pyqt6.py
+*.png
+*.pdf
 
 *~
 .DS_Store
