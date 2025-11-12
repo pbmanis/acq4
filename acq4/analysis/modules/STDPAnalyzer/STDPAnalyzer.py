@@ -299,7 +299,7 @@ class STDPAnalyzer(AnalysisModule):
                         self.plots.tracesPlot.plot(orig['primary'], pen=pg.intColor(i, len(data), alpha=30))
 
         ### If analysis has been done, mark the location on each trace where the highest slope was found
-        if self.analysisResults is not None and len(data[dataKey] > 0):
+        if self.analysisResults is not None and len(data[dataKey]) > 0:
             datatime = data[dataKey][0].axisValues('Time')
             timestep = datatime[1]-datatime[0]
             for i, time in enumerate(data[timeKey]):
