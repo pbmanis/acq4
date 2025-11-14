@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm", "cython"]
+requires = ["setuptools", "cython", "setuptools-git-versioning>=2.0,<3",]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "acq4"
-version = "0.9.3"
+dynamic = ["version"]
 description = "Neurophysiology acquisition and analysis platform"
 authors = [
     {name = "Luke Campagnola", email = "luke.campagnola@gmail.com"},
@@ -37,7 +37,7 @@ dependencies = [
     "metaarray>=2.2.0",
     "mypy>=1.18.2",
     "neuroanalysis",
-    "neuron>=8.2.3",
+ #   "neuron>=8.2.7",
     "numba",
     "numpy>=1.25.1",
     "numpydoc>=1.1.0",
@@ -78,8 +78,21 @@ acq4 = "acq4.__main__:main"
 [tool.setuptools]
 packages = ["acq4"]
 
+[tool.setuptools-git-versioning]
+enabled = true
+
+#[tool.setuptools_scm]
+#version={"tag":"0.9.3"}
+#version={path=".git", ref= "0.9.3"}
+
 # [tool.hatch.build.targets.wheel]
 # packages = ["acq4"]
 
 # [tool.uv.sources]
 # pyqtgraph = { path = "../Python/pyqtgraph" }
+
+[tool.uv]
+required-environments = [
+"sys_platform == 'win32' and platform_machine == 'AMD64'"
+]
+
