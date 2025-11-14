@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "cython", "setuptools-git-versioning>=2.0,<3",]
+requires = ["setuptools", "cython", setuptools_scm]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -78,12 +78,12 @@ acq4 = "acq4.__main__:main"
 [tool.setuptools]
 packages = ["acq4"]
 
-[tool.setuptools-git-versioning]
-enabled = true
+#[tool.setuptools-git-versioning]
+#enabled = true
 
-#[tool.setuptools_scm]
-#version={"tag":"0.9.3"}
-#version={path=".git", ref= "0.9.3"}
+[tool.setuptools_scm]
+version={"tag":"0.9.3"}
+version={path=".git", ref= "0.9.3"}
 
 # [tool.hatch.build.targets.wheel]
 # packages = ["acq4"]
