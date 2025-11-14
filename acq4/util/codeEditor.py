@@ -32,8 +32,8 @@ editorCommands = {
     'sublime': {
         'win32': {
             'bin_globs': [
-                'C:\Program Files\Sublime Text\subl.exe',
-                'C:\Program Files (x86)\Sublime Text\subl.exe',
+                r'C:\Program Files\Sublime Text\subl.exe',
+                r'C:\Program Files (x86)\Sublime Text\subl.exe',
             ],
             'command': '"{bin}" {fileName}:{lineNum}',
         },
