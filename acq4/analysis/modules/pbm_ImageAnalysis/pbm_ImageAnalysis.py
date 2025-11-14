@@ -2036,10 +2036,14 @@ class pbm_ImageAnalysis(AnalysisModule):
             tr = tr.mean(axis=1).mean(
                 axis=0
             )  # compute average over the ROI against time
+            # print(tr.mean())
             if self.dataState["Normalized"] is False:
-                tr = (
-                    tr / tr.mean()
-                )  # (self.background[0:tr.shape[0]]*trm/self.backgroundmean)
+                if tr.mean() > 0.:
+                    tr = (
+                        tr / tr.mean()
+                    )  # (self.background[0:tr.shape[0]]*trm/self.backgroundmean)
+                else:
+                    tr = np.ones_like(tr) #  * 0.0
             self.FData = self.insertFData(self.FData, tr.copy(), roi)
             if self.applyROIFilters(roi):
                 self.showThisROI(roi, livePlot)
