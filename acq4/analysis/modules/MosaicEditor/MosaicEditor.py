@@ -27,10 +27,26 @@ import acq4.analysis.atlas as atlas
 from acq4.util.Canvas.Canvas import Canvas
 from acq4.util.Canvas import items
 from six.moves import range
+from loky import get_reusable_executor
+from loky import wrap_non_picklable_objects
+
+
 
 
 Ui_Form = Qt.importTemplate(".MosaicEditorTemplate")
 
+# for concurrent futures to do parallel processing ? 
+@wrap_non_picklable_objects
+def operate_on_item(currentItem):
+    print("trying on item: ", currentItem.name)
+    if not hasattr(currentItem, "data"):
+        return
+    print("   operating on : ", currentItem.name)
+    print(currentItem.data.shape)
+    if currentItem.data.ndim == 3 and currentItem.name.find("video_") >= 0:
+        currentItem.filter.filterBtnClicked(True)
+    else:
+        print("   skipping: ", currentItem.name)
 
 class MosaicEditor(AnalysisModule):
     """
@@ -73,9 +89,15 @@ class MosaicEditor(AnalysisModule):
         self.videosSelected = False
         self.videosShown = True
         self.canvas = Canvas(name="MosaicEditor")
+        # place window in center of screen. The ui location file is not saved.
         self.host_window = self._host_.window()
+        self.host_window.setBaseSize(1280, 1024)  # Try to make the winow large enough: this causes the windo to jump around though
+        framegeom = self.host_window.frameGeometry()
+        center = self.host_window.screen().availableGeometry().center()
+        self.host_window.move(
+            int(center.x() - 1280 / 2), int(center.y() - 1024 / 2)
+        )
         self.statusBar = self.host_window.statusBar()  # get this from the host window
-        # self.host_window.setBaseSize(1440, 1280)  # Try to make the winow large enough: this causes the windo to jump around though
 
         self._elements_ = OrderedDict(
             [
@@ -140,12 +162,8 @@ class MosaicEditor(AnalysisModule):
                 continue
             self.ui.atlasCombo.addItem(a)
 
-        # get the markers combox box
-        # "MosaicMarkersCombo" is the name of the combo box in the template
-        self.ui.MosaicMarkersCombo.clear()
-        for marker in self.Markers["definedMarkers"].keys():
-            self.ui.MosaicMarkersCombo.addItem(marker)
-
+        self.updateMarkerComboBox()
+        
         # Add buttons to the canvas control panel (Window named "ItemList")
         self.btnBox = Qt.QWidget()
         self.btnLayout = Qt.QGridLayout()
@@ -200,6 +218,7 @@ class MosaicEditor(AnalysisModule):
         self.ui.mosaicSelectVideos.clicked.connect(self.selectAllVideos)
         self.ui.mosaicShowHide.clicked.connect(self.showAllVideos)
         self.ui.getSpotImage.clicked.connect(self.get_laser_spots)
+        self.ui.mosaicReloadMarkers.clicked.connect(self.reloadMarkers)
 
         self.imageMax = 0.0
 
@@ -463,6 +482,14 @@ class MosaicEditor(AnalysisModule):
         # exit()
         return spotimage
 
+    def updateMarkerComboBox(self):
+        # get the markers combox box
+        # "MosaicMarkersCombo" is the name of the combo box in the template
+        self.ui.MosaicMarkersCombo.clear()
+        for marker in self.Markers["definedMarkers"].keys():
+            self.ui.MosaicMarkersCombo.addItem(marker)
+        return True
+
     def createMarkers(self):
         """createMarkers Instantiate a standard set of markers:
         including the Cell, surface, AN, and slice markers.
@@ -486,6 +513,19 @@ class MosaicEditor(AnalysisModule):
             thismarker.target.param().target.setPos(
                 pos.x() + markerdict[marker][0], pos.y() + markerdict[marker][1]
             )
+        self.updateStatusBar(f"Created markers: {markerType}")
+
+    def reloadMarkers(self):
+        """reloadMarkers Reload the markers from the config file.
+        This allows the user to edit the marker values/names/structure in the config file
+        and reload them without restarting the program.
+        """
+        self.Markers = dict(CF.readConfigFile("config/MosaicEditor.cfg"))
+        # update the drop-down list.
+        if self.updateMarkerComboBox():
+            self.updateStatusBar("Reloaded markers from config/MosaicEditor.cfg")
+        else:
+            self.updateStatusBar("Failed to reload markers from config/MosaicEditor.cfg")
 
     def selectAllVideos(self):
         """select or deselect all of the videos in the canvas.
@@ -531,26 +571,44 @@ class MosaicEditor(AnalysisModule):
             print("unset parallel")
             self.parallel = False
 
+
+
     def MIP_Images(self):
         if self.parallel:
             if platform.system() == "Darwin":
-                raise NotImplementedError(
-                    "Parallel processing is not implemented for this function on Mac OS"
-                )
-            print("running parallel")
-            nWorkers = MPROC.cpu_count()
-            TASKS = [
-                item
-                for j, item in enumerate(self.canvas.selectedItems())
-                if hasattr(item, "data") and item.data.ndim == 3
-            ]
-            tresults = [None] * len(TASKS)
-            msg = f"Processing {len(TASKS):d} videos"
-            with MP.Parallelize(
-                enumerate(TASKS), results=tresults, workers=nWorkers, progressDialog=msg
-            ) as tasker:
-                for j, item in tasker:
-                    item.filter.filterBtnClicked(True)
+
+            #     raise NotImplementedError(
+            #         "Parallel processing is not implemented for this function on Mac OS"
+            #     )
+                print("Just running serial on the selected items.")
+                for item in self.canvas.selectedItems():
+                    operate_on_item(item)
+                    
+                # print("running with : ", MPROC.cpu_count(), " cpus")
+                # executor = get_reusable_executor(max_workers=MPROC.cpu_count()-2)
+                # print(self.canvas.selectedItems())
+                # for x in executor.map(operate_on_item, self.canvas.selectedItems()):
+                #     pass
+                # print("done parallel")
+                # for future in concurrent.futures.as_completed(futures):
+                #     try:
+                #         data = future.result()
+                #     except Exception as exc:
+                #         print("generated an exception: %s" % (exc,))
+            # print("running parallel")
+            # nWorkers = MPROC.cpu_count()
+            # TASKS = [
+            #     item
+            #     for j, item in enumerate(self.canvas.selectedItems())
+            #     if hasattr(item, "data") and item.data.ndim == 3
+            # ]
+            # tresults = [None] * len(TASKS)
+            # msg = f"Processing {len(TASKS):d} videos"
+            # with MP.Parallelize(
+            #     enumerate(TASKS), results=tresults, workers=nWorkers, progressDialog=msg
+            # ) as tasker:
+            #     for j, item in tasker:
+            #         item.filter.filterBtnClicked(True)
 
         else:
             # Non parallelized version:
@@ -559,8 +617,9 @@ class MosaicEditor(AnalysisModule):
                 for i, currentItem in enumerate(self.canvas.selectedItems()):
                     if not hasattr(currentItem, "data"):
                         continue
-                    if currentItem.data.ndim == 3 and currentItem.name.startswith("video_"):
-                        print("   operating on : ", currentItem.name)
+                    print("   operating on : ", currentItem.name)
+                    print(currentItem.data.shape)
+                    if currentItem.data.ndim == 3 and currentItem.name.find("video_") >= 0:
                         currentItem.filter.filterBtnClicked(True)
                     else:
                         print("   skipping: ", currentItem.name)
