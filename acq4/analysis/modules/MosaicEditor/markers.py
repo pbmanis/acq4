@@ -30,7 +30,8 @@ definedMarkers = {
     },
     "DCN Coronal": {
         "dorsal": (-100e-6, 500e-6),
-        "medial": (1 - 100e-6, 0e-6),
+        "medial_dorsal": (100e-6, 0e-6),
+        "medial_ventral": (100e-6, -500e-6),
         "ventral": (-100e-6, -500e-6),
         "lateral1": (-50e-6, -400e-6),
         "lateral2": (250e-6, -200e-6),
