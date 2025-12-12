@@ -55,10 +55,12 @@ class ScanCanvasItem(CanvasItem):
                 else:
                     size = self.defaultSize
                 pts.append({'pos': pos, 'size': size, 'data': d})
+        # print("size: ", size)
+        # raise()
         self.scatterPlotData = pts
         if len(pts) == 0:
             raise Exception("No data found in scan %s." % dirHandle.name(relativeTo=dirHandle.parent().parent()))
-        gitem = pg.ScatterPlotItem(pts, pxMode=False, pen=pg.mkPen((200,50,50,200)), brush=pg.mkBrush((0, 100, 255, 50)))
+        gitem = pg.ScatterPlotItem(pts, pxMode=False, pen=pg.mkPen((200,200,200,128)), brush=pg.mkBrush((0, 100, 255, 20)))
         CanvasItem.__init__(self, gitem, **opts)
         self.originalSpotSize = size
         self.scanImage = None
