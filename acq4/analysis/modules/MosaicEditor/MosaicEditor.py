@@ -291,7 +291,10 @@ class MosaicEditor(AnalysisModule):
                 self.loadStateFile(f.name())
                 continue
             if f.shortName().startswith("Map_"):
-                spotimage = self.get_laser_spots(mapdir=f)
+                # spotimage = self.get_laser_spots(mapdir=f)
+                item = self.canvas.addFile(f,
+                                            name=f.shortName() + "_spotimage")
+                continue
 
             if f in self.files:  ## Do not allow loading the same file more than once
                 item = self.files[f]
@@ -329,6 +332,7 @@ class MosaicEditor(AnalysisModule):
         (chronologically) if it does not already have a user transform specified.
         """
         if f.isFile():
+            print("is file")
             fp = Path(f.name())
             if fp.suffix in [".ma", ".tif"]:
                 name = str(
@@ -336,6 +340,7 @@ class MosaicEditor(AnalysisModule):
                 )  # give a name that includes the parent directory
             return self.addOneFile(f, name=name, inheritTransform=inheritTransform)
         elif f.isDir():
+            print("is dir")
             allfiles = f.ls()  # get all the tif files in the directory
             for fi in allfiles:
                 fh = DataManager.getDirHandle(Path(f.name(), fi))
@@ -445,11 +450,10 @@ class MosaicEditor(AnalysisModule):
 
         mappoints = list(Path(mapdir.name()).glob("*"))
         mappoints = [mp for mp in mappoints if mp.is_dir()]
-        print("map points: ", mappoints)
+        # print("map points: ", mappoints)
         useframe = 1
         for imagecount, mp in enumerate(mappoints):
             cameraframe = Path(mp, "Camera", "frames.ma")
-            print("reading: ", cameraframe)
             frame = MetaArray.MetaArray(
                 file=str(cameraframe),  # read the camera frame
                 readAll=True,  # read all data into memory
