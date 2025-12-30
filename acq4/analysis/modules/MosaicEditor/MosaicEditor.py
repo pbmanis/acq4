@@ -4,6 +4,7 @@ from __future__ import print_function
 import os
 import glob
 import json
+from pprint import pprint
 import weakref
 from collections import OrderedDict
 import numpy as np
@@ -218,7 +219,8 @@ class MosaicEditor(AnalysisModule):
         self.ui.mosaicSelectVideos.clicked.connect(self.selectAllVideos)
         self.ui.mosaicShowHide.clicked.connect(self.showAllVideos)
         self.ui.getSpotImage.clicked.connect(self.get_laser_spots)
-        self.ui.mosaicReloadMarkers.clicked.connect(self.reloadMarkers)
+        self.ui.mosaicReadMarkers.clicked.connect(self.readMarkers)
+        self.ui.mosaicReloadMarkerDefinitions.clicked.connect(self.reloadMarkerDefinitions)
 
         self.imageMax = 0.0
 
@@ -332,7 +334,6 @@ class MosaicEditor(AnalysisModule):
         (chronologically) if it does not already have a user transform specified.
         """
         if f.isFile():
-            print("is file")
             fp = Path(f.name())
             if fp.suffix in [".ma", ".tif"]:
                 name = str(
@@ -519,7 +520,29 @@ class MosaicEditor(AnalysisModule):
             )
         self.updateStatusBar(f"Created markers: {markerType}")
 
-    def reloadMarkers(self):
+    def readMarkers(self):
+        """readMarkers Read markers from another mosaic file.
+        Assumes that the file (json) has a key type: MarkersCanvasItem
+        (if not, nothing is done)
+        This lets you grab a previously specified set of markers, say for a
+        similar set of images, and apply them to the current canvas
+        """
+        base = self.ui.fileLoader.baseDir()
+        filename = Qt.QFileDialog.getOpenFileName(
+            None, # self.host_window,
+            "Select mosaic file to read markers from",
+            str(base),
+            "Mosaic files (*.mosaic);;All files (*)",
+        )[0]
+        if filename == "":
+            return  # user cancelled    
+        state = json.load(open(filename, "r"))
+        # pprint.pprint( state)
+        self.restoreState(state, rootPath=os.path.dirname(filename), loadMarkersOnly=True)
+        self.updateStatusBar("Loaded markers from %s" % filename)
+
+
+    def reloadMarkerDefinitions(self):
         """reloadMarkers Reload the markers from the config file.
         This allows the user to edit the marker values/names/structure in the config file
         and reload them without restarting the program.
@@ -901,7 +924,7 @@ class MosaicEditor(AnalysisModule):
         json.dump(state, open(filename, "w"), indent=4, cls=Encoder)
         self.updateStatusBar("Saved mosaic to %s" % filename)
 
-    def restoreState(self, state, rootPath=None):
+    def restoreState(self, state, rootPath=None, loadMarkersOnly=False):
         if state.get("contents", None) != "MosaicEditor_save":
             raise TypeError("This does not appear to be MosaicEditor save data.")
         if state["version"][0] > self._saveVersion[0]:
@@ -910,7 +933,7 @@ class MosaicEditor(AnalysisModule):
                 % (state["version"][0], state["version"][1], self._saveVersion[0])
             )
 
-        if not self.clear(ask=False):
+        if not loadMarkersOnly and not self.clear(ask=False):
             return
 
         root = state["rootPath"]
@@ -931,17 +954,31 @@ class MosaicEditor(AnalysisModule):
                     # warn the user later on that we could not load this item
                     loadfail.append((itemState.get("name"), 'Unknown item type "%s"' % itemtype))
                     continue
-                item = self.addItem(type=itemtype, name=itemState["name"])
+                if loadMarkersOnly:
+                    if itemtype == "MarkersCanvasItem":
+                        item = self.addItem(type=itemtype, name=itemState["name"])
+                else:
+                    item = self.addItem(type=itemtype, name=itemState["name"])
             else:
                 # create item by loading file and restore state
                 if root is None:
-                    fh = DataManager.getHandle(fh)
+                    fh = DataManager.getHandle(fname)
                 else:
                     fh = root[fname]
-                item = self.addFile(fh, name=itemState["name"], inheritTransform=False)
-            self.updateStatusBar("Loading item %s" % itemState["name"])
-            item.restoreState(itemState)
-
+                if loadMarkersOnly:
+                    itemtype = itemState.get("type")
+                    if itemtype == "MarkersCanvasItem":
+                        item = self.addFile(fh, name=itemState["name"], inheritTransform=False)
+                        print("created item: ", item)
+                    else:
+                        item = None
+                else:
+                    item = self.addFile(fh, name=itemState["name"], inheritTransform=False)
+            if item is not None:
+                self.updateStatusBar("Loading item %s" % itemState["name"])
+                item.restoreState(itemState)
+            # else:
+            #     loadfail.append((itemState.get("name"), "Failed to create mosaic MarkersCanvasItem"))
         self.canvas.view.setState(state["view"])
         if len(loadfail) > 0:
             msg = "\n".join(["%s: %s" % m for m in loadfail])

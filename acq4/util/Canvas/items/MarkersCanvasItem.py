@@ -99,12 +99,13 @@ class MarkersCanvasItem(CanvasItem):
         return state
 
     def restoreState(self, state):
-        markers = state.pop('markers')
-        CanvasItem.restoreState(self, state)
-        for marker in self.params.children():
-            self.removeMarker(marker.name())
-        for name, pos in markers:
-            self.addMarker(name, pos)
+        if 'markers' in state:
+            markers = state.pop('markers')
+            CanvasItem.restoreState(self, state)
+            for marker in self.params.children():
+                self.removeMarker(marker.name())
+            for name, pos in markers:
+                self.addMarker(name, pos)
 
 
 class PointParameterItem(pg.parametertree.ParameterItem):
