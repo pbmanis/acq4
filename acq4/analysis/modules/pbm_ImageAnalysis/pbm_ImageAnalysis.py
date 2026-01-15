@@ -619,7 +619,6 @@ class pbm_ImageAnalysis(AnalysisModule):
         img = None
         self.clearImageTypes()
         # print(f"data structure: {self.dataStruct:s}")
-        # print(dh.name(), "is file: ", os.path.isfile(dh.name()), "Video: ", str(Path(dh.name()).name).startswith("video_"))
         requestType = (
             self.readDataTypes()
         )  # selection of image types for analysis - can exclude imaging for example.
