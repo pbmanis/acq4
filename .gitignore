@@ -19,3 +19,6 @@ config/*
 crash.log
 acq4_venv
 
+
+# Legacy pre-uv setup files, kept for reference, not tracked
+archive/

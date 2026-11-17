@@ -1,0 +1,160 @@
+===============================================================================
+claude_edits.txt — Session reference: uv/pyproject verification & cleanup
+Branch: use-UV-catchup
+Dates: 2026-10-20 / 2026-10-21
+Author of changes: Claude (Claude Code), reviewed by Paul Manis
+===============================================================================
+
+PURPOSE
+-------
+Verify that the uv-based pyproject.toml setup is functional and clean, apply the
+agreed cleanups, and fix a missing runtime dependency that broke the Mosaic
+Editor. Nothing here was committed by Claude — all changes left in the working
+tree for review (per CLAUDE.md: Claude does not perform git actions directly).
+
+
+-------------------------------------------------------------------------------
+1. INITIAL VERIFICATION (no changes) — uv setup was functional
+-------------------------------------------------------------------------------
+- uv 0.9.16; project venv .venv is Python 3.13.7 (matched requires-python).
+- `uv lock --check` passed (lock in sync with pyproject.toml).
+- `uv sync --locked --dry-run` -> "Would make no changes" (env fully synced).
+- acq4 installed as an editable project; version derived from git via
+  setuptools_scm.
+- All dependencies resolve from PyPI; no dangling git/URL sources.
+
+Cleanliness issues found (ranked), then addressed below:
+  #1 uv.lock was untracked in git (later found committed; see notes).
+  #2 Broken console-script entry point `acq4 = "acq4.__main__:main"` — no
+     main() exists in acq4/__main__.py (it is a top-level script).
+  #3 `uv build` vendored an external virtualenv: acq4/modules/aiccf is a
+     SYMLINK to /Users/pbmanis/Desktop/Python/ccfviewer/, whose ccf_venv/
+     (~4,536 files) bloated the wheel to ~20 MB.
+  #4 requires-python pinned to exact patch "==3.13.7".
+  #5 Dev/doc tools (mypy, pytest, Sphinx, numpydoc) listed as runtime deps.
+  #6 Dead build-system requires (setuptools-git-versioning config commented
+     out; cython with no .pyx/.pxd sources). NOT changed this session.
+  #7 Legacy pre-uv files cluttering the tree.
+
+
+-------------------------------------------------------------------------------
+2. CHANGES APPLIED
+-------------------------------------------------------------------------------
+
+pyproject.toml
+  * requires-python: "==3.13.7"  ->  ">=3.13,<3.14"
+      (allows any 3.13.x patch release; still excludes 3.14)
+  * Removed [project.scripts] entry point `acq4 = "acq4.__main__:main"`
+      (no main() to target; launch with `python -m acq4`). Added an
+      explanatory comment in its place.
+  * Moved dev/doc tools out of runtime `dependencies` into a PEP 735
+      [dependency-groups] dev = [ mypy, numpydoc, pytest, Sphinx ].
+      (uv installs the dev group by default on `uv sync`.)
+  * Build package discovery: [tool.setuptools] packages = ["acq4"]  ->
+      [tool.setuptools.packages.find] with
+         where = ["."], include = ["acq4*"],
+         exclude = ["acq4.modules.aiccf*"]
+  * Added "loky" to dependencies (see section 3).
+
+MANIFEST.in
+  * Added:  prune acq4/modules/aiccf
+      This is what actually keeps the symlinked external venv out of the
+      sdist, so the standard `uv build` (sdist -> wheel) is clean.
+
+.gitignore
+  * Added `archive/` (legacy files kept on disk but untracked).
+
+Legacy files ARCHIVED and UNTRACKED (git rm --cached, moved to archive/):
+  * requirements.txt            -> archive/requirements.txt
+  * setup_from_acq4_main.py     -> archive/setup_from_acq4_main.py
+  * setup_priorto_uv.py         -> archive/setup_priorto_uv.py
+  (archive/ is gitignored; files remain available for reference.)
+
+
+-------------------------------------------------------------------------------
+3. MOSAIC EDITOR FIX — "No module named 'loky'"
+-------------------------------------------------------------------------------
+Cause:
+  acq4/analysis/modules/MosaicEditor/MosaicEditor.py imports loky at module
+  top (lines 31-32):
+      from loky import get_reusable_executor
+      from loky import wrap_non_picklable_objects
+  The decorator @wrap_non_picklable_objects on operate_on_item() (line 40) is
+  live, so the import runs unconditionally. loky was never declared in
+  pyproject.toml, so a fresh `uv sync` never installed it -> ImportError broke
+  the whole module.
+
+Fix:
+  Added "loky" to [project].dependencies, then `uv lock` + `uv sync`.
+  Resolved: loky 3.7.0 (+ transitive cloudpickle 3.1.2). Package count 86 -> 88.
+
+Note for later:
+  Only @wrap_non_picklable_objects is currently used; the parallel executor
+  path using get_reusable_executor (MosaicEditor.py ~lines 615-620) is still
+  commented out, and the active path runs serially. loky is therefore an
+  effectively decorative dependency until the parallel work is finished. If
+  that work is abandoned, the two imports + decorator + the loky dependency
+  can be removed instead.
+
+
+-------------------------------------------------------------------------------
+4. VERIFICATION RESULTS
+-------------------------------------------------------------------------------
+- `uv lock` / `uv sync` succeed.
+- `uv lock --check` passes; `uv sync --locked --dry-run` -> "Would make no
+   changes".
+- Dev group installed: pytest 9.0.1, mypy, sphinx 5.3.0, numpydoc.
+- Build (standard `uv build`, sdist -> wheel): CLEAN.
+      Before: ~20 MB wheel, 5,245 files (4,536 from ccf_venv).
+      After:  ~3.2 MB wheel, 696 files, 0 ccf_venv entries, all real
+              acq4 subpackages present. sdist also clean (0 aiccf entries).
+- acq4 still imports as an editable install.
+- loky import verified:
+      from loky import get_reusable_executor, wrap_non_picklable_objects  OK
+
+
+-------------------------------------------------------------------------------
+5. KNOWN ISSUES / FOLLOW-UPS (not changed this session)
+-------------------------------------------------------------------------------
+- `uv build --wheel` (the DIRECT wheel shortcut) is still dirty: it walks the
+  source tree, follows the aiccf symlink, and re-vendors ccf_venv (~20 MB).
+  exclude-package-data did NOT intercept this path (setuptools + symlink +
+  include_package_data limitation), so no dead config was left behind.
+  WORKAROUND: use the default `uv build` (sdist -> wheel), which is clean.
+  ROOT-CAUSE FIX (future): do not symlink a venv-bearing external repo
+  (ccfviewer) into the package tree.
+
+- Pre-existing TEST failures (unrelated to these config changes; interpreter
+  is unchanged at 3.13.7, and no acq4/ source was touched):
+    * acq4/modules/MultiPatch/tests/test_planners.py — collection error:
+      imports _extractionWaypoint / _LOCAL_ORIGIN which no longer exist in
+      acq4/devices/Pipette/planners.py.
+    * acq4/devices/Scanner/scan_program/tests/test_rect.py::test_RectScan —
+      scan-shape assertion off by one ((1,5,17) vs expected (1,6,16)).
+  (Non-hardware subset otherwise: 5 passed. Hardware driver tests under
+   acq4/drivers/ThorlabsMFC1 were not run.)
+
+- Build-system requires still contains `setuptools-git-versioning` (config
+  commented out) and `cython` (no .pyx/.pxd sources). Candidates for removal.
+
+- uv.lock: was reported untracked at session start but is now tracked; the
+  lock was re-resolved by the changes above and shows as modified. Commit the
+  updated uv.lock alongside pyproject.toml.
+
+
+-------------------------------------------------------------------------------
+6. SUGGESTED COMMANDS (run by the user; Claude does not commit)
+-------------------------------------------------------------------------------
+  # review
+  git status
+  git diff pyproject.toml MANIFEST.in .gitignore uv.lock
+
+  # clean build sanity (optional)
+  uv build                       # clean; avoid `uv build --wheel`
+
+  # example commit (user's choice of message/author)
+  git add pyproject.toml MANIFEST.in .gitignore uv.lock
+  git rm requirements.txt setup_from_acq4_main.py setup_priorto_uv.py
+  # commit per CLAUDE.md standards, e.g.:
+  #   chore: clean up uv/pyproject setup; add loky dep; archive legacy setup files
+===============================================================================

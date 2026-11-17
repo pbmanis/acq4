@@ -10,7 +10,7 @@ description = "Neurophysiology acquisition and analysis platform"
 authors = [
     {name = "Luke Campagnola", email = "luke.campagnola@gmail.com"},
 ]
-requires-python = "==3.13.7"
+requires-python = ">=3.13,<3.14"
 readme = "README.md"
 license = "MIT"
 classifiers = [
@@ -34,14 +34,13 @@ dependencies = [
     "idna==2.9",
     # "kiwisolver==1.1.0",
     "lmfit==1.2.2",
+    "loky",
     "matplotlib>=3.10.7",
     "metaarray>=2.2.0",
-    "mypy>=1.18.2",
     "neuroanalysis",
     "neuron>=8.2.3",
     "numba",
     "numpy>=1.25.1",
-    "numpydoc>=1.1.0",
     "openpyxl==3.1.2",
     "pandas>=2.3.3",
     "pillow>=12.0.0",
@@ -55,13 +54,11 @@ dependencies = [
     "pyqtgraph>=0.13.7",
     # "pyqtgraph @ git+https://github.com/acq4/pyqtgraph.git",
     "pyserial==3.4",
-    "pytest",
     "python-dateutil==2.8.2",
     "pyyaml>=6.0.3",
     "requests==2.23.0",
     "sensapex",
     "scipy>=1.16.3",
-    "Sphinx>=4.1.2",
     "six==1.17.0",
     "teleprox",
     "tifffile",
@@ -70,15 +67,32 @@ dependencies = [
     "urllib3>=1.25.8",
     "vispy",
 ]
-[project.scripts]
-acq4 = "acq4.__main__:main"
+
+# Note: acq4 is launched with `python -m acq4` (see acq4/__main__.py).
+# There is intentionally no [project.scripts] console-script entry point because
+# __main__.py is a top-level script with no main() callable to target.
+
+[dependency-groups]
+dev = [
+    "mypy>=1.18.2",
+    "numpydoc>=1.1.0",
+    "pytest",
+    "Sphinx>=4.1.2",
+]
 
 # [build-system]
 # requires = ["hatchling"]
 # build-backend = "hatchling.build"
 
-[tool.setuptools]
-packages = ["acq4"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["acq4*"]
+# acq4/modules/aiccf is a symlink to an external repo containing its own venv.
+# The MANIFEST.in `prune acq4/modules/aiccf` keeps it out of the sdist, so the
+# standard `uv build` (sdist -> wheel) is clean. Note: `uv build --wheel` builds
+# directly from the source tree and will still follow the symlink -- prefer the
+# default `uv build`.
+exclude = ["acq4.modules.aiccf*"]
 
 [tool.setuptools_scm]
 # version={"tag"="acq4-0.9.3"}

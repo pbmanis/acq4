@@ -1,3 +1,7 @@
 recursive-include acq4 *.py *.ui *.m README *.txt *.h *.cache
 recursive-include config *
 include README.md LICENSE.txt bin/acq4
+
+# acq4/modules/aiccf is a symlink to an external repo (with its own venv);
+# prune it so the recursive-include above does not sweep in thousands of files.
+prune acq4/modules/aiccf

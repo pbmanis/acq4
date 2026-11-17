@@ -13,3 +13,4 @@ This file provides Claude-specific guidance when working with code in this repos
 🤖 Generated with [Claude Code](https://claude.ai/code)
 ```
 - Commit types: feat, fix, docs, style, refactor, perf, test, chore
+- Do not perform git actions directly. Tell the user what the action should be and the command, and let the user decide whether this is appropriate or not.
